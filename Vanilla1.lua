@@ -132,6 +132,21 @@ local function onExit()
     _G.VanillaHubCleanup = nil
 end
 
+-- Restore game's lighting fog (undo any changes from previous scripts)
+pcall(function()
+    local Lighting = game:GetService("Lighting")
+    -- Remove any custom Atmosphere that might have been inserted
+    for _, child in ipairs(Lighting:GetChildren()) do
+        if child:IsA("Atmosphere") and child.Name == "VanillaHubAtmosphere" then
+            child:Destroy()
+        end
+    end
+    -- Reset fog to Lumber Tycoon 2 game defaults (no custom override)
+    Lighting.FogEnd   = 100000
+    Lighting.FogStart = 0
+    Lighting.FogColor = Color3.fromRGB(192, 192, 192)
+end)
+
 -- GUI SCAFFOLD
 local gui = Instance.new("ScreenGui")
 gui.Name = "VanillaHub"; gui.Parent = game.CoreGui; gui.ResetOnSpawn = false
@@ -408,6 +423,7 @@ local function toggleGUI()
     guiOpen = not guiOpen
     isAnimatingGUI = true
     if guiOpen then
+        gui.Enabled = true
         wrapper.Visible = true
         main.Visible    = true
         wrapper.Size               = UDim2.new(0,0,0,0)
@@ -432,7 +448,9 @@ local function toggleGUI()
         tw.Completed:Connect(function()
             wrapper.Visible = false
             main.Visible    = false
-            isAnimatingGUI  = false
+            -- Disable entire ScreenGui so nothing bleeds through (lasso rect, welcome popup, etc.)
+            gui.Enabled    = false
+            isAnimatingGUI = false
         end)
     end
 end
@@ -571,7 +589,7 @@ end
 -- ════════════════════════════════════════════════════
 local itemPage = pages["ItemTab"]
 local _ipl = itemPage:FindFirstChildOfClass("UIListLayout")
-if _ipl then _ipl.Padding = UDim.new(0, 6) end
+if _ipl then _ipl.Padding = UDim.new(0, 5) end
 
 local clickSelectEnabled = false
 local lassoEnabled       = false
@@ -589,42 +607,43 @@ end
 
 local function iLabel(text)
     local lbl = Instance.new("TextLabel", itemPage)
-    lbl.Size = UDim2.new(1, -4, 0, 18)
+    lbl.Size = UDim2.new(1, -8, 0, 20)
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
-    lbl.TextColor3 = Color3.fromRGB(100, 100, 130)
+    lbl.TextColor3 = Color3.fromRGB(120, 112, 150)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = string.upper(text)
-    local p = Instance.new("UIPadding", lbl)
-    p.PaddingLeft = UDim.new(0, 2); p.PaddingTop = UDim.new(0, 4)
+    lbl.Text = "  " .. string.upper(text)
+    Instance.new("UIPadding", lbl).PaddingTop = UDim.new(0, 3)
 end
 
 local function iSep()
     local sep = Instance.new("Frame", itemPage)
-    sep.Size = UDim2.new(1, 0, 0, 1)
-    sep.BackgroundColor3 = Color3.fromRGB(32, 32, 44)
+    sep.Size = UDim2.new(1, -16, 0, 1)
+    sep.BackgroundColor3 = Color3.fromRGB(38, 36, 52)
     sep.BorderSizePixel = 0
 end
 
 local function iToggle(text, default, cb)
     local frame = Instance.new("Frame", itemPage)
-    frame.Size = UDim2.new(1, 0, 0, 32)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 27)
+    frame.Size = UDim2.new(1, -4, 0, 34)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 19, 28)
     frame.BorderSizePixel = 0
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Color = Color3.fromRGB(45, 42, 62); stroke.Thickness = 1; stroke.Transparency = 0.5
     local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -52, 1, 0); lbl.Position = UDim2.new(0, 10, 0, 0)
+    lbl.Size = UDim2.new(1, -56, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
     lbl.BackgroundTransparency = 1; lbl.Text = text
     lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
     lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
     local tb = Instance.new("TextButton", frame)
-    tb.Size = UDim2.new(0, 32, 0, 17); tb.Position = UDim2.new(1, -43, 0.5, -8)
-    tb.BackgroundColor3 = default and Color3.fromRGB(55,170,55) or BTN_COLOR
+    tb.Size = UDim2.new(0, 34, 0, 18); tb.Position = UDim2.new(1, -46, 0.5, -9)
+    tb.BackgroundColor3 = default and Color3.fromRGB(55,170,55) or Color3.fromRGB(40,38,55)
     tb.Text = ""; tb.BorderSizePixel = 0
     Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
     local dot = Instance.new("Frame", tb)
     dot.Size = UDim2.new(0, 13, 0, 13)
-    dot.Position = UDim2.new(0, default and 17 or 2, 0.5, -6)
+    dot.Position = UDim2.new(0, default and 18 or 2, 0.5, -6)
     dot.BackgroundColor3 = Color3.fromRGB(255,255,255); dot.BorderSizePixel = 0
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
     local toggled = default
@@ -632,10 +651,10 @@ local function iToggle(text, default, cb)
     tb.MouseButton1Click:Connect(function()
         toggled = not toggled
         TweenService:Create(tb, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
-            BackgroundColor3 = toggled and Color3.fromRGB(55,170,55) or BTN_COLOR
+            BackgroundColor3 = toggled and Color3.fromRGB(55,170,55) or Color3.fromRGB(40,38,55)
         }):Play()
         TweenService:Create(dot, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
-            Position = UDim2.new(0, toggled and 17 or 2, 0.5, -6)
+            Position = UDim2.new(0, toggled and 18 or 2, 0.5, -6)
         }):Play()
         if cb then cb(toggled) end
     end)
@@ -644,11 +663,13 @@ end
 
 local function iSlider(text, minV, maxV, defV, cb)
     local frame = Instance.new("Frame", itemPage)
-    frame.Size = UDim2.new(1, 0, 0, 50)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 27); frame.BorderSizePixel = 0
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+    frame.Size = UDim2.new(1, -4, 0, 54)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 19, 28); frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Color = Color3.fromRGB(45, 42, 62); stroke.Thickness = 1; stroke.Transparency = 0.5
     local row = Instance.new("Frame", frame)
-    row.Size = UDim2.new(1,-14,0,20); row.Position = UDim2.new(0,7,0,5); row.BackgroundTransparency = 1
+    row.Size = UDim2.new(1,-16,0,22); row.Position = UDim2.new(0,8,0,6); row.BackgroundTransparency = 1
     local lbl = Instance.new("TextLabel", row)
     lbl.Size = UDim2.new(0.65,0,1,0); lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 12; lbl.TextColor3 = THEME_TEXT
@@ -656,20 +677,20 @@ local function iSlider(text, minV, maxV, defV, cb)
     local valLbl = Instance.new("TextLabel", row)
     valLbl.Size = UDim2.new(0.35,0,1,0); valLbl.Position = UDim2.new(0.65,0,0,0)
     valLbl.BackgroundTransparency = 1; valLbl.Font = Enum.Font.GothamBold; valLbl.TextSize = 12
-    valLbl.TextColor3 = THEME_TEXT; valLbl.TextXAlignment = Enum.TextXAlignment.Right
+    valLbl.TextColor3 = Color3.fromRGB(160,150,200); valLbl.TextXAlignment = Enum.TextXAlignment.Right
     valLbl.Text = tostring(defV)
     local track = Instance.new("Frame", frame)
-    track.Size = UDim2.new(1,-14,0,5); track.Position = UDim2.new(0,7,0,34)
-    track.BackgroundColor3 = Color3.fromRGB(35,35,50); track.BorderSizePixel = 0
+    track.Size = UDim2.new(1,-16,0,5); track.Position = UDim2.new(0,8,0,37)
+    track.BackgroundColor3 = Color3.fromRGB(38,36,55); track.BorderSizePixel = 0
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
     local fill = Instance.new("Frame", track)
     fill.Size = UDim2.new((defV-minV)/(maxV-minV),0,1,0)
-    fill.BackgroundColor3 = Color3.fromRGB(85,85,110); fill.BorderSizePixel = 0
+    fill.BackgroundColor3 = Color3.fromRGB(95,85,130); fill.BorderSizePixel = 0
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
     local knob = Instance.new("TextButton", track)
     knob.Size = UDim2.new(0,14,0,14); knob.AnchorPoint = Vector2.new(0.5,0.5)
     knob.Position = UDim2.new((defV-minV)/(maxV-minV),0,0.5,0)
-    knob.BackgroundColor3 = Color3.fromRGB(210,210,225); knob.Text = ""; knob.BorderSizePixel = 0
+    knob.BackgroundColor3 = Color3.fromRGB(220,210,240); knob.Text = ""; knob.BorderSizePixel = 0
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
     local ds = false
     local function upd(absX)
@@ -823,46 +844,50 @@ iSep()
 iLabel("Teleport Mode")
 
 local modeDesc = Instance.new("TextLabel", itemPage)
-modeDesc.Size = UDim2.new(1,0,0,26)
-modeDesc.BackgroundColor3 = Color3.fromRGB(18,18,26); modeDesc.BorderSizePixel = 0
+modeDesc.Size = UDim2.new(1,-4,0,24)
+modeDesc.BackgroundColor3 = Color3.fromRGB(16,15,24); modeDesc.BorderSizePixel = 0
 modeDesc.Font = Enum.Font.Gotham; modeDesc.TextSize = 11
-modeDesc.TextColor3 = Color3.fromRGB(115,108,140); modeDesc.TextXAlignment = Enum.TextXAlignment.Left
-modeDesc.TextWrapped = true; modeDesc.Text = "    Items teleported in shuffled order"
-Instance.new("UICorner", modeDesc).CornerRadius = UDim.new(0, 6)
+modeDesc.TextColor3 = Color3.fromRGB(110,100,140); modeDesc.TextXAlignment = Enum.TextXAlignment.Left
+modeDesc.TextWrapped = true; modeDesc.Text = "    ✦  Items teleported in shuffled, spread order"
+Instance.new("UICorner", modeDesc).CornerRadius = UDim.new(0, 7)
 
 local modeRow = Instance.new("Frame", itemPage)
-modeRow.Size = UDim2.new(1,0,0,30); modeRow.BackgroundTransparency = 1
+modeRow.Size = UDim2.new(1,-4,0,32); modeRow.BackgroundColor3 = Color3.fromRGB(16,15,24)
+modeRow.BorderSizePixel = 0
+Instance.new("UICorner", modeRow).CornerRadius = UDim.new(0, 8)
+local modeStroke = Instance.new("UIStroke", modeRow)
+modeStroke.Color = Color3.fromRGB(45,42,62); modeStroke.Thickness = 1; modeStroke.Transparency = 0.5
 
-local ACTIVE_C   = Color3.fromRGB(58,55,82)
-local INACTIVE_C = Color3.fromRGB(26,26,34)
+local ACTIVE_C   = Color3.fromRGB(65,58,95)
+local INACTIVE_C = Color3.fromRGB(28,26,40)
 
 local randomBtn = Instance.new("TextButton", modeRow)
-randomBtn.Size = UDim2.new(0.5,-3,1,0); randomBtn.Position = UDim2.new(0,0,0,0)
+randomBtn.Size = UDim2.new(0.5,-4,1,-8); randomBtn.Position = UDim2.new(0,3,0,4)
 randomBtn.BackgroundColor3 = ACTIVE_C; randomBtn.BorderSizePixel = 0
 randomBtn.Font = Enum.Font.GothamBold; randomBtn.TextSize = 12
-randomBtn.TextColor3 = Color3.fromRGB(220,215,235); randomBtn.Text = "Random"
-Instance.new("UICorner", randomBtn).CornerRadius = UDim.new(0, 7)
+randomBtn.TextColor3 = Color3.fromRGB(225,215,245); randomBtn.Text = "⚄  Random"
+Instance.new("UICorner", randomBtn).CornerRadius = UDim.new(0, 6)
 
 local groupBtn = Instance.new("TextButton", modeRow)
-groupBtn.Size = UDim2.new(0.5,-3,1,0); groupBtn.Position = UDim2.new(0.5,3,0,0)
+groupBtn.Size = UDim2.new(0.5,-4,1,-8); groupBtn.Position = UDim2.new(0.5,1,0,4)
 groupBtn.BackgroundColor3 = INACTIVE_C; groupBtn.BorderSizePixel = 0
 groupBtn.Font = Enum.Font.GothamBold; groupBtn.TextSize = 12
-groupBtn.TextColor3 = Color3.fromRGB(130,125,155); groupBtn.Text = "Group"
-Instance.new("UICorner", groupBtn).CornerRadius = UDim.new(0, 7)
+groupBtn.TextColor3 = Color3.fromRGB(130,120,160); groupBtn.Text = "⊞  Group"
+Instance.new("UICorner", groupBtn).CornerRadius = UDim.new(0, 6)
 
 local function setTpMode(mode)
     tpMode = mode
     TweenService:Create(randomBtn, TweenInfo.new(0.18), {
         BackgroundColor3 = mode=="random" and ACTIVE_C or INACTIVE_C,
-        TextColor3       = mode=="random" and Color3.fromRGB(220,215,235) or Color3.fromRGB(130,125,155)
+        TextColor3       = mode=="random" and Color3.fromRGB(225,215,245) or Color3.fromRGB(130,120,160)
     }):Play()
     TweenService:Create(groupBtn, TweenInfo.new(0.18), {
         BackgroundColor3 = mode=="group" and ACTIVE_C or INACTIVE_C,
-        TextColor3       = mode=="group" and Color3.fromRGB(220,215,235) or Color3.fromRGB(130,125,155)
+        TextColor3       = mode=="group" and Color3.fromRGB(225,215,245) or Color3.fromRGB(130,120,160)
     }):Play()
     modeDesc.Text = mode=="random"
-        and "    Items teleported in shuffled order"
-        or  "    Finishes one item type before the next"
+        and "    ✦  Items teleported in shuffled, spread order"
+        or  "    ▤  Finishes one item type fully before the next"
 end
 
 randomBtn.MouseButton1Click:Connect(function() setTpMode("random") end)
@@ -874,25 +899,29 @@ iSep()
 iLabel("Destination")
 
 local destRow = Instance.new("Frame", itemPage)
-destRow.Size = UDim2.new(1,0,0,30); destRow.BackgroundTransparency = 1
+destRow.Size = UDim2.new(1,-4,0,32); destRow.BackgroundColor3 = Color3.fromRGB(16,15,24)
+destRow.BorderSizePixel = 0
+Instance.new("UICorner", destRow).CornerRadius = UDim.new(0, 8)
+local destStroke = Instance.new("UIStroke", destRow)
+destStroke.Color = Color3.fromRGB(45,42,62); destStroke.Thickness = 1; destStroke.Transparency = 0.5
 
 local setHereBtn = Instance.new("TextButton", destRow)
-setHereBtn.Size = UDim2.new(0.5,-3,1,0); setHereBtn.Position = UDim2.new(0,0,0,0)
-setHereBtn.BackgroundColor3 = BTN_COLOR; setHereBtn.BorderSizePixel = 0
+setHereBtn.Size = UDim2.new(0.5,-4,1,-8); setHereBtn.Position = UDim2.new(0,3,0,4)
+setHereBtn.BackgroundColor3 = Color3.fromRGB(38,36,55); setHereBtn.BorderSizePixel = 0
 setHereBtn.Font = Enum.Font.GothamSemibold; setHereBtn.TextSize = 12
-setHereBtn.TextColor3 = THEME_TEXT; setHereBtn.Text = "Set Here"
-Instance.new("UICorner", setHereBtn).CornerRadius = UDim.new(0, 7)
+setHereBtn.TextColor3 = THEME_TEXT; setHereBtn.Text = "📍 Set Here"
+Instance.new("UICorner", setHereBtn).CornerRadius = UDim.new(0, 6)
 
 local removeDestBtn = Instance.new("TextButton", destRow)
-removeDestBtn.Size = UDim2.new(0.5,-3,1,0); removeDestBtn.Position = UDim2.new(0.5,3,0,0)
-removeDestBtn.BackgroundColor3 = BTN_COLOR; removeDestBtn.BorderSizePixel = 0
+removeDestBtn.Size = UDim2.new(0.5,-4,1,-8); removeDestBtn.Position = UDim2.new(0.5,1,0,4)
+removeDestBtn.BackgroundColor3 = Color3.fromRGB(38,36,55); removeDestBtn.BorderSizePixel = 0
 removeDestBtn.Font = Enum.Font.GothamSemibold; removeDestBtn.TextSize = 12
-removeDestBtn.TextColor3 = THEME_TEXT; removeDestBtn.Text = "Remove"
-Instance.new("UICorner", removeDestBtn).CornerRadius = UDim.new(0, 7)
+removeDestBtn.TextColor3 = Color3.fromRGB(220,140,140); removeDestBtn.Text = "✕ Remove"
+Instance.new("UICorner", removeDestBtn).CornerRadius = UDim.new(0, 6)
 
 for _, b in {setHereBtn, removeDestBtn} do
-    b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.14),{BackgroundColor3=BTN_HOVER}):Play() end)
-    b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(0.14),{BackgroundColor3=BTN_COLOR}):Play() end)
+    b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(58,54,80)}):Play() end)
+    b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(38,36,55)}):Play() end)
 end
 
 setHereBtn.MouseButton1Click:Connect(function()
@@ -906,14 +935,14 @@ setHereBtn.MouseButton1Click:Connect(function()
         tpCircle.Position = char.HumanoidRootPart.Position
     end
     tpCircle.Parent = workspace
-    setHereBtn.Text = "Set"
+    setHereBtn.Text = "✓ Set"
     TweenService:Create(setHereBtn,TweenInfo.new(0.18),{BackgroundColor3=Color3.fromRGB(36,68,46)}):Play()
 end)
 
 removeDestBtn.MouseButton1Click:Connect(function()
     if tpCircle then tpCircle:Destroy(); tpCircle = nil end
-    setHereBtn.Text = "Set Here"
-    TweenService:Create(setHereBtn,TweenInfo.new(0.18),{BackgroundColor3=BTN_COLOR}):Play()
+    setHereBtn.Text = "📍 Set Here"
+    TweenService:Create(setHereBtn,TweenInfo.new(0.18),{BackgroundColor3=Color3.fromRGB(38,36,55)}):Play()
 end)
 
 table.insert(cleanupTasks, function()
@@ -952,19 +981,59 @@ local function teleportItemPart(part, destCF)
     task.wait(tpItemSpeed)
 end
 
--- Random: collect all selected parts then Fisher-Yates shuffle
--- This ensures items of the same type are genuinely mixed, not sequential
+-- Random: collect all selected parts, group by category, then interleave
+-- so that the same name/type is never bunched together
 local function getRandomOrderParts()
     local list = {}
+    -- First bucket by item name to avoid same-category clustering
+    local buckets, bucketOrder = {}, {}
     for _, v in next, workspace.PlayerModels:GetDescendants() do
         if v.Name == "Selection" then
             local part = v.Parent
-            if part and part.Parent then table.insert(list, part) end
+            if part and part.Parent then
+                local model = part.Parent
+                local iv = model:FindFirstChild("ItemName")
+                local key = iv and iv.Value or model.Name
+                if not buckets[key] then
+                    buckets[key] = {}
+                    table.insert(bucketOrder, key)
+                end
+                table.insert(buckets[key], part)
+            end
         end
     end
-    for i = #list, 2, -1 do
+    -- Shuffle each bucket internally
+    math.randomseed(os.clock() * 1e6)
+    for _, key in ipairs(bucketOrder) do
+        local b = buckets[key]
+        for i = #b, 2, -1 do
+            local j = math.random(1, i)
+            b[i], b[j] = b[j], b[i]
+        end
+    end
+    -- Shuffle bucket order itself
+    for i = #bucketOrder, 2, -1 do
         local j = math.random(1, i)
-        list[i], list[j] = list[j], list[i]
+        bucketOrder[i], bucketOrder[j] = bucketOrder[j], bucketOrder[i]
+    end
+    -- Round-robin interleave: take one item from each bucket in rotation
+    -- so same-category items are maximally spread apart
+    local maxLen = 0
+    for _, k in ipairs(bucketOrder) do
+        if #buckets[k] > maxLen then maxLen = #buckets[k] end
+    end
+    for round = 1, maxLen do
+        -- Shuffle bucket visit order each round for extra randomness
+        local visitOrder = {}
+        for _, k in ipairs(bucketOrder) do table.insert(visitOrder, k) end
+        for i = #visitOrder, 2, -1 do
+            local j = math.random(1, i)
+            visitOrder[i], visitOrder[j] = visitOrder[j], visitOrder[i]
+        end
+        for _, key in ipairs(visitOrder) do
+            local b = buckets[key]
+            if b[round] then table.insert(list, b[round]) end
+        end
     end
     return list
 end
@@ -989,12 +1058,14 @@ end
 
 -- Progress bar
 local progressLabel = Instance.new("TextLabel", itemPage)
-progressLabel.Size = UDim2.new(1,0,0,22)
-progressLabel.BackgroundColor3 = Color3.fromRGB(18,18,26); progressLabel.BorderSizePixel = 0
-progressLabel.Font = Enum.Font.Gotham; progressLabel.TextSize = 11
-progressLabel.TextColor3 = Color3.fromRGB(100,200,130); progressLabel.TextXAlignment = Enum.TextXAlignment.Center
+progressLabel.Size = UDim2.new(1,-4,0,26)
+progressLabel.BackgroundColor3 = Color3.fromRGB(16,22,18); progressLabel.BorderSizePixel = 0
+progressLabel.Font = Enum.Font.GothamSemibold; progressLabel.TextSize = 12
+progressLabel.TextColor3 = Color3.fromRGB(120,220,150); progressLabel.TextXAlignment = Enum.TextXAlignment.Center
 progressLabel.Text = ""; progressLabel.Visible = false
-Instance.new("UICorner", progressLabel).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", progressLabel).CornerRadius = UDim.new(0, 7)
+local progressStroke = Instance.new("UIStroke", progressLabel)
+progressStroke.Color = Color3.fromRGB(60,120,70); progressStroke.Thickness = 1; progressStroke.Transparency = 0.5
 
 local function runTeleport(destCF)
     if tpRunning then return end
@@ -1041,52 +1112,60 @@ end
 
 -- Teleport to destination row (Go + Stop)
 local tpRow = Instance.new("Frame", itemPage)
-tpRow.Size = UDim2.new(1,0,0,32); tpRow.BackgroundTransparency = 1
+tpRow.Size = UDim2.new(1,-4,0,34); tpRow.BackgroundTransparency = 1
 
 local tpGoBtn = Instance.new("TextButton", tpRow)
-tpGoBtn.Size = UDim2.new(1,-68,1,0); tpGoBtn.Position = UDim2.new(0,0,0,0)
-tpGoBtn.BackgroundColor3 = Color3.fromRGB(42,52,68); tpGoBtn.BorderSizePixel = 0
+tpGoBtn.Size = UDim2.new(1,-72,1,0); tpGoBtn.Position = UDim2.new(0,0,0,0)
+tpGoBtn.BackgroundColor3 = Color3.fromRGB(38,48,68); tpGoBtn.BorderSizePixel = 0
 tpGoBtn.Font = Enum.Font.GothamBold; tpGoBtn.TextSize = 12
-tpGoBtn.TextColor3 = Color3.fromRGB(175,205,240); tpGoBtn.Text = "Teleport Selected"
-Instance.new("UICorner", tpGoBtn).CornerRadius = UDim.new(0, 7)
+tpGoBtn.TextColor3 = Color3.fromRGB(175,205,240); tpGoBtn.Text = "▶  Teleport Selected"
+Instance.new("UICorner", tpGoBtn).CornerRadius = UDim.new(0, 8)
+local tpGoStroke = Instance.new("UIStroke", tpGoBtn)
+tpGoStroke.Color = Color3.fromRGB(80,110,160); tpGoStroke.Thickness = 1; tpGoStroke.Transparency = 0.6
 
 local tpStopBtn = Instance.new("TextButton", tpRow)
-tpStopBtn.Size = UDim2.new(0,60,1,0); tpStopBtn.Position = UDim2.new(1,-60,0,0)
-tpStopBtn.BackgroundColor3 = Color3.fromRGB(72,26,26); tpStopBtn.BorderSizePixel = 0
+tpStopBtn.Size = UDim2.new(0,64,1,0); tpStopBtn.Position = UDim2.new(1,-64,0,0)
+tpStopBtn.BackgroundColor3 = Color3.fromRGB(68,24,24); tpStopBtn.BorderSizePixel = 0
 tpStopBtn.Font = Enum.Font.GothamBold; tpStopBtn.TextSize = 12
-tpStopBtn.TextColor3 = Color3.fromRGB(255,155,155); tpStopBtn.Text = "Stop"
-Instance.new("UICorner", tpStopBtn).CornerRadius = UDim.new(0, 7)
+tpStopBtn.TextColor3 = Color3.fromRGB(255,145,145); tpStopBtn.Text = "■  Stop"
+Instance.new("UICorner", tpStopBtn).CornerRadius = UDim.new(0, 8)
+local tpStopStroke = Instance.new("UIStroke", tpStopBtn)
+tpStopStroke.Color = Color3.fromRGB(140,60,60); tpStopStroke.Thickness = 1; tpStopStroke.Transparency = 0.6
 
-tpGoBtn.MouseEnter:Connect(function() TweenService:Create(tpGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(58,70,90)}):Play() end)
-tpGoBtn.MouseLeave:Connect(function() TweenService:Create(tpGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(42,52,68)}):Play() end)
-tpStopBtn.MouseEnter:Connect(function() TweenService:Create(tpStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(96,35,35)}):Play() end)
-tpStopBtn.MouseLeave:Connect(function() TweenService:Create(tpStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(72,26,26)}):Play() end)
+tpGoBtn.MouseEnter:Connect(function() TweenService:Create(tpGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(52,66,92)}):Play() end)
+tpGoBtn.MouseLeave:Connect(function() TweenService:Create(tpGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(38,48,68)}):Play() end)
+tpStopBtn.MouseEnter:Connect(function() TweenService:Create(tpStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(92,32,32)}):Play() end)
+tpStopBtn.MouseLeave:Connect(function() TweenService:Create(tpStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(68,24,24)}):Play() end)
 
 tpGoBtn.MouseButton1Click:Connect(function() runTeleport(tpCircle and tpCircle.CFrame) end)
 tpStopBtn.MouseButton1Click:Connect(function() tpRunning = false end)
 
 -- Sell row (Go + Stop)
 local sellRow = Instance.new("Frame", itemPage)
-sellRow.Size = UDim2.new(1,0,0,32); sellRow.BackgroundTransparency = 1
+sellRow.Size = UDim2.new(1,-4,0,34); sellRow.BackgroundTransparency = 1
 
 local sellGoBtn = Instance.new("TextButton", sellRow)
-sellGoBtn.Size = UDim2.new(1,-68,1,0); sellGoBtn.Position = UDim2.new(0,0,0,0)
-sellGoBtn.BackgroundColor3 = Color3.fromRGB(36,54,38); sellGoBtn.BorderSizePixel = 0
+sellGoBtn.Size = UDim2.new(1,-72,1,0); sellGoBtn.Position = UDim2.new(0,0,0,0)
+sellGoBtn.BackgroundColor3 = Color3.fromRGB(32,54,34); sellGoBtn.BorderSizePixel = 0
 sellGoBtn.Font = Enum.Font.GothamBold; sellGoBtn.TextSize = 12
-sellGoBtn.TextColor3 = Color3.fromRGB(155,228,165); sellGoBtn.Text = "Sell Selected"
-Instance.new("UICorner", sellGoBtn).CornerRadius = UDim.new(0, 7)
+sellGoBtn.TextColor3 = Color3.fromRGB(145,228,155); sellGoBtn.Text = "💰  Sell Selected"
+Instance.new("UICorner", sellGoBtn).CornerRadius = UDim.new(0, 8)
+local sellGoStroke = Instance.new("UIStroke", sellGoBtn)
+sellGoStroke.Color = Color3.fromRGB(70,140,75); sellGoStroke.Thickness = 1; sellGoStroke.Transparency = 0.6
 
 local sellStopBtn = Instance.new("TextButton", sellRow)
-sellStopBtn.Size = UDim2.new(0,60,1,0); sellStopBtn.Position = UDim2.new(1,-60,0,0)
-sellStopBtn.BackgroundColor3 = Color3.fromRGB(72,26,26); sellStopBtn.BorderSizePixel = 0
+sellStopBtn.Size = UDim2.new(0,64,1,0); sellStopBtn.Position = UDim2.new(1,-64,0,0)
+sellStopBtn.BackgroundColor3 = Color3.fromRGB(68,24,24); sellStopBtn.BorderSizePixel = 0
 sellStopBtn.Font = Enum.Font.GothamBold; sellStopBtn.TextSize = 12
-sellStopBtn.TextColor3 = Color3.fromRGB(255,155,155); sellStopBtn.Text = "Stop"
-Instance.new("UICorner", sellStopBtn).CornerRadius = UDim.new(0, 7)
+sellStopBtn.TextColor3 = Color3.fromRGB(255,145,145); sellStopBtn.Text = "■  Stop"
+Instance.new("UICorner", sellStopBtn).CornerRadius = UDim.new(0, 8)
+local sellStopStroke = Instance.new("UIStroke", sellStopBtn)
+sellStopStroke.Color = Color3.fromRGB(140,60,60); sellStopStroke.Thickness = 1; sellStopStroke.Transparency = 0.6
 
-sellGoBtn.MouseEnter:Connect(function() TweenService:Create(sellGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(50,72,52)}):Play() end)
-sellGoBtn.MouseLeave:Connect(function() TweenService:Create(sellGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(36,54,38)}):Play() end)
-sellStopBtn.MouseEnter:Connect(function() TweenService:Create(sellStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(96,35,35)}):Play() end)
-sellStopBtn.MouseLeave:Connect(function() TweenService:Create(sellStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(72,26,26)}):Play() end)
+sellGoBtn.MouseEnter:Connect(function() TweenService:Create(sellGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(44,72,46)}):Play() end)
+sellGoBtn.MouseLeave:Connect(function() TweenService:Create(sellGoBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(32,54,34)}):Play() end)
+sellStopBtn.MouseEnter:Connect(function() TweenService:Create(sellStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(92,32,32)}):Play() end)
+sellStopBtn.MouseLeave:Connect(function() TweenService:Create(sellStopBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(68,24,24)}):Play() end)
 
 sellGoBtn.MouseButton1Click:Connect(function()
     -- temporarily point tpCircle at dropoff then run
@@ -1100,8 +1179,8 @@ sellGoBtn.MouseButton1Click:Connect(function()
         tpCircle.CFrame = fakeCF; tpCircle.Parent = workspace
         runTeleport(fakeCF)
         tpCircle:Destroy(); tpCircle = nil
-        setHereBtn.Text = "Set Here"
-        TweenService:Create(setHereBtn,TweenInfo.new(0.18),{BackgroundColor3=BTN_COLOR}):Play()
+        setHereBtn.Text = "📍 Set Here"
+        TweenService:Create(setHereBtn,TweenInfo.new(0.18),{BackgroundColor3=Color3.fromRGB(38,36,55)}):Play()
     else
         runTeleport(fakeCF)
     end
@@ -1110,12 +1189,14 @@ sellStopBtn.MouseButton1Click:Connect(function() tpRunning = false end)
 
 -- Deselect All
 local deselectBtn = Instance.new("TextButton", itemPage)
-deselectBtn.Size = UDim2.new(1,0,0,30); deselectBtn.BackgroundColor3 = BTN_COLOR
+deselectBtn.Size = UDim2.new(1,-4,0,32); deselectBtn.BackgroundColor3 = Color3.fromRGB(28,26,40)
 deselectBtn.BorderSizePixel = 0; deselectBtn.Font = Enum.Font.GothamSemibold; deselectBtn.TextSize = 12
-deselectBtn.TextColor3 = THEME_TEXT; deselectBtn.Text = "Deselect All"
-Instance.new("UICorner", deselectBtn).CornerRadius = UDim.new(0, 7)
-deselectBtn.MouseEnter:Connect(function() TweenService:Create(deselectBtn,TweenInfo.new(0.14),{BackgroundColor3=BTN_HOVER}):Play() end)
-deselectBtn.MouseLeave:Connect(function() TweenService:Create(deselectBtn,TweenInfo.new(0.14),{BackgroundColor3=BTN_COLOR}):Play() end)
+deselectBtn.TextColor3 = Color3.fromRGB(180,170,210); deselectBtn.Text = "✕  Deselect All"
+Instance.new("UICorner", deselectBtn).CornerRadius = UDim.new(0, 8)
+local deselectStroke = Instance.new("UIStroke", deselectBtn)
+deselectStroke.Color = Color3.fromRGB(65,58,95); deselectStroke.Thickness = 1; deselectStroke.Transparency = 0.5
+deselectBtn.MouseEnter:Connect(function() TweenService:Create(deselectBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(44,40,62)}):Play() end)
+deselectBtn.MouseLeave:Connect(function() TweenService:Create(deselectBtn,TweenInfo.new(0.14),{BackgroundColor3=Color3.fromRGB(28,26,40)}):Play() end)
 deselectBtn.MouseButton1Click:Connect(function() deselectAll() end)
 
 -- ════════════════════════════════════════════════════
