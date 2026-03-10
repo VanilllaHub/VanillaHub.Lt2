@@ -198,7 +198,7 @@ Instance.new("UICorner", hubIcon).CornerRadius = UDim.new(0, 5)
 
 local titleLbl = Instance.new("TextLabel", topBar)
 titleLbl.Size = UDim2.new(1, -90, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
-titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub"
+titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub ┈➤ lt2"
 titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 16
 titleLbl.TextColor3 = THEME_TEXT; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.ZIndex = 5
 
@@ -1169,9 +1169,10 @@ end
 
 for i, mName in ipairs(modeNames) do
     local mb = Instance.new("TextButton", modeRow)
-    local w = (1 / #modeNames)
-    mb.Size = UDim2.new(w, -4, 1, 0)
-    mb.Position = UDim2.new(w * (i-1), (i == 1 and 0 or 4), 0, 0)
+    -- 3 equal buttons: each ~1/3 width minus 4px gap on sides
+    local xScale = 1 / #modeNames
+    mb.Size = UDim2.new(xScale, -4, 1, 0)
+    mb.Position = UDim2.new(xScale * (i - 1), i == 1 and 0 or 2, 0, 0)
     mb.BackgroundColor3 = BTN_COLOR
     mb.Font = Enum.Font.GothamSemibold; mb.TextSize = 12
     mb.TextColor3 = THEME_TEXT; mb.Text = mName; mb.BorderSizePixel = 0
@@ -1432,135 +1433,124 @@ createPSlider("Jumpower", 50, 300, 50, function(val)
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.JumpPower=val end
 end)
 
-local flySpeed = 100
-createPSlider("Fly Speed", 100, 500, 100, function(val) flySpeed=val end)
-
--- Fly key row
-local flyKeyFrame=Instance.new("Frame",playerPage)
-flyKeyFrame.Size=UDim2.new(1,0,0,36); flyKeyFrame.BackgroundColor3=Color3.fromRGB(20,16,24)
-flyKeyFrame.BorderSizePixel=0
-Instance.new("UICorner",flyKeyFrame).CornerRadius=UDim.new(0,8)
-local flyKeyLabel=Instance.new("TextLabel",flyKeyFrame)
-flyKeyLabel.Size=UDim2.new(0.55,0,1,0); flyKeyLabel.Position=UDim2.new(0,12,0,0)
-flyKeyLabel.BackgroundTransparency=1; flyKeyLabel.Font=Enum.Font.GothamSemibold; flyKeyLabel.TextSize=13
-flyKeyLabel.TextColor3=THEME_TEXT; flyKeyLabel.TextXAlignment=Enum.TextXAlignment.Left; flyKeyLabel.Text="Fly Keybind"
-local currentFlyKey = Enum.KeyCode.Q
-local flyKeyBtn=Instance.new("TextButton",flyKeyFrame)
-flyKeyBtn.Size=UDim2.new(0,60,0,24); flyKeyBtn.Position=UDim2.new(1,-70,0.5,-12)
-flyKeyBtn.BackgroundColor3=BTN_COLOR; flyKeyBtn.Font=Enum.Font.GothamSemibold
-flyKeyBtn.TextSize=12; flyKeyBtn.TextColor3=THEME_TEXT; flyKeyBtn.Text="Q"
-flyKeyBtn.BorderSizePixel=0; Instance.new("UICorner",flyKeyBtn).CornerRadius=UDim.new(0,6)
-flyKeyBtn.MouseEnter:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
-flyKeyBtn.MouseLeave:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
-flyKeyBtn.MouseButton1Click:Connect(function()
-    if _G.VH and _G.VH.waitingForFlyKey then return end
-    if _G.VH then _G.VH.waitingForFlyKey=true end
-    flyKeyBtn.Text="..."; flyKeyBtn.BackgroundColor3=Color3.fromRGB(55,90,55)
-end)
-
--- ── FLY ENABLE/DISABLE TOGGLE (NEW) ──────────────────────────
--- Enabled by default. When disabled, fly key does nothing and fly is turned off.
-local flyEnabled = true  -- global fly permission flag
-
-local flyEnabledToggleFrame = Instance.new("Frame", playerPage)
-flyEnabledToggleFrame.Size = UDim2.new(1, 0, 0, 36)
-flyEnabledToggleFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 24)
-flyEnabledToggleFrame.BorderSizePixel = 0
-Instance.new("UICorner", flyEnabledToggleFrame).CornerRadius = UDim.new(0, 8)
-
-local flyEnabledLbl = Instance.new("TextLabel", flyEnabledToggleFrame)
-flyEnabledLbl.Size = UDim2.new(1, -54, 1, 0)
-flyEnabledLbl.Position = UDim2.new(0, 12, 0, 0)
-flyEnabledLbl.BackgroundTransparency = 1
-flyEnabledLbl.Text = "Fly Enabled"
-flyEnabledLbl.Font = Enum.Font.GothamSemibold
-flyEnabledLbl.TextSize = 13
-flyEnabledLbl.TextColor3 = THEME_TEXT
-flyEnabledLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-local flyEnabledTb = Instance.new("TextButton", flyEnabledToggleFrame)
-flyEnabledTb.Size = UDim2.new(0, 36, 0, 20)
-flyEnabledTb.Position = UDim2.new(1, -46, 0.5, -10)
-flyEnabledTb.BackgroundColor3 = Color3.fromRGB(80, 160, 80)  -- on by default
-flyEnabledTb.Text = ""; flyEnabledTb.BorderSizePixel = 0
-Instance.new("UICorner", flyEnabledTb).CornerRadius = UDim.new(1, 0)
-
-local flyEnabledCircle = Instance.new("Frame", flyEnabledTb)
-flyEnabledCircle.Size = UDim2.new(0, 14, 0, 14)
-flyEnabledCircle.Position = UDim2.new(0, 20, 0.5, -7)  -- right = on
-flyEnabledCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-flyEnabledCircle.BorderSizePixel = 0
-Instance.new("UICorner", flyEnabledCircle).CornerRadius = UDim.new(1, 0)
-
-flyEnabledTb.MouseButton1Click:Connect(function()
-    flyEnabled = not flyEnabled
-    TweenService:Create(flyEnabledTb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-        BackgroundColor3 = flyEnabled and Color3.fromRGB(80,160,80) or Color3.fromRGB(45,38,55)
-    }):Play()
-    TweenService:Create(flyEnabledCircle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-        Position = UDim2.new(0, flyEnabled and 20 or 2, 0.5, -7)
-    }):Play()
-    -- If disabling while currently flying, stop fly immediately
-    if not flyEnabled and isFlyEnabled then
-        stopFly()
-    end
-end)
-
-local flyHint=Instance.new("TextLabel",playerPage)
-flyHint.Size=UDim2.new(1,0,0,26); flyHint.BackgroundColor3=Color3.fromRGB(18,14,22)
-flyHint.BorderSizePixel=0; flyHint.Font=Enum.Font.Gotham; flyHint.TextSize=11
-flyHint.TextColor3=Color3.fromRGB(100,90,120); flyHint.TextWrapped=true
-flyHint.TextXAlignment=Enum.TextXAlignment.Left
-flyHint.Text="  Press your Fly Key to toggle fly on/off"
-Instance.new("UICorner",flyHint).CornerRadius=UDim.new(0,8)
-Instance.new("UIPadding",flyHint).PaddingLeft=UDim.new(0,6)
-
-local isFlyEnabled = false
+-- ── FLY STATE (before UI so callbacks can reference these) ────
+local flySpeed     = 100
+local flyEnabled   = true    -- master on/off; ON by default
+local isFlyEnabled = false   -- currently active?
 local flyBV, flyBG, flyConn
+local currentFlyKey = Enum.KeyCode.Q
 
 local function stopFly()
-    isFlyEnabled=false
-    if _G.VH then _G.VH.isFlyEnabled=false end
-    if flyConn then flyConn:Disconnect(); flyConn=nil end
-    if flyBV and flyBV.Parent then flyBV:Destroy(); flyBV=nil end
-    if flyBG and flyBG.Parent then flyBG:Destroy(); flyBG=nil end
-    local char=player.Character
-    if char and char:FindFirstChild("Humanoid") then char.Humanoid.PlatformStand=false end
+    isFlyEnabled = false
+    if _G.VH then _G.VH.isFlyEnabled = false end
+    if flyConn then flyConn:Disconnect(); flyConn = nil end
+    if flyBV and flyBV.Parent then flyBV:Destroy(); flyBV = nil end
+    if flyBG and flyBG.Parent then flyBG:Destroy(); flyBG = nil end
+    local char = player.Character
+    if char and char:FindFirstChild("Humanoid") then char.Humanoid.PlatformStand = false end
 end
 
 local function startFly()
-    stopFly(); isFlyEnabled=true
-    if _G.VH then _G.VH.isFlyEnabled=true end
-    local char=player.Character
-    if not char then isFlyEnabled=false; return end
-    local root=char:FindFirstChild("HumanoidRootPart")
-    local hum=char:FindFirstChild("Humanoid")
-    if not root or not hum then isFlyEnabled=false; return end
-    hum.PlatformStand=true
-    flyBV=Instance.new("BodyVelocity",root)
-    flyBV.MaxForce=Vector3.new(1e5,1e5,1e5); flyBV.Velocity=Vector3.zero
-    flyBG=Instance.new("BodyGyro",root)
-    flyBG.MaxTorque=Vector3.new(1e5,1e5,1e5); flyBG.P=1e4; flyBG.D=100
-    flyConn=RunService.Heartbeat:Connect(function()
+    if not flyEnabled then return end  -- do nothing when fly is disabled
+    stopFly(); isFlyEnabled = true
+    if _G.VH then _G.VH.isFlyEnabled = true end
+    local char = player.Character
+    if not char then isFlyEnabled = false; return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum  = char:FindFirstChild("Humanoid")
+    if not root or not hum then isFlyEnabled = false; return end
+    hum.PlatformStand = true
+    flyBV = Instance.new("BodyVelocity", root)
+    flyBV.MaxForce = Vector3.new(1e5, 1e5, 1e5); flyBV.Velocity = Vector3.zero
+    flyBG = Instance.new("BodyGyro", root)
+    flyBG.MaxTorque = Vector3.new(1e5, 1e5, 1e5); flyBG.P = 1e4; flyBG.D = 100
+    flyConn = RunService.Heartbeat:Connect(function()
         if not (flyBV and flyBV.Parent and flyBG and flyBG.Parent) then return end
-        local ch=player.Character; local h=ch and ch:FindFirstChild("Humanoid"); local r=ch and ch:FindFirstChild("HumanoidRootPart")
+        local ch = player.Character
+        local h  = ch and ch:FindFirstChild("Humanoid")
+        local r  = ch and ch:FindFirstChild("HumanoidRootPart")
         if not (h and r) then return end
-        local cf=workspace.CurrentCamera.CFrame
-        local dir=Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir=dir+cf.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir=dir-cf.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir=dir-cf.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir=dir+cf.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space)     then dir=dir+Vector3.new(0,1,0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir=dir-Vector3.new(0,1,0) end
-        h.PlatformStand=true
-        flyBV.MaxForce=Vector3.new(1e5,1e5,1e5)
-        flyBV.Velocity=dir.Magnitude>0 and dir.Unit*flySpeed or Vector3.zero
-        flyBG.CFrame=cf
+        local cf  = workspace.CurrentCamera.CFrame
+        local dir = Vector3.zero
+        if UserInputService:IsKeyDown(Enum.KeyCode.W)         then dir = dir + cf.LookVector  end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S)         then dir = dir - cf.LookVector  end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A)         then dir = dir - cf.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D)         then dir = dir + cf.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space)     then dir = dir + Vector3.new(0,1,0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0,1,0) end
+        h.PlatformStand = true
+        flyBV.MaxForce  = Vector3.new(1e5, 1e5, 1e5)
+        flyBV.Velocity  = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
+        flyBG.CFrame    = cf
     end)
 end
 
 table.insert(cleanupTasks, stopFly)
+
+createPSlider("Fly Speed", 100, 500, 100, function(val) flySpeed = val end)
+
+-- Fly Keybind row
+local flyKeyFrame = Instance.new("Frame", playerPage)
+flyKeyFrame.Size = UDim2.new(1, 0, 0, 36)
+flyKeyFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 24); flyKeyFrame.BorderSizePixel = 0
+Instance.new("UICorner", flyKeyFrame).CornerRadius = UDim.new(0, 8)
+local flyKeyLabel = Instance.new("TextLabel", flyKeyFrame)
+flyKeyLabel.Size = UDim2.new(0.55, 0, 1, 0); flyKeyLabel.Position = UDim2.new(0, 12, 0, 0)
+flyKeyLabel.BackgroundTransparency = 1; flyKeyLabel.Font = Enum.Font.GothamSemibold; flyKeyLabel.TextSize = 13
+flyKeyLabel.TextColor3 = THEME_TEXT; flyKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
+flyKeyLabel.Text = "Fly Keybind"
+local flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
+flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70, 0.5, -12)
+flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
+flyKeyBtn.TextSize = 12; flyKeyBtn.TextColor3 = THEME_TEXT; flyKeyBtn.Text = "Q"
+flyKeyBtn.BorderSizePixel = 0; Instance.new("UICorner", flyKeyBtn).CornerRadius = UDim.new(0, 6)
+flyKeyBtn.MouseEnter:Connect(function() TweenService:Create(flyKeyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
+flyKeyBtn.MouseLeave:Connect(function() TweenService:Create(flyKeyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play() end)
+flyKeyBtn.MouseButton1Click:Connect(function()
+    if _G.VH and _G.VH.waitingForFlyKey then return end
+    if _G.VH then _G.VH.waitingForFlyKey = true end
+    flyKeyBtn.Text = "..."; flyKeyBtn.BackgroundColor3 = Color3.fromRGB(55, 90, 55)
+end)
+
+-- Fly ON/OFF toggle  (label = "Fly", ON by default)
+local flyEnabledToggleFrame = Instance.new("Frame", playerPage)
+flyEnabledToggleFrame.Size = UDim2.new(1, 0, 0, 36)
+flyEnabledToggleFrame.BackgroundColor3 = Color3.fromRGB(20, 16, 24); flyEnabledToggleFrame.BorderSizePixel = 0
+Instance.new("UICorner", flyEnabledToggleFrame).CornerRadius = UDim.new(0, 8)
+local flyEnabledLbl = Instance.new("TextLabel", flyEnabledToggleFrame)
+flyEnabledLbl.Size = UDim2.new(1, -54, 1, 0); flyEnabledLbl.Position = UDim2.new(0, 12, 0, 0)
+flyEnabledLbl.BackgroundTransparency = 1; flyEnabledLbl.Font = Enum.Font.GothamSemibold; flyEnabledLbl.TextSize = 13
+flyEnabledLbl.TextColor3 = THEME_TEXT; flyEnabledLbl.TextXAlignment = Enum.TextXAlignment.Left
+flyEnabledLbl.Text = "Fly"
+local flyEnabledTb = Instance.new("TextButton", flyEnabledToggleFrame)
+flyEnabledTb.Size = UDim2.new(0, 36, 0, 20); flyEnabledTb.Position = UDim2.new(1, -46, 0.5, -10)
+flyEnabledTb.BackgroundColor3 = Color3.fromRGB(80, 160, 80)   -- green = ON by default
+flyEnabledTb.Text = ""; flyEnabledTb.BorderSizePixel = 0
+Instance.new("UICorner", flyEnabledTb).CornerRadius = UDim.new(1, 0)
+local flyEnabledCircle = Instance.new("Frame", flyEnabledTb)
+flyEnabledCircle.Size = UDim2.new(0, 14, 0, 14)
+flyEnabledCircle.Position = UDim2.new(0, 20, 0.5, -7)  -- right = ON
+flyEnabledCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); flyEnabledCircle.BorderSizePixel = 0
+Instance.new("UICorner", flyEnabledCircle).CornerRadius = UDim.new(1, 0)
+flyEnabledTb.MouseButton1Click:Connect(function()
+    flyEnabled = not flyEnabled
+    TweenService:Create(flyEnabledTb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        BackgroundColor3 = flyEnabled and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(45, 38, 55)
+    }):Play()
+    TweenService:Create(flyEnabledCircle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        Position = UDim2.new(0, flyEnabled and 20 or 2, 0.5, -7)
+    }):Play()
+    if not flyEnabled and isFlyEnabled then stopFly() end
+end)
+
+local flyHint = Instance.new("TextLabel", playerPage)
+flyHint.Size = UDim2.new(1, 0, 0, 26); flyHint.BackgroundColor3 = Color3.fromRGB(18, 14, 22)
+flyHint.BorderSizePixel = 0; flyHint.Font = Enum.Font.Gotham; flyHint.TextSize = 11
+flyHint.TextColor3 = Color3.fromRGB(100, 90, 120); flyHint.TextWrapped = true
+flyHint.TextXAlignment = Enum.TextXAlignment.Left
+flyHint.Text = "  Press your Fly Key to toggle fly on/off"
+Instance.new("UICorner", flyHint).CornerRadius = UDim.new(0, 8)
+Instance.new("UIPadding", flyHint).PaddingLeft = UDim.new(0, 6)
 
 createPSep()
 createPSection("Character")
