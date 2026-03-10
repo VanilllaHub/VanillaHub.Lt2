@@ -683,34 +683,26 @@ local dayBtn, setDayVisual     = makeEnvToggle("Always Day", 2)
 local nightBtn, setNightVisual = makeEnvToggle("Always Night", 3)
 
 dayBtn.MouseButton1Click:Connect(function()
+    alwaysDayActive = not alwaysDayActive
+    setDayVisual(alwaysDayActive)
     if alwaysDayActive then
-        -- already on, turn it off
-        alwaysDayActive = false
-        setDayVisual(false)
-        stopEnvThread()
-    else
-        -- turn on day, force night off
-        alwaysDayActive = true
         alwaysNightActive = false
-        setDayVisual(true)
         setNightVisual(false)
         startEnvLoop(true)
+    else
+        stopEnvThread()
     end
 end)
 
 nightBtn.MouseButton1Click:Connect(function()
+    alwaysNightActive = not alwaysNightActive
+    setNightVisual(alwaysNightActive)
     if alwaysNightActive then
-        -- already on, turn it off
-        alwaysNightActive = false
-        setNightVisual(false)
-        stopEnvThread()
-    else
-        -- turn on night, force day off
-        alwaysNightActive = true
         alwaysDayActive = false
-        setNightVisual(true)
         setDayVisual(false)
         startEnvLoop(false)
+    else
+        stopEnvThread()
     end
 end)
 
