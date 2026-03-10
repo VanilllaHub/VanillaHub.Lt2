@@ -384,6 +384,7 @@ for _, name in ipairs(tabs) do
     btn.Text = name; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = Color3.fromRGB(105, 100, 125)
     btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.AutoButtonColor = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 14)
     local ai = Instance.new("Frame", btn)
@@ -574,7 +575,7 @@ local itemLayout = itemPage:FindFirstChildOfClass("UIListLayout")
 if itemLayout then itemLayout.Padding = UDim.new(0, 6) end
 
 local tpItemSpeed     = 0.3
-local tpMode          = "random"
+local tpMode          = "group"
 local tpStopFlag      = false
 local clickSelectEnabled  = false
 local lassoEnabled        = false
@@ -733,8 +734,10 @@ end
 
 local function deselectAll()
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
-        if v:FindFirstChild("Main") and v.Main:FindFirstChild("Selection") then v.Main.Selection:Destroy() end
-        if v:FindFirstChild("WoodSection") and v.WoodSection:FindFirstChild("Selection") then v.WoodSection.Selection:Destroy() end
+        if v:FindFirstChild("Owner") and (v:FindFirstChild("Main") or v:FindFirstChild("WoodSection")) then
+            if v:FindFirstChild("Main") and v.Main:FindFirstChild("Selection") then v.Main.Selection:Destroy() end
+            if v:FindFirstChild("WoodSection") and v.WoodSection:FindFirstChild("Selection") then v.WoodSection.Selection:Destroy() end
+        end
     end
 end
 table.insert(cleanupTasks, deselectAll)
@@ -742,23 +745,32 @@ table.insert(cleanupTasks, deselectAll)
 local function trySelect(target)
     if not target then return end
     local par = target.Parent; if not par then return end
-    if not par:FindFirstChild("Owner") then return end
-    if par:FindFirstChild("Main") then
-        local tPart = par.Main
-        if target == tPart or target:IsDescendantOf(tPart) then
-            if tPart:FindFirstChild("Selection") then deselectPart(tPart) else selectPart(tPart) end
-            return
-        end
+    -- Only allow selection of items that have an Owner value AND a Main or WoodSection part
+    -- This prevents vehicle seats and other non-item parts from being selected
+    local function isValidItemModel(model)
+        if not model then return false end
+        if not model:FindFirstChild("Owner") then return false end
+        if not (model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")) then return false end
+        return true
     end
-    if par:FindFirstChild("WoodSection") then
-        local tPart = par.WoodSection
-        if target == tPart or target:IsDescendantOf(tPart) then
-            if tPart:FindFirstChild("Selection") then deselectPart(tPart) else selectPart(tPart) end
-            return
+    if isValidItemModel(par) then
+        if par:FindFirstChild("Main") then
+            local tPart = par.Main
+            if target == tPart or target:IsDescendantOf(tPart) then
+                if tPart:FindFirstChild("Selection") then deselectPart(tPart) else selectPart(tPart) end
+                return
+            end
+        end
+        if par:FindFirstChild("WoodSection") then
+            local tPart = par.WoodSection
+            if target == tPart or target:IsDescendantOf(tPart) then
+                if tPart:FindFirstChild("Selection") then deselectPart(tPart) else selectPart(tPart) end
+                return
+            end
         end
     end
     local model = target:FindFirstAncestorOfClass("Model")
-    if model and model:FindFirstChild("Owner") then
+    if isValidItemModel(model) then
         if model:FindFirstChild("Main") then
             local p = model.Main
             if p:FindFirstChild("Selection") then deselectPart(p) else selectPart(p) end
@@ -772,10 +784,10 @@ end
 local function tryGroupSelect(target)
     if not target then return end
     local model = target.Parent
-    if not (model and model:FindFirstChild("Owner")) then
+    if not (model and model:FindFirstChild("Owner") and (model:FindFirstChild("Main") or model:FindFirstChild("WoodSection"))) then
         model = target:FindFirstAncestorOfClass("Model")
     end
-    if not (model and model:FindFirstChild("Owner")) then return end
+    if not (model and model:FindFirstChild("Owner") and (model:FindFirstChild("Main") or model:FindFirstChild("WoodSection"))) then return end
     local iv = model:FindFirstChild("ItemName")
     local groupName = iv and iv.Value or model.Name
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
@@ -866,13 +878,15 @@ UserInputService.InputChanged:Connect(function(input)
     if now - lastLassoCheck < 0.1 then return end
     lastLassoCheck = now
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
-        if v:FindFirstChild("Main") then
-            local sp, vis = Camera:WorldToScreenPoint(v.Main.CFrame.p)
-            if vis and is_in_lasso(Vector2.new(sp.X, sp.Y)) then selectPart(v.Main) end
-        end
-        if v:FindFirstChild("WoodSection") then
-            local sp, vis = Camera:WorldToScreenPoint(v.WoodSection.CFrame.p)
-            if vis and is_in_lasso(Vector2.new(sp.X, sp.Y)) then selectPart(v.WoodSection) end
+        if v:FindFirstChild("Owner") and (v:FindFirstChild("Main") or v:FindFirstChild("WoodSection")) then
+            if v:FindFirstChild("Main") then
+                local sp, vis = Camera:WorldToScreenPoint(v.Main.CFrame.p)
+                if vis and is_in_lasso(Vector2.new(sp.X, sp.Y)) then selectPart(v.Main) end
+            end
+            if v:FindFirstChild("WoodSection") then
+                local sp, vis = Camera:WorldToScreenPoint(v.WoodSection.CFrame.p)
+                if vis and is_in_lasso(Vector2.new(sp.X, sp.Y)) then selectPart(v.WoodSection) end
+            end
         end
     end
 end)
@@ -909,6 +923,8 @@ iToggleCard("Group Select", false, function(val)
     if val then clickSelectEnabled = false; lassoEnabled = false end
 end)
 
+iButton("Deselect All", function() deselectAll() end)
+
 iSep()
 
 -- ── SECTION 2: TELEPORT MODE ───────────────────────
@@ -921,7 +937,7 @@ modeDesc.BorderSizePixel = 0
 modeDesc.Font = Enum.Font.Gotham; modeDesc.TextSize = 12
 modeDesc.TextColor3 = Color3.fromRGB(115, 110, 140)
 modeDesc.TextWrapped = true; modeDesc.TextXAlignment = Enum.TextXAlignment.Left
-modeDesc.Text = "   Random: items teleported in shuffled order"
+modeDesc.Text = "   Group: one item type teleported at a time"
 Instance.new("UICorner", modeDesc).CornerRadius = UDim.new(0, 7)
 Instance.new("UIPadding", modeDesc).PaddingLeft = UDim.new(0, 4)
 
@@ -930,17 +946,17 @@ modeRow.Size = UDim2.new(1, -12, 0, 34); modeRow.BackgroundTransparency = 1
 
 local randomModeBtn = Instance.new("TextButton", modeRow)
 randomModeBtn.Size = UDim2.new(0.5, -4, 1, 0); randomModeBtn.Position = UDim2.new(0, 0, 0, 0)
-randomModeBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 78)
+randomModeBtn.BackgroundColor3 = BTN_COLOR
 randomModeBtn.Font = Enum.Font.GothamBold; randomModeBtn.TextSize = 13
-randomModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); randomModeBtn.Text = "Random"
+randomModeBtn.TextColor3 = Color3.fromRGB(155, 150, 175); randomModeBtn.Text = "Random"
 randomModeBtn.BorderSizePixel = 0
 Instance.new("UICorner", randomModeBtn).CornerRadius = UDim.new(0, 7)
 
 local groupModeBtn = Instance.new("TextButton", modeRow)
 groupModeBtn.Size = UDim2.new(0.5, -4, 1, 0); groupModeBtn.Position = UDim2.new(0.5, 4, 0, 0)
-groupModeBtn.BackgroundColor3 = BTN_COLOR
+groupModeBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 78)
 groupModeBtn.Font = Enum.Font.GothamBold; groupModeBtn.TextSize = 13
-groupModeBtn.TextColor3 = Color3.fromRGB(155, 150, 175); groupModeBtn.Text = "Group"
+groupModeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); groupModeBtn.Text = "Group"
 groupModeBtn.BorderSizePixel = 0
 Instance.new("UICorner", groupModeBtn).CornerRadius = UDim.new(0, 7)
 
@@ -1145,8 +1161,6 @@ local sellBtn = iButton("Sell Selected Items", function()
         end
     end)
 end)
-
-iButton("Deselect All", function() deselectAll() end)
 
 -- ════════════════════════════════════════════════════
 -- PLAYER TAB
@@ -1356,7 +1370,7 @@ flyToggleFrame.BorderSizePixel = 0; Instance.new("UICorner", flyToggleFrame).Cor
 local flyToggleLbl = Instance.new("TextLabel", flyToggleFrame)
 flyToggleLbl.Size = UDim2.new(1, -52, 1, 0); flyToggleLbl.Position = UDim2.new(0, 12, 0, 0)
 flyToggleLbl.BackgroundTransparency = 1; flyToggleLbl.Font = Enum.Font.GothamSemibold; flyToggleLbl.TextSize = 13
-flyToggleLbl.TextColor3 = THEME_TEXT; flyToggleLbl.TextXAlignment = Enum.TextXAlignment.Left; flyToggleLbl.Text = "Fly Enabled"
+flyToggleLbl.TextColor3 = THEME_TEXT; flyToggleLbl.TextXAlignment = Enum.TextXAlignment.Left; flyToggleLbl.Text = "Fly"
 local flyToggleBtn = Instance.new("TextButton", flyToggleFrame)
 flyToggleBtn.Size = UDim2.new(0, 32, 0, 17); flyToggleBtn.Position = UDim2.new(1, -44, 0.5, -8.5)
 flyToggleBtn.BackgroundColor3 = Color3.fromRGB(55, 175, 55) -- starts enabled
