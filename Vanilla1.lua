@@ -86,11 +86,12 @@ local RunService        = game:GetService("RunService")
 local TeleportService   = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Stats             = game:GetService("Stats")
+local Lighting          = game:GetService("Lighting")
 local player            = Players.LocalPlayer
 local mouse             = player:GetMouse()
 
 -- ════════════════════════════════════════════════════
--- THEME  (clean black / grey)
+-- THEME
 -- ════════════════════════════════════════════════════
 local THEME_TEXT   = Color3.fromRGB(220, 220, 220)
 local BTN_COLOR    = Color3.fromRGB(32, 32, 36)
@@ -469,7 +470,6 @@ end
 -- ════════════════════════════════════════════════════
 local homePage = pages["HomeTab"]
 
--- Chat bubble row
 local bubbleRow = Instance.new("Frame", homePage)
 bubbleRow.Size = UDim2.new(1, 0, 0, 100); bubbleRow.BackgroundTransparency = 1; bubbleRow.LayoutOrder = 1
 
@@ -547,14 +547,12 @@ rejoinBtn.MouseEnter:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.
 rejoinBtn.MouseLeave:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=Color3.fromRGB(16,16,20)}):Play() end)
 rejoinBtn.MouseButton1Click:Connect(function() pcall(function() TeleportService:Teleport(game.PlaceId,player) end) end)
 
--- Ping update every heartbeat
 local pingConn = RunService.Heartbeat:Connect(function()
     local ok, ping = pcall(function() return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
     pingLabel.Text = ok and ("Ping: "..ping.." ms") or "Ping: N/A"
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
 
--- Server uptime
 local _serverAgeSnapshot = 0
 local _loadClock = os.clock()
 pcall(function() _serverAgeSnapshot = workspace.DistributedGameTime end)
@@ -569,16 +567,10 @@ uptimeThread = task.spawn(function()
             local m = math.floor((secs % 3600) / 60)
             local s = secs % 60
             local upStr
-            if h > 0 then
-                upStr = string.format("%dh %02dm", h, m)
-            elseif m > 0 then
-                upStr = string.format("%dm %02ds", m, s)
-            else
-                upStr = string.format("%ds", s)
-            end
-            if uptimeLabel and uptimeLabel.Parent then
-                uptimeLabel.Text = "Server: " .. upStr
-            end
+            if h > 0 then upStr = string.format("%dh %02dm", h, m)
+            elseif m > 0 then upStr = string.format("%dm %02ds", m, s)
+            else upStr = string.format("%ds", s) end
+            if uptimeLabel and uptimeLabel.Parent then uptimeLabel.Text = "Server: " .. upStr end
         end)
         task.wait(1)
     end
@@ -587,15 +579,11 @@ table.insert(cleanupTasks, function()
     if uptimeThread then pcall(task.cancel, uptimeThread); uptimeThread = nil end
 end)
 
--- Executor detection (one-shot)
 task.delay(1, function()
     local execName = detectExecutor()
-    if execLabel and execLabel.Parent then
-        execLabel.Text = "Exec: " .. execName
-    end
+    if execLabel and execLabel.Parent then execLabel.Text = "Exec: " .. execName end
 end)
 
--- Lag detection — updates every 5 seconds
 local lagThread
 lagThread = task.spawn(function()
     while gui and gui.Parent do
@@ -603,14 +591,11 @@ lagThread = task.spawn(function()
         if lagLabel and lagLabel.Parent then
             if ok then
                 if ping > 250 then
-                    lagLabel.Text = "Bad Ping"
-                    lagLabel.TextColor3 = Color3.fromRGB(240, 100, 100)
+                    lagLabel.Text = "Bad Ping"; lagLabel.TextColor3 = Color3.fromRGB(240, 100, 100)
                 elseif ping > 120 then
-                    lagLabel.Text = "High Ping"
-                    lagLabel.TextColor3 = Color3.fromRGB(240, 200, 80)
+                    lagLabel.Text = "High Ping"; lagLabel.TextColor3 = Color3.fromRGB(240, 200, 80)
                 else
-                    lagLabel.Text = "Good Ping"
-                    lagLabel.TextColor3 = Color3.fromRGB(100, 210, 100)
+                    lagLabel.Text = "Good Ping"; lagLabel.TextColor3 = Color3.fromRGB(100, 210, 100)
                 end
             else
                 lagLabel.Text = "Lag: N/A"
@@ -621,6 +606,102 @@ lagThread = task.spawn(function()
 end)
 table.insert(cleanupTasks, function()
     if lagThread then pcall(task.cancel, lagThread); lagThread = nil end
+end)
+
+-- ════════════════════════════════════════════════════
+-- WORLD TAB — ENVIRONMENT
+-- ════════════════════════════════════════════════════
+local worldPage = pages["WorldTab"]
+
+local alwaysDayActive   = false
+local alwaysNightActive = false
+local envThread         = nil
+
+local function stopEnvThread()
+    if envThread then pcall(task.cancel, envThread); envThread = nil end
+end
+table.insert(cleanupTasks, stopEnvThread)
+
+local function startEnvLoop(isDay)
+    stopEnvThread()
+    envThread = task.spawn(function()
+        while true do
+            pcall(function()
+                Lighting.ClockTime = isDay and 14 or 2
+            end)
+            task.wait(0.5)
+        end
+    end)
+end
+
+local function wSectionLabel(text)
+    local w = Instance.new("Frame", worldPage)
+    w.Size = UDim2.new(1, 0, 0, 24); w.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel", w)
+    lbl.Size = UDim2.new(1, -4, 1, 0); lbl.Position = UDim2.new(0, 4, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
+    lbl.TextColor3 = SECTION_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = "  " .. string.upper(text)
+end
+
+local function wToggle(text, default)
+    local frame = Instance.new("Frame", worldPage)
+    frame.Size = UDim2.new(1, 0, 0, 36)
+    frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Text = text
+    lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
+    lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    local tb = Instance.new("TextButton", frame)
+    tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
+    tb.BackgroundColor3 = default and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    tb.Text = ""; tb.BorderSizePixel = 0
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
+    local circle = Instance.new("Frame", tb)
+    circle.Size = UDim2.new(0, 14, 0, 14)
+    circle.Position = UDim2.new(0, default and 20 or 2, 0.5, -7)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+    local function setState(val)
+        TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = val and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+        }):Play()
+        TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            Position = UDim2.new(0, val and 20 or 2, 0.5, -7)
+        }):Play()
+    end
+    return tb, setState
+end
+
+wSectionLabel("Environment")
+
+local dayBtn, setDayVisual     = wToggle("Always Day",   false)
+local nightBtn, setNightVisual = wToggle("Always Night", false)
+
+dayBtn.MouseButton1Click:Connect(function()
+    alwaysDayActive = not alwaysDayActive
+    setDayVisual(alwaysDayActive)
+    if alwaysDayActive then
+        alwaysNightActive = false
+        setNightVisual(false)
+        startEnvLoop(true)
+    else
+        stopEnvThread()
+    end
+end)
+
+nightBtn.MouseButton1Click:Connect(function()
+    alwaysNightActive = not alwaysNightActive
+    setNightVisual(alwaysNightActive)
+    if alwaysNightActive then
+        alwaysDayActive = false
+        setDayVisual(false)
+        startEnvLoop(false)
+    else
+        stopEnvThread()
+    end
 end)
 
 -- ════════════════════════════════════════════════════
@@ -672,11 +753,6 @@ for i, loc in ipairs(locations) do
         end
     end)
 end
-
--- ════════════════════════════════════════════════════
--- WORLD TAB
--- ════════════════════════════════════════════════════
-local worldPage = pages["WorldTab"]
 
 -- ════════════════════════════════════════════════════
 -- SHARED ITEM/DUPE STATE
@@ -1395,9 +1471,7 @@ local function startFly()
     flyBG.CFrame = workspace.CurrentCamera.CFrame
     flyConn = RunService.Heartbeat:Connect(function()
         if not isFlyActive then return end
-        if not (flyBV and flyBV.Parent) then
-            stopFly(); return
-        end
+        if not (flyBV and flyBV.Parent) then stopFly(); return end
         local ch  = player.Character; if not ch then stopFly(); return end
         local h   = ch:FindFirstChild("Humanoid"); if not h then stopFly(); return end
         local r   = ch:FindFirstChild("HumanoidRootPart"); if not r then stopFly(); return end
@@ -1534,7 +1608,6 @@ end)
 -- GLOBAL KEY LISTENER
 -- ════════════════════════════════════════════════════
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    -- Keybind capture must run even when a GUI element is focused (gameProcessed = true)
     if waitingForFlyKey then
         if input.UserInputType == Enum.UserInputType.Keyboard then
             currentFlyKey = input.KeyCode
