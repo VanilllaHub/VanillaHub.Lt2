@@ -609,7 +609,7 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- WORLD TAB — ENVIRONMENT (fixed: single section, mutually exclusive)
+-- WORLD TAB
 -- ════════════════════════════════════════════════════
 local worldPage = pages["WorldTab"]
 
@@ -634,19 +634,10 @@ local function startEnvLoop(isDay)
     end)
 end
 
--- Section label (built once, inline)
-local wEnvLabelFrame = Instance.new("Frame", worldPage)
-wEnvLabelFrame.Size = UDim2.new(1, 0, 0, 24); wEnvLabelFrame.BackgroundTransparency = 1
-local wEnvLbl = Instance.new("TextLabel", wEnvLabelFrame)
-wEnvLbl.Size = UDim2.new(1, -4, 1, 0); wEnvLbl.Position = UDim2.new(0, 4, 0, 0)
-wEnvLbl.BackgroundTransparency = 1; wEnvLbl.Font = Enum.Font.GothamBold; wEnvLbl.TextSize = 10
-wEnvLbl.TextColor3 = SECTION_TEXT; wEnvLbl.TextXAlignment = Enum.TextXAlignment.Left
-wEnvLbl.Text = "  ENVIRONMENT"
-
--- Single toggle builder scoped only to worldPage
-local function makeEnvToggle(labelText)
+local function makeEnvToggle(labelText, layoutOrder)
     local frame = Instance.new("Frame", worldPage)
     frame.Size = UDim2.new(1, 0, 0, 36)
+    frame.LayoutOrder = layoutOrder
     frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local lbl = Instance.new("TextLabel", frame)
@@ -675,31 +666,25 @@ local function makeEnvToggle(labelText)
     return tb, setState
 end
 
-local dayBtn, setDayVisual     = makeEnvToggle("Always Day")
-local nightBtn, setNightVisual = makeEnvToggle("Always Night")
+local dayBtn, setDayVisual     = makeEnvToggle("Always Day", 1)
+local nightBtn, setNightVisual = makeEnvToggle("Always Night", 2)
 
 dayBtn.MouseButton1Click:Connect(function()
     alwaysDayActive = not alwaysDayActive
+    alwaysNightActive = false
     setDayVisual(alwaysDayActive)
-    if alwaysDayActive then
-        alwaysNightActive = false
-        setNightVisual(false)
-        startEnvLoop(true)
-    else
-        stopEnvThread()
-    end
+    setNightVisual(false)
+    stopEnvThread()
+    if alwaysDayActive then startEnvLoop(true) end
 end)
 
 nightBtn.MouseButton1Click:Connect(function()
     alwaysNightActive = not alwaysNightActive
+    alwaysDayActive = false
     setNightVisual(alwaysNightActive)
-    if alwaysNightActive then
-        alwaysDayActive = false
-        setDayVisual(false)
-        startEnvLoop(false)
-    else
-        stopEnvThread()
-    end
+    setDayVisual(false)
+    stopEnvThread()
+    if alwaysNightActive then startEnvLoop(false) end
 end)
 
 -- ════════════════════════════════════════════════════
