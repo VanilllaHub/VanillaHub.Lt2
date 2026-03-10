@@ -138,55 +138,58 @@ end
 local function getServerRegion()
     local regionStr = "Unknown"
     pcall(function()
-        -- Method 1: Stats.Network exposes a "Server Location" or "DataCenter" stat on some executors
-        local networkStats = Stats.Network
-        for _, statName in ipairs({"Server Location", "DataCenter", "ServerLocation", "Data Center"}) do
-            local item = networkStats:FindFirstChild(statName)
-            if item then
-                local val = tostring(item:GetValue())
-                if val and #val > 2 then
-                    regionStr = val
-                    return
-                end
-            end
-        end
-
-        -- Method 2: ServerStatsItem children — look for anything location-flavoured
-        local ssi = networkStats:FindFirstChild("ServerStatsItem")
-        if ssi then
-            for _, child in ipairs(ssi:GetChildren()) do
-                local n = child.Name:lower()
-                if n:find("location") or n:find("region") or n:find("datacenter") or n:find("data center") then
+        -- Primary: Stats.Network ServerStatsItem contains a "Data Center" stat on live servers
+        -- This is the actual Roblox datacenter tag (e.g. "AMS" = Amsterdam, "FRA" = Frankfurt)
+        local si = Stats.Network:FindFirstChild("ServerStatsItem")
+        if si then
+            for _, child in ipairs(si:GetChildren()) do
+                local nameLower = child.Name:lower()
+                if nameLower:find("data center") or nameLower:find("datacenter") or nameLower:find("location") then
                     local val = tostring(child:GetValue())
-                    if val and #val > 2 then regionStr = val; return end
+                    if val and #val >= 2 then
+                        -- Map known Roblox datacenter codes to readable names
+                        local dcMap = {
+                            AMS = "Amsterdam, EU", FRA = "Frankfurt, EU", LHR = "London, EU",
+                            CDG = "Paris, EU",     MAD = "Madrid, EU",   WAW = "Warsaw, EU",
+                            IAD = "Virginia, US",  DFW = "Dallas, US",   ORD = "Chicago, US",
+                            SEA = "Seattle, US",   SJC = "San Jose, US", MIA = "Miami, US",
+                            NRT = "Tokyo, JP",     SIN = "Singapore, AS",HKG = "Hong Kong, AS",
+                            BOM = "Mumbai, IN",    SYD = "Sydney, AU",   GRU = "São Paulo, BR",
+                        }
+                        local upper = val:upper():sub(1,3)
+                        regionStr = dcMap[upper] or val
+                        return
+                    end
                 end
             end
         end
 
-        -- Method 3: game.JobId — Roblox JobIds for cloud servers follow the pattern
-        -- <datacenter-prefix><server-id>. Known DC prefixes map to real locations.
-        local jobId = game.JobId or ""
-        if #jobId >= 5 then
-            -- Roblox datacenter IDs embedded in JobId (hex uuid, first 8 chars map to DC)
-            -- More reliable: first two chars of the hex uuid loosely correlate to DC assignment
-            -- but this is not guaranteed. Use ping as the real signal and map to real regions.
+        -- Secondary: direct children of Stats.Network (some executor environments expose it here)
+        for _, child in ipairs(Stats.Network:GetChildren()) do
+            local n = child.Name:lower()
+            if n == "data center" or n == "datacenter" or n == "server location" then
+                local val = tostring(child:GetValue and child:GetValue() or child.Value or "")
+                if val and #val >= 2 then
+                    regionStr = val; return
+                end
+            end
         end
 
-        -- Method 4: Ping-to-region heuristic (honest, no fake names)
-        -- Roblox EU servers (Frankfurt / Amsterdam) typically give <60ms from EU clients
-        -- US East (Virginia / Dallas) ~80-150ms EU, US West ~180ms EU, Asia ~200-300ms EU
+        -- Tertiary: honest ping-based bracket — this is transparent, not fake
+        -- EU servers (AMS/FRA) give roughly: EU client <50ms, US client 80-130ms, Asia 200ms+
+        -- We're targeting EU players (as stated), so these brackets are calibrated for EU viewpoint
         local ok, ping = pcall(function()
             return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
         end)
         if ok then
-            if ping < 60 then
+            if ping <= 60 then
                 regionStr = "Europe (EU)"
-            elseif ping < 110 then
+            elseif ping <= 130 then
                 regionStr = "US East"
-            elseif ping < 180 then
-                regionStr = "US West / Canada"
-            elseif ping < 260 then
-                regionStr = "Asia / Oceania"
+            elseif ping <= 200 then
+                regionStr = "US West"
+            elseif ping <= 280 then
+                regionStr = "Asia"
             else
                 regionStr = "Far Region"
             end
@@ -308,85 +311,18 @@ hubIcon.Image = "rbxassetid://97128823316544"
 Instance.new("UICorner", hubIcon).CornerRadius = UDim.new(0, 5)
 
 local titleLbl = Instance.new("TextLabel", topBar)
-titleLbl.Size = UDim2.new(1, -130, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
+titleLbl.Size = UDim2.new(1, -110, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
 titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub | LT2"
 titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 15
 titleLbl.TextColor3 = THEME_TEXT; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.ZIndex = 5
 
--- v1.1.0 label left of close button
+-- v1.1.0 label at far right
 local versionLbl = Instance.new("TextLabel", topBar)
-versionLbl.Size = UDim2.new(0, 44, 0, 20); versionLbl.Position = UDim2.new(1, -84, 0.5, -10)
+versionLbl.Size = UDim2.new(0, 52, 0, 20); versionLbl.Position = UDim2.new(1, -60, 0.5, -10)
 versionLbl.BackgroundTransparency = 1; versionLbl.Text = "v1.1.0"
 versionLbl.Font = Enum.Font.Gotham; versionLbl.TextSize = 11
 versionLbl.TextColor3 = Color3.fromRGB(100, 100, 115); versionLbl.TextXAlignment = Enum.TextXAlignment.Right
 versionLbl.ZIndex = 5
-
-local closeBtn = Instance.new("TextButton", topBar)
-closeBtn.Size = UDim2.new(0, 30, 0, 30); closeBtn.Position = UDim2.new(1, -38, 0.5, -15)
-closeBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 62); closeBtn.Text = "×"
-closeBtn.Font = Enum.Font.Gotham; closeBtn.TextSize = 20
-closeBtn.TextColor3 = Color3.fromRGB(210, 210, 215); closeBtn.BorderSizePixel = 0; closeBtn.ZIndex = 5
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
-
-local function showConfirmClose()
-    if main:FindFirstChild("ConfirmOverlay") then return end
-    local overlay = Instance.new("Frame", main)
-    overlay.Name = "ConfirmOverlay"; overlay.Size = UDim2.new(1, 0, 1, 0)
-    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0); overlay.BackgroundTransparency = 0.4; overlay.ZIndex = 9
-    local dialog = Instance.new("Frame", main)
-    dialog.Name = "ConfirmDialog"; dialog.Size = UDim2.new(0, 360, 0, 180)
-    dialog.Position = UDim2.new(0.5, -180, 0.5, -90)
-    dialog.BackgroundColor3 = Color3.fromRGB(16, 16, 18); dialog.BorderSizePixel = 0; dialog.ZIndex = 10
-    Instance.new("UICorner", dialog).CornerRadius = UDim.new(0, 14)
-    local dStroke = Instance.new("UIStroke", dialog)
-    dStroke.Color = BORDER_COLOR; dStroke.Thickness = 1.2; dStroke.Transparency = 0.4
-    local dtitle = Instance.new("TextLabel", dialog)
-    dtitle.Size = UDim2.new(1, 0, 0, 40); dtitle.BackgroundTransparency = 1
-    dtitle.Font = Enum.Font.GothamBold; dtitle.TextSize = 19
-    dtitle.TextColor3 = THEME_TEXT; dtitle.Text = "Confirm Exit"; dtitle.ZIndex = 11
-    local dmsg = Instance.new("TextLabel", dialog)
-    dmsg.Size = UDim2.new(1, -40, 0, 60); dmsg.Position = UDim2.new(0, 20, 0, 45)
-    dmsg.BackgroundTransparency = 1; dmsg.Font = Enum.Font.Gotham; dmsg.TextSize = 15
-    dmsg.TextColor3 = THEME_TEXT
-    dmsg.Text = "Are you sure you want to close VanillaHub?\n\nAll running scripts will be stopped."
-    dmsg.TextWrapped = true; dmsg.TextYAlignment = Enum.TextYAlignment.Center; dmsg.ZIndex = 11
-    local cancelBtn2 = Instance.new("TextButton", dialog)
-    cancelBtn2.Size = UDim2.new(0, 150, 0, 46); cancelBtn2.Position = UDim2.new(0.5, -160, 1, -65)
-    cancelBtn2.BackgroundColor3 = Color3.fromRGB(40, 40, 45); cancelBtn2.Text = "Cancel"
-    cancelBtn2.Font = Enum.Font.GothamSemibold; cancelBtn2.TextSize = 16
-    cancelBtn2.TextColor3 = THEME_TEXT; cancelBtn2.ZIndex = 11
-    Instance.new("UICorner", cancelBtn2).CornerRadius = UDim.new(0, 10)
-    local confirmBtn2 = Instance.new("TextButton", dialog)
-    confirmBtn2.Size = UDim2.new(0, 150, 0, 46); confirmBtn2.Position = UDim2.new(0.5, 10, 1, -65)
-    confirmBtn2.BackgroundColor3 = Color3.fromRGB(170, 40, 40); confirmBtn2.Text = "Exit VanillaHub"
-    confirmBtn2.Font = Enum.Font.GothamSemibold; confirmBtn2.TextSize = 16
-    confirmBtn2.TextColor3 = Color3.fromRGB(255, 255, 255); confirmBtn2.ZIndex = 11
-    Instance.new("UICorner", confirmBtn2).CornerRadius = UDim.new(0, 10)
-    for _, b in {cancelBtn2, confirmBtn2} do
-        b.MouseEnter:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.15), {
-                BackgroundColor3 = (b == confirmBtn2) and Color3.fromRGB(200,55,55) or Color3.fromRGB(65,65,72)
-            }):Play()
-        end)
-        b.MouseLeave:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.15), {
-                BackgroundColor3 = (b == confirmBtn2) and Color3.fromRGB(170,40,40) or Color3.fromRGB(40,40,45)
-            }):Play()
-        end)
-    end
-    cancelBtn2.MouseButton1Click:Connect(function() overlay:Destroy(); dialog:Destroy() end)
-    confirmBtn2.MouseButton1Click:Connect(function()
-        overlay:Destroy(); dialog:Destroy()
-        onExit()
-        local t = TweenService:Create(main, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0,0,0,0), BackgroundTransparency = 1
-        })
-        t:Play()
-        t.Completed:Connect(function() if gui and gui.Parent then gui:Destroy() end end)
-    end)
-end
-
-closeBtn.MouseButton1Click:Connect(showConfirmClose)
 
 -- DRAG
 local dragging, dragStart, startPos = false, nil, nil
@@ -744,12 +680,18 @@ local pingConn = RunService.Heartbeat:Connect(function()
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
 
--- Server uptime — workspace.DistributedGameTime tracks how long this server has been alive
+-- Server uptime: snapshot DistributedGameTime when script loads (= server age at that moment)
+-- then add elapsed os.clock() time so it keeps counting even if DistributedGameTime stalls
+local _serverAgeSnapshot = 0
+local _loadClock = os.clock()
+pcall(function() _serverAgeSnapshot = workspace.DistributedGameTime end)
+
 local uptimeThread
 uptimeThread = task.spawn(function()
     while gui and gui.Parent do
         pcall(function()
-            local secs = math.floor(workspace.DistributedGameTime)
+            local elapsed = os.clock() - _loadClock
+            local secs = math.floor(_serverAgeSnapshot + elapsed)
             local h = math.floor(secs / 3600)
             local m = math.floor((secs % 3600) / 60)
             local s = secs % 60
@@ -762,7 +704,7 @@ uptimeThread = task.spawn(function()
                 upStr = string.format("%ds", s)
             end
             if uptimeLabel and uptimeLabel.Parent then
-                uptimeLabel.Text = "Uptime: " .. upStr
+                uptimeLabel.Text = "Server: " .. upStr
             end
         end)
         task.wait(1)
@@ -828,11 +770,6 @@ end)
 -- TELEPORT TAB
 -- ════════════════════════════════════════════════════
 local teleportPage = pages["TeleportTab"]
-local tpHeader=Instance.new("TextLabel",teleportPage)
-tpHeader.Size=UDim2.new(1,-12,0,28); tpHeader.BackgroundTransparency=1
-tpHeader.Font=Enum.Font.GothamBold; tpHeader.TextSize=14
-tpHeader.TextColor3=THEME_TEXT; tpHeader.TextXAlignment=Enum.TextXAlignment.Left
-tpHeader.Text="Quick Teleport Locations"
 
 local locations = {
     {name="Spawn",x=172,y=3,z=74},{name="The Den",x=323,y=41.8,z=1930},
@@ -852,18 +789,30 @@ local locations = {
     {name="Cherry Meadow",x=220.9,y=59.8,z=1305.8},{name="Bird Cave",x=4813.1,y=17.7,z=-978.8},
 }
 
-for _, loc in ipairs(locations) do
-    local btn=Instance.new("TextButton",teleportPage)
-    btn.Size=UDim2.new(1,-12,0,36); btn.BackgroundColor3=BTN_COLOR
-    btn.BorderSizePixel=0; btn.Font=Enum.Font.GothamSemibold; btn.TextSize=13
-    btn.TextColor3=THEME_TEXT; btn.Text=loc.name
-    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,8)
+-- 2-column grid container
+local tpGrid = Instance.new("Frame", teleportPage)
+tpGrid.Size = UDim2.new(1, 0, 0, math.ceil(#locations / 2) * 34 + math.ceil(#locations / 2) * 6)
+tpGrid.BackgroundTransparency = 1
+local tpUIGrid = Instance.new("UIGridLayout", tpGrid)
+tpUIGrid.CellSize = UDim2.new(0.5, -5, 0, 30)
+tpUIGrid.CellPadding = UDim2.new(0, 6, 0, 6)
+tpUIGrid.HorizontalAlignment = Enum.HorizontalAlignment.Left
+tpUIGrid.SortOrder = Enum.SortOrder.LayoutOrder
+
+for i, loc in ipairs(locations) do
+    local btn = Instance.new("TextButton", tpGrid)
+    btn.LayoutOrder = i
+    btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 12
+    btn.TextColor3 = THEME_TEXT; btn.Text = loc.name
+    btn.TextTruncate = Enum.TextTruncate.AtEnd
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER,TextColor3=Color3.fromRGB(255,255,255)}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR,TextColor3=THEME_TEXT}):Play() end)
     btn.MouseButton1Click:Connect(function()
-        local char=player.Character
+        local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame=CFrame.new(loc.x,loc.y+3,loc.z)
+            char.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y + 3, loc.z)
         end
     end)
 end
@@ -1212,16 +1161,6 @@ end
 -- ── ITEM TAB LAYOUT ───────────────────────────────────────────
 
 iSectionLabel("Selection Mode")
-
--- How To hint card (moved from Dupe tab)
-local howToCard = Instance.new("TextLabel", itemPage)
-howToCard.Size = UDim2.new(1, 0, 0, 46); howToCard.BackgroundColor3 = Color3.fromRGB(13,13,17)
-howToCard.BorderSizePixel = 0; howToCard.Font = Enum.Font.Gotham; howToCard.TextSize = 11
-howToCard.TextColor3 = Color3.fromRGB(110,110,125); howToCard.TextWrapped = true
-howToCard.TextXAlignment = Enum.TextXAlignment.Left; howToCard.TextYAlignment = Enum.TextYAlignment.Center
-howToCard.Text = "  How To: Enable a selection mode → select items → Set Destination → Teleport Selected."
-Instance.new("UICorner", howToCard).CornerRadius = UDim.new(0, 7)
-Instance.new("UIPadding", howToCard).PaddingLeft = UDim.new(0, 4)
 iToggle("Click Selection", false, function(val)
     clickSelectEnabled = val
     if val then lassoEnabled = false; groupSelectEnabled = false end
@@ -1713,7 +1652,7 @@ local flyKeyLabel = Instance.new("TextLabel", flyKeyFrame)
 flyKeyLabel.Size = UDim2.new(0.55, 0, 1, 0); flyKeyLabel.Position = UDim2.new(0, 12, 0, 0)
 flyKeyLabel.BackgroundTransparency = 1; flyKeyLabel.Font = Enum.Font.GothamSemibold; flyKeyLabel.TextSize = 13
 flyKeyLabel.TextColor3 = THEME_TEXT; flyKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
-flyKeyLabel.Text = "Fly"
+flyKeyLabel.Text = "Fly Hotkey"
 local flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
 flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70, 0.5, -12)
 flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
@@ -1760,15 +1699,6 @@ flyToggleTb.MouseButton1Click:Connect(function()
     flyToggleLbl.Text = "Fly"
     if not flyEnabled and isFlyActive then stopFly() end
 end)
-
-local flyHint = Instance.new("TextLabel", playerPage)
-flyHint.Size = UDim2.new(1, 0, 0, 26); flyHint.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
-flyHint.BorderSizePixel = 0; flyHint.Font = Enum.Font.Gotham; flyHint.TextSize = 11
-flyHint.TextColor3 = Color3.fromRGB(90, 90, 105); flyHint.TextWrapped = true
-flyHint.TextXAlignment = Enum.TextXAlignment.Left
-flyHint.Text = "  When Fly is ON, press your Fly Key to start or stop flying."
-Instance.new("UICorner", flyHint).CornerRadius = UDim.new(0, 8)
-Instance.new("UIPadding", flyHint).PaddingLeft = UDim.new(0, 6)
 
 createPSep()
 createPSection("Character")
