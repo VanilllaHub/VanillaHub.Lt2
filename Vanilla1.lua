@@ -634,58 +634,70 @@ local function startEnvLoop(isDay)
     end)
 end
 
-local function makeEnvToggle(labelText, layoutOrder)
-    local frame = Instance.new("Frame", worldPage)
-    frame.Size = UDim2.new(1, 0, 0, 36)
-    frame.LayoutOrder = layoutOrder
-    frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
-    lbl.BackgroundTransparency = 1; lbl.Text = labelText
-    lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
-    lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
-    local tb = Instance.new("TextButton", frame)
-    tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
-    tb.BackgroundColor3 = Color3.fromRGB(38, 38, 45)
-    tb.Text = ""; tb.BorderSizePixel = 0
-    Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
-    local circle = Instance.new("Frame", tb)
-    circle.Size = UDim2.new(0, 14, 0, 14)
-    circle.Position = UDim2.new(0, 2, 0.5, -7)
-    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
-    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
-    local function setState(val)
-        TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            BackgroundColor3 = val and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(38, 38, 45)
-        }):Play()
-        TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            Position = UDim2.new(0, val and 20 or 2, 0.5, -7)
+-- Section label
+local envSectionW = Instance.new("Frame", worldPage)
+envSectionW.Size = UDim2.new(1, 0, 0, 24); envSectionW.BackgroundTransparency = 1
+local envSectionLbl = Instance.new("TextLabel", envSectionW)
+envSectionLbl.Size = UDim2.new(1, -4, 1, 0); envSectionLbl.Position = UDim2.new(0, 4, 0, 0)
+envSectionLbl.BackgroundTransparency = 1; envSectionLbl.Font = Enum.Font.GothamBold; envSectionLbl.TextSize = 10
+envSectionLbl.TextColor3 = SECTION_TEXT; envSectionLbl.TextXAlignment = Enum.TextXAlignment.Left
+envSectionLbl.Text = "  ENVIRONMENT"
+
+-- Mode button row
+local envModeRow = Instance.new("Frame", worldPage)
+envModeRow.Size = UDim2.new(1, 0, 0, 30); envModeRow.BackgroundTransparency = 1
+
+local envModeButtons = {}
+local envModeNames = {"Always Day", "Always Night"}
+local activeEnvMode = nil  -- nil = neither active
+
+local function updateEnvModeButtons(active)
+    for _, mb in ipairs(envModeButtons) do
+        local isActive = mb.Text == active
+        TweenService:Create(mb, TweenInfo.new(0.18), {
+            BackgroundColor3 = isActive and ACCENT or BTN_COLOR,
+            TextColor3 = isActive and Color3.fromRGB(255, 255, 255) or THEME_TEXT
         }):Play()
     end
-    return tb, setState
 end
 
-local dayBtn, setDayVisual     = makeEnvToggle("Always Day", 1)
-local nightBtn, setNightVisual = makeEnvToggle("Always Night", 2)
+for i, mName in ipairs(envModeNames) do
+    local mb = Instance.new("TextButton", envModeRow)
+    mb.Size = UDim2.new(0.5, -4, 1, 0)
+    mb.Position = UDim2.new((i - 1) * 0.5, i == 1 and 0 or 4, 0, 0)
+    mb.BackgroundColor3 = BTN_COLOR; mb.Font = Enum.Font.GothamSemibold; mb.TextSize = 12
+    mb.TextColor3 = THEME_TEXT; mb.Text = mName; mb.BorderSizePixel = 0
+    Instance.new("UICorner", mb).CornerRadius = UDim.new(0, 7)
+    mb.MouseEnter:Connect(function()
+        if activeEnvMode ~= mName then
+            TweenService:Create(mb, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play()
+        end
+    end)
+    mb.MouseLeave:Connect(function()
+        if activeEnvMode ~= mName then
+            TweenService:Create(mb, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play()
+        end
+    end)
+    table.insert(envModeButtons, mb)
+    mb.MouseButton1Click:Connect(function()
+        if activeEnvMode == mName then
+            -- clicking active button turns it off
+            activeEnvMode = nil
+            alwaysDayActive = false
+            alwaysNightActive = false
+            stopEnvThread()
+            updateEnvModeButtons(nil)
+        else
+            activeEnvMode = mName
+            alwaysDayActive   = (mName == "Always Day")
+            alwaysNightActive = (mName == "Always Night")
+            startEnvLoop(alwaysDayActive)
+            updateEnvModeButtons(mName)
+        end
+    end)
+end
 
-dayBtn.MouseButton1Click:Connect(function()
-    alwaysDayActive = not alwaysDayActive
-    alwaysNightActive = false
-    setDayVisual(alwaysDayActive)
-    setNightVisual(false)
-    stopEnvThread()
-    if alwaysDayActive then startEnvLoop(true) end
-end)
-
-nightBtn.MouseButton1Click:Connect(function()
-    alwaysNightActive = not alwaysNightActive
-    alwaysDayActive = false
-    setNightVisual(alwaysNightActive)
-    setDayVisual(false)
-    stopEnvThread()
-    if alwaysNightActive then startEnvLoop(false) end
-end)
+updateEnvModeButtons(nil)
 
 -- ════════════════════════════════════════════════════
 -- TELEPORT TAB
