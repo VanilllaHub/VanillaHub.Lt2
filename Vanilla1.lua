@@ -283,6 +283,8 @@ side.Size = UDim2.new(0, 154, 1, -39); side.Position = UDim2.new(0, 0, 0, 39)
 side.BackgroundColor3 = Color3.fromRGB(11, 11, 15); side.BorderSizePixel = 0
 side.ScrollBarThickness = 3; side.ScrollBarImageColor3 = Color3.fromRGB(45, 45, 60)
 side.CanvasSize = UDim2.new(0, 0, 0, 0)
+side.ScrollingDirection = Enum.ScrollingDirection.Y
+side.ElasticBehavior = Enum.ElasticBehavior.Never
 local sideLayout = Instance.new("UIListLayout", side)
 sideLayout.Padding = UDim.new(0, 3); sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -360,46 +362,62 @@ local activeTabButton = nil
 local function switchTab(targetName)
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
-        TweenService:Create(activeTabButton, TweenInfo.new(0.2), {
-            BackgroundColor3 = Color3.fromRGB(15, 15, 19), TextColor3 = Color3.fromRGB(105, 100, 125)
+        TweenService:Create(activeTabButton, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1,
+            TextColor3 = Color3.fromRGB(100, 95, 122)
         }):Play()
         local ai = activeTabButton:FindFirstChild("AI")
-        if ai then TweenService:Create(ai, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play() end
+        if ai then TweenService:Create(ai, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {BackgroundTransparency = 1}):Play() end
     end
     local btn = side:FindFirstChild(targetName:gsub("Tab",""))
     if btn then
         activeTabButton = btn
-        TweenService:Create(btn, TweenInfo.new(0.2), {
-            BackgroundColor3 = Color3.fromRGB(28, 27, 36), TextColor3 = THEME_TEXT
+        TweenService:Create(btn, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = Color3.fromRGB(32, 30, 42), BackgroundTransparency = 0,
+            TextColor3 = THEME_TEXT
         }):Play()
         local ai = btn:FindFirstChild("AI")
-        if ai then TweenService:Create(ai, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play() end
+        if ai then TweenService:Create(ai, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {BackgroundTransparency = 0}):Play() end
     end
 end
 
+-- Blank image used to suppress Roblox's default white selection highlight on buttons
+local blankImg = Instance.new("ImageLabel")
+blankImg.BackgroundTransparency = 1; blankImg.Image = ""; blankImg.Size = UDim2.new(1,0,1,0)
+
 for _, name in ipairs(tabs) do
     local btn = Instance.new("TextButton", side)
-    btn.Name = name; btn.Size = UDim2.new(1, -12, 0, 32)
-    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 19); btn.BorderSizePixel = 0
+    btn.Name = name; btn.Size = UDim2.new(1, -14, 0, 31)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    btn.BackgroundTransparency = 1
+    btn.BorderSizePixel = 0
     btn.Text = name; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(105, 100, 125)
+    btn.TextColor3 = Color3.fromRGB(100, 95, 122)
     btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.AutoButtonColor = false
+    btn.SelectionImageObject = blankImg
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 14)
+    -- Active indicator pill
     local ai = Instance.new("Frame", btn)
-    ai.Name = "AI"; ai.Size = UDim2.new(0, 3, 0.55, 0)
-    ai.Position = UDim2.new(0, 0, 0.225, 0)
+    ai.Name = "AI"; ai.Size = UDim2.new(0, 3, 0.5, 0)
+    ai.Position = UDim2.new(0, 0, 0.25, 0)
     ai.BackgroundColor3 = THEME_TEXT; ai.BorderSizePixel = 0; ai.BackgroundTransparency = 1
     Instance.new("UICorner", ai).CornerRadius = UDim.new(1, 0)
     btn.MouseEnter:Connect(function()
         if activeTabButton ~= btn then
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(22, 21, 28), TextColor3 = Color3.fromRGB(155, 148, 175)}):Play()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = Color3.fromRGB(24, 22, 32), BackgroundTransparency = 0,
+                TextColor3 = Color3.fromRGB(150, 143, 170)
+            }):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= btn then
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(15, 15, 19), TextColor3 = Color3.fromRGB(105, 100, 125)}):Play()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1,
+                TextColor3 = Color3.fromRGB(100, 95, 122)
+            }):Play()
         end
     end)
     btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
@@ -803,6 +821,16 @@ local function tryGroupSelect(target)
 end
 
 -- ── LASSO — throttled, no RenderStepped loop ────────
+
+-- Forward-declare fly variables so InputBegan handler (below) can reference them
+-- Actual values are set properly when the Player tab builds its UI
+local flyEnabled    = true
+local isFlyEnabled  = false
+local currentFlyKey = Enum.KeyCode.Q
+local flyBV, flyBG, flyConn
+local flyKeyBtn     -- forward ref, assigned in Player tab
+local flyHint       -- forward ref, assigned in Player tab
+local stopFly, startFly  -- forward ref functions
 local lassoFrame = Instance.new("Frame", gui)
 lassoFrame.Name = "VHLassoRect"
 lassoFrame.BackgroundColor3 = Color3.fromRGB(55, 110, 195)
@@ -849,7 +877,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         return
     end
     if _G.VH and not _G.VH.waitingForFlyKey and input.KeyCode == currentFlyKey then
-        if _G.VH and _G.VH.flyEnabled then
+        if flyEnabled then
             if isFlyEnabled then stopFly() else startFly() end
         end
         return
@@ -1042,14 +1070,6 @@ iSep()
 -- ── SECTION 5: ACTIONS ─────────────────────────────
 iSectionLabel("Actions")
 
--- Stop button (starts hidden)
-local stopBtn = iButton("Stop Teleport", Color3.fromRGB(120, 38, 38), function()
-    tpStopFlag = true
-end)
-stopBtn.Visible = false
-stopBtn.MouseEnter:Connect(function() TweenService:Create(stopBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(165, 52, 52)}):Play() end)
-stopBtn.MouseLeave:Connect(function() TweenService:Create(stopBtn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(120, 38, 38)}):Play() end)
-
 -- Helpers
 local function getSelectedParts()
     local result = {}
@@ -1111,11 +1131,27 @@ local function teleportItemPart(part, destCF)
     return not tpStopFlag
 end
 
+-- tpToDestBtn declared forward so runTeleport can reference it
+local tpToDestBtn
+local isTeleporting = false
+
+local function setTpBtnRunning(running)
+    isTeleporting = running
+    if tpToDestBtn then
+        if running then
+            tpToDestBtn.Text = "Stop Teleporting"
+            TweenService:Create(tpToDestBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(120, 38, 38)}):Play()
+        else
+            tpToDestBtn.Text = "Teleport Selected"
+            TweenService:Create(tpToDestBtn, TweenInfo.new(0.2), {BackgroundColor3 = BTN_COLOR}):Play()
+        end
+    end
+end
+
 local function runTeleport(destCF, parts)
     tpStopFlag = false
-    stopBtn.Visible = true
+    setTpBtnRunning(true)
     if tpMode == "random" then
-        -- Truly shuffle ALL selected parts regardless of name
         local shuffled = shuffleTable(parts)
         for _, part in ipairs(shuffled) do
             if not teleportItemPart(part, destCF) then break end
@@ -1130,10 +1166,14 @@ local function runTeleport(destCF, parts)
         end
     end
     tpStopFlag = false
-    stopBtn.Visible = false
+    setTpBtnRunning(false)
 end
 
-local tpToDestBtn = iButton("Teleport to Destination", function()
+tpToDestBtn = iButton("Teleport Selected", function()
+    if isTeleporting then
+        tpStopFlag = true
+        return
+    end
     if not tpCircle then return end
     local destCF = tpCircle.CFrame
     local parts = getSelectedParts()
@@ -1146,6 +1186,17 @@ local tpToDestBtn = iButton("Teleport to Destination", function()
             player.Character.HumanoidRootPart.CFrame = oldPos
         end
     end)
+end)
+-- Override hover colors to also reflect stop state properly
+tpToDestBtn.MouseEnter:Connect(function()
+    TweenService:Create(tpToDestBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = isTeleporting and Color3.fromRGB(155, 52, 52) or BTN_HOVER
+    }):Play()
+end)
+tpToDestBtn.MouseLeave:Connect(function()
+    TweenService:Create(tpToDestBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = isTeleporting and Color3.fromRGB(120, 38, 38) or BTN_COLOR
+    }):Play()
 end)
 
 local sellBtn = iButton("Sell Selected Items", function()
@@ -1300,8 +1351,8 @@ local flyKeyLabel = Instance.new("TextLabel", flyKeyFrame)
 flyKeyLabel.Size = UDim2.new(0.6, 0, 1, 0); flyKeyLabel.Position = UDim2.new(0, 12, 0, 0)
 flyKeyLabel.BackgroundTransparency = 1; flyKeyLabel.Font = Enum.Font.GothamSemibold; flyKeyLabel.TextSize = 13
 flyKeyLabel.TextColor3 = THEME_TEXT; flyKeyLabel.TextXAlignment = Enum.TextXAlignment.Left; flyKeyLabel.Text = "Fly Key"
-local currentFlyKey = Enum.KeyCode.Q
-local flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
+-- currentFlyKey already forward-declared above, just use it here
+flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
 flyKeyBtn.Size = UDim2.new(0, 56, 0, 22); flyKeyBtn.Position = UDim2.new(1, -66, 0.5, -11)
 flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
 flyKeyBtn.TextSize = 12; flyKeyBtn.TextColor3 = THEME_TEXT; flyKeyBtn.Text = "Q"
@@ -1314,11 +1365,8 @@ flyKeyBtn.MouseButton1Click:Connect(function()
     flyKeyBtn.Text = "..."; flyKeyBtn.BackgroundColor3 = Color3.fromRGB(55, 90, 55)
 end)
 
--- Fly enable/disable toggle (enabled by default)
-local isFlyEnabled = false
-local flyBV, flyBG, flyConn
-
-local function stopFly()
+-- Fly functions (assigned to forward-declared locals)
+stopFly = function()
     isFlyEnabled = false
     if _G.VH then _G.VH.isFlyEnabled = false end
     if flyConn then flyConn:Disconnect(); flyConn = nil end
@@ -1328,7 +1376,7 @@ local function stopFly()
     if char and char:FindFirstChild("Humanoid") then char.Humanoid.PlatformStand = false end
 end
 
-local function startFly()
+startFly = function()
     stopFly(); isFlyEnabled = true
     if _G.VH then _G.VH.isFlyEnabled = true end
     local char = player.Character; if not char then isFlyEnabled = false; return end
@@ -1361,9 +1409,7 @@ end
 
 table.insert(cleanupTasks, stopFly)
 
--- Fly toggle switch (enabled by default = true)
-local flyEnabled = true
-
+-- Fly toggle switch (enabled by default = true, flyEnabled already = true from forward decl)
 local flyToggleFrame = Instance.new("Frame", playerPage)
 flyToggleFrame.Size = UDim2.new(1, -12, 0, 34); flyToggleFrame.BackgroundColor3 = CARD_BG
 flyToggleFrame.BorderSizePixel = 0; Instance.new("UICorner", flyToggleFrame).CornerRadius = UDim.new(0, 7)
@@ -1392,7 +1438,7 @@ flyToggleBtn.MouseButton1Click:Connect(function()
     if not flyEnabled and isFlyEnabled then stopFly() end
 end)
 
-local flyHint = Instance.new("TextLabel", playerPage)
+flyHint = Instance.new("TextLabel", playerPage)
 flyHint.Size = UDim2.new(1, -12, 0, 20); flyHint.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
 flyHint.BorderSizePixel = 0; flyHint.Font = Enum.Font.Gotham; flyHint.TextSize = 11
 flyHint.TextColor3 = Color3.fromRGB(95, 90, 120); flyHint.TextWrapped = true
