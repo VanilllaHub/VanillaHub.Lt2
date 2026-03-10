@@ -634,7 +634,7 @@ local function startEnvLoop(isDay)
     end)
 end
 
-local function makeEnvToggle(labelText, layoutOrder)
+local function makeToggle(labelText, layoutOrder)
     local frame = Instance.new("Frame", worldPage)
     frame.Size = UDim2.new(1, 0, 0, 36)
     frame.LayoutOrder = layoutOrder
@@ -666,8 +666,8 @@ local function makeEnvToggle(labelText, layoutOrder)
     return tb, setState
 end
 
-local dayBtn, setDayVisual     = makeEnvToggle("Always Day", 1)
-local nightBtn, setNightVisual = makeEnvToggle("Always Night", 2)
+local dayBtn, setDayVisual     = makeToggle("Always Day", 1)
+local nightBtn, setNightVisual = makeToggle("Always Night", 2)
 
 dayBtn.MouseButton1Click:Connect(function()
     alwaysDayActive = not alwaysDayActive
