@@ -623,6 +623,9 @@ local dayConn   = nil
 local nightConn = nil
 local fogConn   = nil
 
+local alwaysDayActive   = true
+local alwaysNightActive = false
+
 local function stopDayNight()
     if dayConn   then dayConn:Disconnect();   dayConn   = nil end
     if nightConn then nightConn:Disconnect(); nightConn = nil end
@@ -686,8 +689,14 @@ end
 -- ── ENVIRONMENT ───────────────────────────────────────────────────────────────
 makeWorldSectionLabel("Environment")
 
-local _, setDayState = makeWorldToggle("Always Day", true, function(v)
+local setDayState
+local setNightState
+
+local _, _setDay = makeWorldToggle("Always Day", true, function(v)
+    alwaysDayActive = v
     if v then
+        alwaysNightActive = false
+        if setNightState then setNightState(false) end
         stopDayNight()
         Lighting.ClockTime = 14
         dayConn = RunService.Heartbeat:Connect(function()
@@ -698,11 +707,14 @@ local _, setDayState = makeWorldToggle("Always Day", true, function(v)
         Lighting.ClockTime = origClockTime
     end
 end)
+setDayState = _setDay
 
-local _, setNightState = makeWorldToggle("Always Night", false, function(v)
+local _, _setNight = makeWorldToggle("Always Night", false, function(v)
+    alwaysNightActive = v
     if v then
+        alwaysDayActive = false
+        if setDayState then setDayState(false) end
         stopDayNight()
-        setDayState(false)
         Lighting.ClockTime = 0
         nightConn = RunService.Heartbeat:Connect(function()
             Lighting.ClockTime = 0
@@ -712,23 +724,14 @@ local _, setNightState = makeWorldToggle("Always Night", false, function(v)
         Lighting.ClockTime = origClockTime
     end
 end)
+setNightState = _setNight
 
--- Patch Always Day to turn off Always Night when enabled
-local origSetDayState = setDayState
-setDayState = function(val)
-    if val then
-        stopDayNight()
-        setNightState(false)
-        Lighting.ClockTime = 14
-        dayConn = RunService.Heartbeat:Connect(function()
-            Lighting.ClockTime = 14
-        end)
-    else
-        if dayConn then dayConn:Disconnect(); dayConn = nil end
-        Lighting.ClockTime = origClockTime
-    end
-    origSetDayState(val)
-end
+-- Start day loop immediately since Always Day is on by default
+stopDayNight()
+Lighting.ClockTime = 14
+dayConn = RunService.Heartbeat:Connect(function()
+    Lighting.ClockTime = 14
+end)
 
 makeWorldToggle("Remove Fog", false, function(v)
     if fogConn then fogConn:Disconnect(); fogConn = nil end
