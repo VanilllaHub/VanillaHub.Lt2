@@ -680,19 +680,18 @@ local pingConn = RunService.Heartbeat:Connect(function()
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
 
--- Server uptime — counts how long this server has been running using workspace.DistributedGameTime
--- This is set by Roblox to the age of the server instance, not the client join time.
--- We snapshot it once on load and add elapsed client time on top for accuracy.
-local serverAgeAtLoad = 0
-pcall(function() serverAgeAtLoad = workspace.DistributedGameTime end)
-local clientLoadTime = os.clock()
+-- Server uptime: snapshot DistributedGameTime when script loads (= server age at that moment)
+-- then add elapsed os.clock() time so it keeps counting even if DistributedGameTime stalls
+local _serverAgeSnapshot = 0
+local _loadClock = os.clock()
+pcall(function() _serverAgeSnapshot = workspace.DistributedGameTime end)
 
 local uptimeThread
 uptimeThread = task.spawn(function()
     while gui and gui.Parent do
         pcall(function()
-            -- DistributedGameTime continues ticking; use it directly as server age
-            local secs = math.floor(workspace.DistributedGameTime)
+            local elapsed = os.clock() - _loadClock
+            local secs = math.floor(_serverAgeSnapshot + elapsed)
             local h = math.floor(secs / 3600)
             local m = math.floor((secs % 3600) / 60)
             local s = secs % 60
@@ -771,11 +770,6 @@ end)
 -- TELEPORT TAB
 -- ════════════════════════════════════════════════════
 local teleportPage = pages["TeleportTab"]
-local tpHeader=Instance.new("TextLabel",teleportPage)
-tpHeader.Size=UDim2.new(1,-12,0,28); tpHeader.BackgroundTransparency=1
-tpHeader.Font=Enum.Font.GothamBold; tpHeader.TextSize=14
-tpHeader.TextColor3=THEME_TEXT; tpHeader.TextXAlignment=Enum.TextXAlignment.Left
-tpHeader.Text="Quick Teleport Locations"
 
 local locations = {
     {name="Spawn",x=172,y=3,z=74},{name="The Den",x=323,y=41.8,z=1930},
@@ -795,18 +789,30 @@ local locations = {
     {name="Cherry Meadow",x=220.9,y=59.8,z=1305.8},{name="Bird Cave",x=4813.1,y=17.7,z=-978.8},
 }
 
-for _, loc in ipairs(locations) do
-    local btn=Instance.new("TextButton",teleportPage)
-    btn.Size=UDim2.new(1,-12,0,36); btn.BackgroundColor3=BTN_COLOR
-    btn.BorderSizePixel=0; btn.Font=Enum.Font.GothamSemibold; btn.TextSize=13
-    btn.TextColor3=THEME_TEXT; btn.Text=loc.name
-    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,8)
+-- 2-column grid container
+local tpGrid = Instance.new("Frame", teleportPage)
+tpGrid.Size = UDim2.new(1, 0, 0, math.ceil(#locations / 2) * 34 + math.ceil(#locations / 2) * 6)
+tpGrid.BackgroundTransparency = 1
+local tpUIGrid = Instance.new("UIGridLayout", tpGrid)
+tpUIGrid.CellSize = UDim2.new(0.5, -5, 0, 30)
+tpUIGrid.CellPadding = UDim2.new(0, 6, 0, 6)
+tpUIGrid.HorizontalAlignment = Enum.HorizontalAlignment.Left
+tpUIGrid.SortOrder = Enum.SortOrder.LayoutOrder
+
+for i, loc in ipairs(locations) do
+    local btn = Instance.new("TextButton", tpGrid)
+    btn.LayoutOrder = i
+    btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 12
+    btn.TextColor3 = THEME_TEXT; btn.Text = loc.name
+    btn.TextTruncate = Enum.TextTruncate.AtEnd
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER,TextColor3=Color3.fromRGB(255,255,255)}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR,TextColor3=THEME_TEXT}):Play() end)
     btn.MouseButton1Click:Connect(function()
-        local char=player.Character
+        local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame=CFrame.new(loc.x,loc.y+3,loc.z)
+            char.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y + 3, loc.z)
         end
     end)
 end
@@ -1155,16 +1161,6 @@ end
 -- ── ITEM TAB LAYOUT ───────────────────────────────────────────
 
 iSectionLabel("Selection Mode")
-
--- How To hint card (moved from Dupe tab)
-local howToCard = Instance.new("TextLabel", itemPage)
-howToCard.Size = UDim2.new(1, 0, 0, 46); howToCard.BackgroundColor3 = Color3.fromRGB(13,13,17)
-howToCard.BorderSizePixel = 0; howToCard.Font = Enum.Font.Gotham; howToCard.TextSize = 11
-howToCard.TextColor3 = Color3.fromRGB(110,110,125); howToCard.TextWrapped = true
-howToCard.TextXAlignment = Enum.TextXAlignment.Left; howToCard.TextYAlignment = Enum.TextYAlignment.Center
-howToCard.Text = "  How To: Enable a selection mode → select items → Set Destination → Teleport Selected."
-Instance.new("UICorner", howToCard).CornerRadius = UDim.new(0, 7)
-Instance.new("UIPadding", howToCard).PaddingLeft = UDim.new(0, 4)
 iToggle("Click Selection", false, function(val)
     clickSelectEnabled = val
     if val then lassoEnabled = false; groupSelectEnabled = false end
@@ -1656,7 +1652,7 @@ local flyKeyLabel = Instance.new("TextLabel", flyKeyFrame)
 flyKeyLabel.Size = UDim2.new(0.55, 0, 1, 0); flyKeyLabel.Position = UDim2.new(0, 12, 0, 0)
 flyKeyLabel.BackgroundTransparency = 1; flyKeyLabel.Font = Enum.Font.GothamSemibold; flyKeyLabel.TextSize = 13
 flyKeyLabel.TextColor3 = THEME_TEXT; flyKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
-flyKeyLabel.Text = "Fly"
+flyKeyLabel.Text = "Fly Hotkey"
 local flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
 flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70, 0.5, -12)
 flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
@@ -1703,15 +1699,6 @@ flyToggleTb.MouseButton1Click:Connect(function()
     flyToggleLbl.Text = "Fly"
     if not flyEnabled and isFlyActive then stopFly() end
 end)
-
-local flyHint = Instance.new("TextLabel", playerPage)
-flyHint.Size = UDim2.new(1, 0, 0, 26); flyHint.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
-flyHint.BorderSizePixel = 0; flyHint.Font = Enum.Font.Gotham; flyHint.TextSize = 11
-flyHint.TextColor3 = Color3.fromRGB(90, 90, 105); flyHint.TextWrapped = true
-flyHint.TextXAlignment = Enum.TextXAlignment.Left
-flyHint.Text = "  When Fly is ON, press your Fly Key to start or stop flying."
-Instance.new("UICorner", flyHint).CornerRadius = UDim.new(0, 8)
-Instance.new("UIPadding", flyHint).PaddingLeft = UDim.new(0, 6)
 
 createPSep()
 createPSection("Character")
