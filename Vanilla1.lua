@@ -882,13 +882,13 @@ end
 
 wSectionLabel("Atmosphere")
 
--- Fog toggle — grey, barely visible
+-- Fog toggle — very light, barely-there grey haze
 wToggle("Fog", false, function(val)
     pcall(function()
         if val then
-            game.Lighting.FogColor  = Color3.fromRGB(180, 180, 185) -- neutral grey
-            game.Lighting.FogStart  = 200
-            game.Lighting.FogEnd    = 600  -- very far end = barely visible
+            game.Lighting.FogColor  = Color3.fromRGB(210, 212, 215) -- cool light grey
+            game.Lighting.FogStart  = 800   -- fog starts far away
+            game.Lighting.FogEnd    = 2000  -- fades out gently — barely visible
         else
             game.Lighting.FogColor  = origFogColor
             game.Lighting.FogEnd    = origFogEnd
@@ -898,32 +898,21 @@ wToggle("Fog", false, function(val)
 end)
 
 wSep()
-wSectionLabel("Lighting")
+wSectionLabel("Rendering")
 
--- Shadows toggle — disables GlobalShadows on the Lighting service
+-- Shadows toggle — single instance, no duplicate
 wToggle("Shadows", true, function(val)
     pcall(function()
         game.Lighting.GlobalShadows = val
-        -- Also reach into all BaseParts to make sure cast shadows reflect the setting
-        -- (Roblox automatically handles shadow casting from GlobalShadows)
-        if not val then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    pcall(function() obj.CastShadow = false end)
-                end
-            end
-        else
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    pcall(function() obj.CastShadow = true end)
-                end
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                pcall(function() obj.CastShadow = val end)
             end
         end
     end)
 end)
 
 table.insert(cleanupTasks, function()
-    -- Restore shadow state on all parts
     pcall(function()
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") then pcall(function() obj.CastShadow = true end) end
@@ -1231,6 +1220,10 @@ iToggle("Group Selection", false, function(val)
 end)
 
 iSep()
+iSectionLabel("Delay Per Item")
+iSlider("Delay (x0.1s)", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
+
+iSep()
 iSectionLabel("Teleport Mode")
 
 -- Only Group and Random — Group on left, Random on right, Group default
@@ -1276,10 +1269,6 @@ Instance.new("UICorner", itemModeHint).CornerRadius = UDim.new(0, 7)
 Instance.new("UIPadding", itemModeHint).PaddingLeft = UDim.new(0, 4)
 
 iButton("Deselect All", function() deselectAll() end)
-
-iSep()
-iSectionLabel("Delay Per Item")
-iSlider("Delay (x0.1s)", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
 
 iSep()
 iSectionLabel("Teleport Destination")
@@ -1484,9 +1473,15 @@ local function dButton(text, cb)
     return btn
 end
 
-dSectionLabel("Quick Actions")
-dButton("Go to Item Tab", function() switchTab("ItemTab") end)
-dButton("Deselect All", function() deselectAll() end)
+dSectionLabel("Info")
+local dupeInfoLbl = Instance.new("TextLabel", dupePage)
+dupeInfoLbl.Size = UDim2.new(1, 0, 0, 40); dupeInfoLbl.BackgroundColor3 = Color3.fromRGB(13,13,17)
+dupeInfoLbl.BorderSizePixel = 0; dupeInfoLbl.Font = Enum.Font.Gotham; dupeInfoLbl.TextSize = 11
+dupeInfoLbl.TextColor3 = Color3.fromRGB(110,110,125); dupeInfoLbl.TextWrapped = true
+dupeInfoLbl.TextXAlignment = Enum.TextXAlignment.Left; dupeInfoLbl.TextYAlignment = Enum.TextYAlignment.Center
+dupeInfoLbl.Text = "  Teleport controls are in the Item tab."
+Instance.new("UICorner", dupeInfoLbl).CornerRadius = UDim.new(0, 7)
+Instance.new("UIPadding", dupeInfoLbl).PaddingLeft = UDim.new(0, 4)
 
 -- ════════════════════════════════════════════════════
 -- PLAYER TAB
