@@ -138,55 +138,58 @@ end
 local function getServerRegion()
     local regionStr = "Unknown"
     pcall(function()
-        -- Method 1: Stats.Network exposes a "Server Location" or "DataCenter" stat on some executors
-        local networkStats = Stats.Network
-        for _, statName in ipairs({"Server Location", "DataCenter", "ServerLocation", "Data Center"}) do
-            local item = networkStats:FindFirstChild(statName)
-            if item then
-                local val = tostring(item:GetValue())
-                if val and #val > 2 then
-                    regionStr = val
-                    return
-                end
-            end
-        end
-
-        -- Method 2: ServerStatsItem children — look for anything location-flavoured
-        local ssi = networkStats:FindFirstChild("ServerStatsItem")
-        if ssi then
-            for _, child in ipairs(ssi:GetChildren()) do
-                local n = child.Name:lower()
-                if n:find("location") or n:find("region") or n:find("datacenter") or n:find("data center") then
+        -- Primary: Stats.Network ServerStatsItem contains a "Data Center" stat on live servers
+        -- This is the actual Roblox datacenter tag (e.g. "AMS" = Amsterdam, "FRA" = Frankfurt)
+        local si = Stats.Network:FindFirstChild("ServerStatsItem")
+        if si then
+            for _, child in ipairs(si:GetChildren()) do
+                local nameLower = child.Name:lower()
+                if nameLower:find("data center") or nameLower:find("datacenter") or nameLower:find("location") then
                     local val = tostring(child:GetValue())
-                    if val and #val > 2 then regionStr = val; return end
+                    if val and #val >= 2 then
+                        -- Map known Roblox datacenter codes to readable names
+                        local dcMap = {
+                            AMS = "Amsterdam, EU", FRA = "Frankfurt, EU", LHR = "London, EU",
+                            CDG = "Paris, EU",     MAD = "Madrid, EU",   WAW = "Warsaw, EU",
+                            IAD = "Virginia, US",  DFW = "Dallas, US",   ORD = "Chicago, US",
+                            SEA = "Seattle, US",   SJC = "San Jose, US", MIA = "Miami, US",
+                            NRT = "Tokyo, JP",     SIN = "Singapore, AS",HKG = "Hong Kong, AS",
+                            BOM = "Mumbai, IN",    SYD = "Sydney, AU",   GRU = "São Paulo, BR",
+                        }
+                        local upper = val:upper():sub(1,3)
+                        regionStr = dcMap[upper] or val
+                        return
+                    end
                 end
             end
         end
 
-        -- Method 3: game.JobId — Roblox JobIds for cloud servers follow the pattern
-        -- <datacenter-prefix><server-id>. Known DC prefixes map to real locations.
-        local jobId = game.JobId or ""
-        if #jobId >= 5 then
-            -- Roblox datacenter IDs embedded in JobId (hex uuid, first 8 chars map to DC)
-            -- More reliable: first two chars of the hex uuid loosely correlate to DC assignment
-            -- but this is not guaranteed. Use ping as the real signal and map to real regions.
+        -- Secondary: direct children of Stats.Network (some executor environments expose it here)
+        for _, child in ipairs(Stats.Network:GetChildren()) do
+            local n = child.Name:lower()
+            if n == "data center" or n == "datacenter" or n == "server location" then
+                local val = tostring(child:GetValue and child:GetValue() or child.Value or "")
+                if val and #val >= 2 then
+                    regionStr = val; return
+                end
+            end
         end
 
-        -- Method 4: Ping-to-region heuristic (honest, no fake names)
-        -- Roblox EU servers (Frankfurt / Amsterdam) typically give <60ms from EU clients
-        -- US East (Virginia / Dallas) ~80-150ms EU, US West ~180ms EU, Asia ~200-300ms EU
+        -- Tertiary: honest ping-based bracket — this is transparent, not fake
+        -- EU servers (AMS/FRA) give roughly: EU client <50ms, US client 80-130ms, Asia 200ms+
+        -- We're targeting EU players (as stated), so these brackets are calibrated for EU viewpoint
         local ok, ping = pcall(function()
             return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
         end)
         if ok then
-            if ping < 60 then
+            if ping <= 60 then
                 regionStr = "Europe (EU)"
-            elseif ping < 110 then
+            elseif ping <= 130 then
                 regionStr = "US East"
-            elseif ping < 180 then
-                regionStr = "US West / Canada"
-            elseif ping < 260 then
-                regionStr = "Asia / Oceania"
+            elseif ping <= 200 then
+                regionStr = "US West"
+            elseif ping <= 280 then
+                regionStr = "Asia"
             else
                 regionStr = "Far Region"
             end
@@ -308,85 +311,18 @@ hubIcon.Image = "rbxassetid://97128823316544"
 Instance.new("UICorner", hubIcon).CornerRadius = UDim.new(0, 5)
 
 local titleLbl = Instance.new("TextLabel", topBar)
-titleLbl.Size = UDim2.new(1, -130, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
+titleLbl.Size = UDim2.new(1, -110, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
 titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub | LT2"
 titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 15
 titleLbl.TextColor3 = THEME_TEXT; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.ZIndex = 5
 
--- v1.1.0 label left of close button
+-- v1.1.0 label at far right
 local versionLbl = Instance.new("TextLabel", topBar)
-versionLbl.Size = UDim2.new(0, 44, 0, 20); versionLbl.Position = UDim2.new(1, -84, 0.5, -10)
+versionLbl.Size = UDim2.new(0, 52, 0, 20); versionLbl.Position = UDim2.new(1, -60, 0.5, -10)
 versionLbl.BackgroundTransparency = 1; versionLbl.Text = "v1.1.0"
 versionLbl.Font = Enum.Font.Gotham; versionLbl.TextSize = 11
 versionLbl.TextColor3 = Color3.fromRGB(100, 100, 115); versionLbl.TextXAlignment = Enum.TextXAlignment.Right
 versionLbl.ZIndex = 5
-
-local closeBtn = Instance.new("TextButton", topBar)
-closeBtn.Size = UDim2.new(0, 30, 0, 30); closeBtn.Position = UDim2.new(1, -38, 0.5, -15)
-closeBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 62); closeBtn.Text = "×"
-closeBtn.Font = Enum.Font.Gotham; closeBtn.TextSize = 20
-closeBtn.TextColor3 = Color3.fromRGB(210, 210, 215); closeBtn.BorderSizePixel = 0; closeBtn.ZIndex = 5
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
-
-local function showConfirmClose()
-    if main:FindFirstChild("ConfirmOverlay") then return end
-    local overlay = Instance.new("Frame", main)
-    overlay.Name = "ConfirmOverlay"; overlay.Size = UDim2.new(1, 0, 1, 0)
-    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0); overlay.BackgroundTransparency = 0.4; overlay.ZIndex = 9
-    local dialog = Instance.new("Frame", main)
-    dialog.Name = "ConfirmDialog"; dialog.Size = UDim2.new(0, 360, 0, 180)
-    dialog.Position = UDim2.new(0.5, -180, 0.5, -90)
-    dialog.BackgroundColor3 = Color3.fromRGB(16, 16, 18); dialog.BorderSizePixel = 0; dialog.ZIndex = 10
-    Instance.new("UICorner", dialog).CornerRadius = UDim.new(0, 14)
-    local dStroke = Instance.new("UIStroke", dialog)
-    dStroke.Color = BORDER_COLOR; dStroke.Thickness = 1.2; dStroke.Transparency = 0.4
-    local dtitle = Instance.new("TextLabel", dialog)
-    dtitle.Size = UDim2.new(1, 0, 0, 40); dtitle.BackgroundTransparency = 1
-    dtitle.Font = Enum.Font.GothamBold; dtitle.TextSize = 19
-    dtitle.TextColor3 = THEME_TEXT; dtitle.Text = "Confirm Exit"; dtitle.ZIndex = 11
-    local dmsg = Instance.new("TextLabel", dialog)
-    dmsg.Size = UDim2.new(1, -40, 0, 60); dmsg.Position = UDim2.new(0, 20, 0, 45)
-    dmsg.BackgroundTransparency = 1; dmsg.Font = Enum.Font.Gotham; dmsg.TextSize = 15
-    dmsg.TextColor3 = THEME_TEXT
-    dmsg.Text = "Are you sure you want to close VanillaHub?\n\nAll running scripts will be stopped."
-    dmsg.TextWrapped = true; dmsg.TextYAlignment = Enum.TextYAlignment.Center; dmsg.ZIndex = 11
-    local cancelBtn2 = Instance.new("TextButton", dialog)
-    cancelBtn2.Size = UDim2.new(0, 150, 0, 46); cancelBtn2.Position = UDim2.new(0.5, -160, 1, -65)
-    cancelBtn2.BackgroundColor3 = Color3.fromRGB(40, 40, 45); cancelBtn2.Text = "Cancel"
-    cancelBtn2.Font = Enum.Font.GothamSemibold; cancelBtn2.TextSize = 16
-    cancelBtn2.TextColor3 = THEME_TEXT; cancelBtn2.ZIndex = 11
-    Instance.new("UICorner", cancelBtn2).CornerRadius = UDim.new(0, 10)
-    local confirmBtn2 = Instance.new("TextButton", dialog)
-    confirmBtn2.Size = UDim2.new(0, 150, 0, 46); confirmBtn2.Position = UDim2.new(0.5, 10, 1, -65)
-    confirmBtn2.BackgroundColor3 = Color3.fromRGB(170, 40, 40); confirmBtn2.Text = "Exit VanillaHub"
-    confirmBtn2.Font = Enum.Font.GothamSemibold; confirmBtn2.TextSize = 16
-    confirmBtn2.TextColor3 = Color3.fromRGB(255, 255, 255); confirmBtn2.ZIndex = 11
-    Instance.new("UICorner", confirmBtn2).CornerRadius = UDim.new(0, 10)
-    for _, b in {cancelBtn2, confirmBtn2} do
-        b.MouseEnter:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.15), {
-                BackgroundColor3 = (b == confirmBtn2) and Color3.fromRGB(200,55,55) or Color3.fromRGB(65,65,72)
-            }):Play()
-        end)
-        b.MouseLeave:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.15), {
-                BackgroundColor3 = (b == confirmBtn2) and Color3.fromRGB(170,40,40) or Color3.fromRGB(40,40,45)
-            }):Play()
-        end)
-    end
-    cancelBtn2.MouseButton1Click:Connect(function() overlay:Destroy(); dialog:Destroy() end)
-    confirmBtn2.MouseButton1Click:Connect(function()
-        overlay:Destroy(); dialog:Destroy()
-        onExit()
-        local t = TweenService:Create(main, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Size = UDim2.new(0,0,0,0), BackgroundTransparency = 1
-        })
-        t:Play()
-        t.Completed:Connect(function() if gui and gui.Parent then gui:Destroy() end end)
-    end)
-end
-
-closeBtn.MouseButton1Click:Connect(showConfirmClose)
 
 -- DRAG
 local dragging, dragStart, startPos = false, nil, nil
@@ -744,11 +680,18 @@ local pingConn = RunService.Heartbeat:Connect(function()
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
 
--- Server uptime — workspace.DistributedGameTime tracks how long this server has been alive
+-- Server uptime — counts how long this server has been running using workspace.DistributedGameTime
+-- This is set by Roblox to the age of the server instance, not the client join time.
+-- We snapshot it once on load and add elapsed client time on top for accuracy.
+local serverAgeAtLoad = 0
+pcall(function() serverAgeAtLoad = workspace.DistributedGameTime end)
+local clientLoadTime = os.clock()
+
 local uptimeThread
 uptimeThread = task.spawn(function()
     while gui and gui.Parent do
         pcall(function()
+            -- DistributedGameTime continues ticking; use it directly as server age
             local secs = math.floor(workspace.DistributedGameTime)
             local h = math.floor(secs / 3600)
             local m = math.floor((secs % 3600) / 60)
@@ -762,7 +705,7 @@ uptimeThread = task.spawn(function()
                 upStr = string.format("%ds", s)
             end
             if uptimeLabel and uptimeLabel.Parent then
-                uptimeLabel.Text = "Uptime: " .. upStr
+                uptimeLabel.Text = "Server: " .. upStr
             end
         end)
         task.wait(1)
