@@ -609,7 +609,7 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- WORLD TAB — ENVIRONMENT
+-- WORLD TAB — ENVIRONMENT (fixed: single section, mutually exclusive)
 -- ════════════════════════════════════════════════════
 local worldPage = pages["WorldTab"]
 
@@ -634,39 +634,39 @@ local function startEnvLoop(isDay)
     end)
 end
 
-local function wSectionLabel(text)
-    local w = Instance.new("Frame", worldPage)
-    w.Size = UDim2.new(1, 0, 0, 24); w.BackgroundTransparency = 1
-    local lbl = Instance.new("TextLabel", w)
-    lbl.Size = UDim2.new(1, -4, 1, 0); lbl.Position = UDim2.new(0, 4, 0, 0)
-    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
-    lbl.TextColor3 = SECTION_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = "  " .. string.upper(text)
-end
+-- Section label (built once, inline)
+local wEnvLabelFrame = Instance.new("Frame", worldPage)
+wEnvLabelFrame.Size = UDim2.new(1, 0, 0, 24); wEnvLabelFrame.BackgroundTransparency = 1
+local wEnvLbl = Instance.new("TextLabel", wEnvLabelFrame)
+wEnvLbl.Size = UDim2.new(1, -4, 1, 0); wEnvLbl.Position = UDim2.new(0, 4, 0, 0)
+wEnvLbl.BackgroundTransparency = 1; wEnvLbl.Font = Enum.Font.GothamBold; wEnvLbl.TextSize = 10
+wEnvLbl.TextColor3 = SECTION_TEXT; wEnvLbl.TextXAlignment = Enum.TextXAlignment.Left
+wEnvLbl.Text = "  ENVIRONMENT"
 
-local function wToggle(text, default)
+-- Single toggle builder scoped only to worldPage
+local function makeEnvToggle(labelText)
     local frame = Instance.new("Frame", worldPage)
     frame.Size = UDim2.new(1, 0, 0, 36)
     frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local lbl = Instance.new("TextLabel", frame)
     lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
-    lbl.BackgroundTransparency = 1; lbl.Text = text
+    lbl.BackgroundTransparency = 1; lbl.Text = labelText
     lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
     lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
     local tb = Instance.new("TextButton", frame)
     tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
-    tb.BackgroundColor3 = default and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    tb.BackgroundColor3 = Color3.fromRGB(38, 38, 45)
     tb.Text = ""; tb.BorderSizePixel = 0
     Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
     local circle = Instance.new("Frame", tb)
     circle.Size = UDim2.new(0, 14, 0, 14)
-    circle.Position = UDim2.new(0, default and 20 or 2, 0.5, -7)
+    circle.Position = UDim2.new(0, 2, 0.5, -7)
     circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
     local function setState(val)
         TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            BackgroundColor3 = val and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+            BackgroundColor3 = val and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(38, 38, 45)
         }):Play()
         TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
             Position = UDim2.new(0, val and 20 or 2, 0.5, -7)
@@ -675,10 +675,8 @@ local function wToggle(text, default)
     return tb, setState
 end
 
-wSectionLabel("Environment")
-
-local dayBtn, setDayVisual     = wToggle("Always Day",   false)
-local nightBtn, setNightVisual = wToggle("Always Night", false)
+local dayBtn, setDayVisual     = makeEnvToggle("Always Day")
+local nightBtn, setNightVisual = makeEnvToggle("Always Night")
 
 dayBtn.MouseButton1Click:Connect(function()
     alwaysDayActive = not alwaysDayActive
