@@ -739,6 +739,253 @@ local function wToggle(text, defaultState, callback)
 end
 
 -- ════════════════════════════════════════════════════
+-- WORLD TAB CONTROLS
+-- ════════════════════════════════════════════════════
+
+local origClockTime = game.Lighting.ClockTime
+local origFogEnd    = game.Lighting.FogEnd
+local origFogStart  = game.Lighting.FogStart
+local origFogColor  = game.Lighting.FogColor
+
+table.insert(cleanupTasks, function()
+    pcall(function()
+        game.Lighting.ClockTime = origClockTime
+        game.Lighting.FogEnd    = origFogEnd
+        game.Lighting.FogStart  = origFogStart
+        game.Lighting.FogColor  = origFogColor
+    end)
+end)
+
+local alwaysDayEnabled   = false
+local alwaysNightEnabled = false
+local timeThread         = nil
+local dayToggleRef       = nil
+local nightToggleRef     = nil
+local dayCircleRef       = nil
+local nightCircleRef     = nil
+
+local function setDayVisual(state)
+    if not dayToggleRef then return end
+    TweenService:Create(dayToggleRef, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        BackgroundColor3 = state and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    }):Play()
+    TweenService:Create(dayCircleRef, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        Position = UDim2.new(0, state and 20 or 2, 0.5, -7)
+    }):Play()
+end
+
+local function setNightVisual(state)
+    if not nightToggleRef then return end
+    TweenService:Create(nightToggleRef, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        BackgroundColor3 = state and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    }):Play()
+    TweenService:Create(nightCircleRef, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        Position = UDim2.new(0, state and 20 or 2, 0.5, -7)
+    }):Play()
+end
+
+local function stopTimeThread()
+    if timeThread then pcall(task.cancel, timeThread); timeThread = nil end
+end
+table.insert(cleanupTasks, stopTimeThread)
+
+wSectionLabel("Time of Day")
+
+-- Always Day
+do
+    local frame = Instance.new("Frame", worldPage)
+    frame.Size = UDim2.new(1, 0, 0, 34)
+    frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Text = "Always Day"
+    lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
+    lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    local tb = Instance.new("TextButton", frame)
+    tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
+    tb.BackgroundColor3 = Color3.fromRGB(38, 38, 45); tb.Text = ""; tb.BorderSizePixel = 0
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
+    local circle = Instance.new("Frame", tb)
+    circle.Size = UDim2.new(0, 14, 0, 14); circle.Position = UDim2.new(0, 2, 0.5, -7)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+    dayToggleRef = tb; dayCircleRef = circle
+    tb.MouseButton1Click:Connect(function()
+        alwaysDayEnabled = not alwaysDayEnabled
+        if alwaysDayEnabled then
+            if alwaysNightEnabled then
+                alwaysNightEnabled = false
+                setNightVisual(false)
+            end
+            stopTimeThread()
+            timeThread = task.spawn(function()
+                while alwaysDayEnabled do
+                    pcall(function() game.Lighting.ClockTime = 14 end)
+                    task.wait(1)
+                end
+            end)
+        else
+            stopTimeThread()
+            pcall(function() game.Lighting.ClockTime = origClockTime end)
+        end
+        setDayVisual(alwaysDayEnabled)
+    end)
+end
+
+-- Always Night
+do
+    local frame = Instance.new("Frame", worldPage)
+    frame.Size = UDim2.new(1, 0, 0, 34)
+    frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Text = "Always Night"
+    lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
+    lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    local tb = Instance.new("TextButton", frame)
+    tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
+    tb.BackgroundColor3 = Color3.fromRGB(38, 38, 45); tb.Text = ""; tb.BorderSizePixel = 0
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
+    local circle = Instance.new("Frame", tb)
+    circle.Size = UDim2.new(0, 14, 0, 14); circle.Position = UDim2.new(0, 2, 0.5, -7)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+    nightToggleRef = tb; nightCircleRef = circle
+    tb.MouseButton1Click:Connect(function()
+        alwaysNightEnabled = not alwaysNightEnabled
+        if alwaysNightEnabled then
+            if alwaysDayEnabled then
+                alwaysDayEnabled = false
+                setDayVisual(false)
+            end
+            stopTimeThread()
+            timeThread = task.spawn(function()
+                while alwaysNightEnabled do
+                    pcall(function() game.Lighting.ClockTime = 0 end)
+                    task.wait(1)
+                end
+            end)
+        else
+            stopTimeThread()
+            pcall(function() game.Lighting.ClockTime = origClockTime end)
+        end
+        setNightVisual(alwaysNightEnabled)
+    end)
+end
+
+wSep()
+wSectionLabel("Fog")
+
+local fogEnabled = false
+local fogDensity = 1500  -- FogEnd; higher = thinner fog (range 200–3000)
+
+-- Fog toggle
+local fogToggleFrame = Instance.new("Frame", worldPage)
+fogToggleFrame.Size = UDim2.new(1, 0, 0, 34)
+fogToggleFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); fogToggleFrame.BorderSizePixel = 0
+Instance.new("UICorner", fogToggleFrame).CornerRadius = UDim.new(0, 7)
+local fogToggleLblW = Instance.new("TextLabel", fogToggleFrame)
+fogToggleLblW.Size = UDim2.new(1, -54, 1, 0); fogToggleLblW.Position = UDim2.new(0, 12, 0, 0)
+fogToggleLblW.BackgroundTransparency = 1; fogToggleLblW.Text = "Enable Fog"
+fogToggleLblW.Font = Enum.Font.GothamSemibold; fogToggleLblW.TextSize = 13
+fogToggleLblW.TextColor3 = THEME_TEXT; fogToggleLblW.TextXAlignment = Enum.TextXAlignment.Left
+local fogToggleTb = Instance.new("TextButton", fogToggleFrame)
+fogToggleTb.Size = UDim2.new(0, 36, 0, 20); fogToggleTb.Position = UDim2.new(1, -46, 0.5, -10)
+fogToggleTb.BackgroundColor3 = Color3.fromRGB(38, 38, 45); fogToggleTb.Text = ""; fogToggleTb.BorderSizePixel = 0
+Instance.new("UICorner", fogToggleTb).CornerRadius = UDim.new(1, 0)
+local fogToggleCircle = Instance.new("Frame", fogToggleTb)
+fogToggleCircle.Size = UDim2.new(0, 14, 0, 14); fogToggleCircle.Position = UDim2.new(0, 2, 0.5, -7)
+fogToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); fogToggleCircle.BorderSizePixel = 0
+Instance.new("UICorner", fogToggleCircle).CornerRadius = UDim.new(1, 0)
+
+-- Fog density slider (200 = very thick, 3000 = barely noticeable)
+local fogSliderFrame = Instance.new("Frame", worldPage)
+fogSliderFrame.Size = UDim2.new(1, 0, 0, 54)
+fogSliderFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); fogSliderFrame.BorderSizePixel = 0
+Instance.new("UICorner", fogSliderFrame).CornerRadius = UDim.new(0, 7)
+local fogTopRow = Instance.new("Frame", fogSliderFrame)
+fogTopRow.Size = UDim2.new(1, -16, 0, 22); fogTopRow.Position = UDim2.new(0, 8, 0, 7)
+fogTopRow.BackgroundTransparency = 1
+local fogSliderLbl = Instance.new("TextLabel", fogTopRow)
+fogSliderLbl.Size = UDim2.new(0.72, 0, 1, 0); fogSliderLbl.BackgroundTransparency = 1
+fogSliderLbl.Font = Enum.Font.GothamSemibold; fogSliderLbl.TextSize = 13
+fogSliderLbl.TextColor3 = THEME_TEXT; fogSliderLbl.TextXAlignment = Enum.TextXAlignment.Left
+fogSliderLbl.Text = "Fog Density"
+local fogValLbl = Instance.new("TextLabel", fogTopRow)
+fogValLbl.Size = UDim2.new(0.28, 0, 1, 0); fogValLbl.Position = UDim2.new(0.72, 0, 0, 0)
+fogValLbl.BackgroundTransparency = 1; fogValLbl.Font = Enum.Font.GothamBold; fogValLbl.TextSize = 13
+fogValLbl.TextColor3 = Color3.fromRGB(160, 160, 175); fogValLbl.TextXAlignment = Enum.TextXAlignment.Right
+fogValLbl.Text = tostring(fogDensity)
+local fogTrack = Instance.new("Frame", fogSliderFrame)
+fogTrack.Size = UDim2.new(1, -16, 0, 5); fogTrack.Position = UDim2.new(0, 8, 0, 38)
+fogTrack.BackgroundColor3 = Color3.fromRGB(32, 32, 38); fogTrack.BorderSizePixel = 0
+Instance.new("UICorner", fogTrack).CornerRadius = UDim.new(1, 0)
+local fogFill = Instance.new("Frame", fogTrack)
+fogFill.Size = UDim2.new((fogDensity - 200) / (3000 - 200), 0, 1, 0)
+fogFill.BackgroundColor3 = ACCENT; fogFill.BorderSizePixel = 0
+Instance.new("UICorner", fogFill).CornerRadius = UDim.new(1, 0)
+local fogKnob = Instance.new("TextButton", fogTrack)
+fogKnob.Size = UDim2.new(0, 14, 0, 14); fogKnob.AnchorPoint = Vector2.new(0.5, 0.5)
+fogKnob.Position = UDim2.new((fogDensity - 200) / (3000 - 200), 0, 0.5, 0)
+fogKnob.BackgroundColor3 = Color3.fromRGB(210, 210, 220); fogKnob.Text = ""; fogKnob.BorderSizePixel = 0
+Instance.new("UICorner", fogKnob).CornerRadius = UDim.new(1, 0)
+
+local fogSliderDragging = false
+local function updateFogSlider(absX)
+    local r = math.clamp((absX - fogTrack.AbsolutePosition.X) / fogTrack.AbsoluteSize.X, 0, 1)
+    fogDensity = math.round(200 + r * (3000 - 200))
+    fogFill.Size = UDim2.new(r, 0, 1, 0)
+    fogKnob.Position = UDim2.new(r, 0, 0.5, 0)
+    fogValLbl.Text = tostring(fogDensity)
+    if fogEnabled then
+        pcall(function()
+            game.Lighting.FogEnd   = fogDensity
+            game.Lighting.FogStart = fogDensity * 0.4
+        end)
+    end
+end
+fogKnob.MouseButton1Down:Connect(function() fogSliderDragging = true end)
+fogTrack.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        fogSliderDragging = true; updateFogSlider(i.Position.X)
+    end
+end)
+UserInputService.InputChanged:Connect(function(i)
+    if fogSliderDragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        updateFogSlider(i.Position.X)
+    end
+end)
+UserInputService.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then fogSliderDragging = false end
+end)
+
+fogToggleTb.MouseButton1Click:Connect(function()
+    fogEnabled = not fogEnabled
+    TweenService:Create(fogToggleTb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        BackgroundColor3 = fogEnabled and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    }):Play()
+    TweenService:Create(fogToggleCircle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+        Position = UDim2.new(0, fogEnabled and 20 or 2, 0.5, -7)
+    }):Play()
+    if fogEnabled then
+        pcall(function()
+            game.Lighting.FogEnd   = fogDensity
+            game.Lighting.FogStart = fogDensity * 0.4
+            game.Lighting.FogColor = Color3.fromRGB(180, 190, 200)
+        end)
+    else
+        pcall(function()
+            game.Lighting.FogEnd   = origFogEnd
+            game.Lighting.FogStart = origFogStart
+            game.Lighting.FogColor = origFogColor
+        end)
+    end
+end)
+
+
+-- ════════════════════════════════════════════════════
 -- SHARED ITEM/DUPE STATE
 -- ════════════════════════════════════════════════════
 local tpCircle       = nil
