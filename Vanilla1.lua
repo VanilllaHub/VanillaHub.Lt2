@@ -1594,8 +1594,7 @@ end)
 -- GLOBAL KEY LISTENER
 -- ════════════════════════════════════════════════════
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-
+    -- Keybind capture must run even when a GUI element is focused (gameProcessed = true)
     if waitingForFlyKey then
         if input.UserInputType == Enum.UserInputType.Keyboard then
             currentFlyKey = input.KeyCode
@@ -1608,11 +1607,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
+    if gameProcessed then return end
+
     if input.KeyCode == currentToggleKey then
         toggleGUI(); return
     end
 
-    if input.KeyCode == currentFlyKey and flyEnabled then
+    if input.KeyCode == currentFlyKey then
+        if not flyEnabled then return end
         if isFlyActive then stopFly() else startFly() end
         return
     end
