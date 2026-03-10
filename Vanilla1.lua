@@ -582,7 +582,7 @@ local homePage = pages["HomeTab"]
 
 -- Chat bubble row
 local bubbleRow = Instance.new("Frame", homePage)
-bubbleRow.Size = UDim2.new(1, 0, 0, 100); bubbleRow.BackgroundTransparency = 1
+bubbleRow.Size = UDim2.new(1, 0, 0, 100); bubbleRow.BackgroundTransparency = 1; bubbleRow.LayoutOrder = 1
 
 local bubbleIcon = Instance.new("ImageLabel", bubbleRow)
 bubbleIcon.Size=UDim2.new(0,52,0,52); bubbleIcon.Position=UDim2.new(0,6,0.5,-26)
@@ -622,7 +622,8 @@ bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Le
 
 -- STATS GRID
 local statsContainer = Instance.new("Frame", homePage)
-statsContainer.Size=UDim2.new(1,0,0,100); statsContainer.BackgroundTransparency=1
+statsContainer.Size=UDim2.new(1,0,0,120); statsContainer.BackgroundTransparency=1
+statsContainer.LayoutOrder = 2
 local gridLayout=Instance.new("UIGridLayout",statsContainer)
 gridLayout.CellSize=UDim2.new(0,148,0,36); gridLayout.CellPadding=UDim2.new(0,8,0,8)
 gridLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; gridLayout.SortOrder=Enum.SortOrder.LayoutOrder
@@ -659,7 +660,7 @@ rejoinBtn.MouseButton1Click:Connect(function() pcall(function() TeleportService:
 -- ── Server Region card (full width, below grid) ───────────────
 local regionCard = Instance.new("Frame", homePage)
 regionCard.Size = UDim2.new(1, 0, 0, 42); regionCard.BackgroundColor3 = Color3.fromRGB(16,16,20)
-regionCard.BorderSizePixel = 0
+regionCard.BorderSizePixel = 0; regionCard.LayoutOrder = 3
 Instance.new("UICorner", regionCard).CornerRadius = UDim.new(0, 7)
 local rcStroke = Instance.new("UIStroke", regionCard)
 rcStroke.Color = SEP_COLOR; rcStroke.Thickness = 1; rcStroke.Transparency = 0.55
@@ -685,7 +686,7 @@ regionValueLbl.Text = "Detecting…"
 -- ── Performance warning row (hidden by default) ───────────────
 local perfRow = Instance.new("Frame", homePage)
 perfRow.Size = UDim2.new(1, 0, 0, 34); perfRow.BackgroundColor3 = Color3.fromRGB(50,18,18)
-perfRow.BorderSizePixel = 0; perfRow.Visible = false
+perfRow.BorderSizePixel = 0; perfRow.Visible = false; perfRow.LayoutOrder = 4
 Instance.new("UICorner", perfRow).CornerRadius = UDim.new(0, 7)
 local prStroke = Instance.new("UIStroke", perfRow)
 prStroke.Color = Color3.fromRGB(180,50,50); prStroke.Thickness = 1; prStroke.Transparency = 0.5
@@ -748,13 +749,13 @@ lagThread = task.spawn(function()
         if lagLabel and lagLabel.Parent then
             if ok then
                 if ping > 250 then
-                    lagLabel.Text = "Lag: Yes"
+                    lagLabel.Text = "Bad Ping"
                     lagLabel.TextColor3 = Color3.fromRGB(240, 100, 100)
                 elseif ping > 120 then
-                    lagLabel.Text = "Lag: Yes"
+                    lagLabel.Text = "High Ping"
                     lagLabel.TextColor3 = Color3.fromRGB(240, 200, 80)
                 else
-                    lagLabel.Text = "Lag: No"
+                    lagLabel.Text = "Good Ping"
                     lagLabel.TextColor3 = Color3.fromRGB(100, 210, 100)
                 end
             else
@@ -878,27 +879,7 @@ local function wToggle(text, defaultState, callback)
     return frame
 end
 
-wSectionLabel("Environment")
-
--- Single Shadows toggle
-wToggle("Shadows", true, function(val)
-    pcall(function()
-        game.Lighting.GlobalShadows = val
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                pcall(function() obj.CastShadow = val end)
-            end
-        end
-    end)
-end)
-
-table.insert(cleanupTasks, function()
-    pcall(function()
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("BasePart") then pcall(function() obj.CastShadow = true end) end
-        end
-    end)
-end)
+-- World tab intentionally left minimal; additional environment controls can be added here
 
 -- ════════════════════════════════════════════════════
 -- SHARED ITEM/DUPE STATE
@@ -1702,7 +1683,7 @@ local flyToggleLbl = Instance.new("TextLabel", flyToggleFrame)
 flyToggleLbl.Size = UDim2.new(1, -54, 1, 0); flyToggleLbl.Position = UDim2.new(0, 12, 0, 0)
 flyToggleLbl.BackgroundTransparency = 1; flyToggleLbl.Font = Enum.Font.GothamSemibold; flyToggleLbl.TextSize = 13
 flyToggleLbl.TextColor3 = THEME_TEXT; flyToggleLbl.TextXAlignment = Enum.TextXAlignment.Left
-flyToggleLbl.Text = "Fly  (key: Q)"
+flyToggleLbl.Text = "Fly"
 local flyToggleTb = Instance.new("TextButton", flyToggleFrame)
 flyToggleTb.Size = UDim2.new(0, 36, 0, 20); flyToggleTb.Position = UDim2.new(1, -46, 0.5, -10)
 flyToggleTb.BackgroundColor3 = Color3.fromRGB(80, 160, 80)   -- green = ON by default
@@ -1721,7 +1702,7 @@ flyToggleTb.MouseButton1Click:Connect(function()
     TweenService:Create(flyToggleCircle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
         Position = UDim2.new(0, flyEnabled and 20 or 2, 0.5, -7)
     }):Play()
-    flyToggleLbl.Text = "Fly  (key: " .. currentFlyKey.Name .. ")"
+    flyToggleLbl.Text = "Fly"
     if not flyEnabled and isFlyActive then stopFly() end
 end)
 
@@ -1795,7 +1776,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             currentFlyKey = input.KeyCode
             flyKeyBtn.Text = input.KeyCode.Name
             flyKeyBtn.BackgroundColor3 = BTN_COLOR
-            flyToggleLbl.Text = "Fly  (key: " .. input.KeyCode.Name .. ")"
+            flyToggleLbl.Text = "Fly"
             waitingForFlyKey = false
             if _G.VH then _G.VH.currentFlyKey = currentFlyKey end
         end
