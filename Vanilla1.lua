@@ -608,6 +608,191 @@ table.insert(cleanupTasks, function()
     if lagThread then pcall(task.cancel, lagThread); lagThread = nil end
 end)
 
+-- ════════════════════════════════════════════════════
+-- WORLD TAB
+-- ════════════════════════════════════════════════════
+local worldPage = pages["WorldTab"]
+
+local origClockTime = Lighting.ClockTime
+local origFogEnd    = Lighting.FogEnd
+local origFogStart  = Lighting.FogStart
+local origFogColor  = Lighting.FogColor
+local origShadows   = Lighting.GlobalShadows
+
+local dayConn   = nil
+local nightConn = nil
+local fogConn   = nil
+
+local function stopDayNight()
+    if dayConn   then dayConn:Disconnect();   dayConn   = nil end
+    if nightConn then nightConn:Disconnect(); nightConn = nil end
+end
+
+local function makeWorldSectionLabel(text)
+    local w = Instance.new("Frame", worldPage)
+    w.Size = UDim2.new(1, 0, 0, 24); w.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel", w)
+    lbl.Size = UDim2.new(1, -4, 1, 0); lbl.Position = UDim2.new(0, 4, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
+    lbl.TextColor3 = SECTION_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = "  " .. string.upper(text)
+end
+
+local function makeWorldSep()
+    local s = Instance.new("Frame", worldPage)
+    s.Size = UDim2.new(1, 0, 0, 1)
+    s.BackgroundColor3 = SEP_COLOR; s.BorderSizePixel = 0
+end
+
+local function makeWorldToggle(labelText, default, callback)
+    local frame = Instance.new("Frame", worldPage)
+    frame.Size = UDim2.new(1, 0, 0, 36)
+    frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Text = labelText
+    lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
+    lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    local tb = Instance.new("TextButton", frame)
+    tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
+    tb.BackgroundColor3 = default and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(38, 38, 45)
+    tb.Text = ""; tb.BorderSizePixel = 0
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
+    local circle = Instance.new("Frame", tb)
+    circle.Size = UDim2.new(0, 14, 0, 14)
+    circle.Position = UDim2.new(0, default and 20 or 2, 0.5, -7)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+    local toggled = default
+    if callback then callback(toggled) end
+    local function setState(val)
+        toggled = val
+        TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = val and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(38, 38, 45)
+        }):Play()
+        TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            Position = UDim2.new(0, val and 20 or 2, 0.5, -7)
+        }):Play()
+    end
+    tb.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        setState(toggled)
+        if callback then callback(toggled) end
+    end)
+    return frame, setState
+end
+
+-- ENVIRONMENT
+makeWorldSectionLabel("Environment")
+
+local _, setDayState = makeWorldToggle("Always Day", false, function(v)
+    if v then
+        stopDayNight()
+        Lighting.ClockTime = 14
+        dayConn = RunService.Heartbeat:Connect(function()
+            Lighting.ClockTime = 14
+        end)
+    else
+        if dayConn then dayConn:Disconnect(); dayConn = nil end
+        Lighting.ClockTime = origClockTime
+    end
+end)
+
+local _, setNightState = makeWorldToggle("Always Night", false, function(v)
+    if v then
+        stopDayNight()
+        Lighting.ClockTime = 0
+        nightConn = RunService.Heartbeat:Connect(function()
+            Lighting.ClockTime = 0
+        end)
+    else
+        if nightConn then nightConn:Disconnect(); nightConn = nil end
+        Lighting.ClockTime = origClockTime
+    end
+end)
+
+-- Mutual exclusion: patch callbacks after both toggles exist
+local origDayState = setDayState
+local origNightState = setNightState
+
+makeWorldToggle("Remove Fog", false, function(v)
+    if fogConn then fogConn:Disconnect(); fogConn = nil end
+    if v then
+        Lighting.FogEnd   = 1e9
+        Lighting.FogStart = 1e9
+        fogConn = RunService.Heartbeat:Connect(function()
+            Lighting.FogEnd   = 1e9
+            Lighting.FogStart = 1e9
+        end)
+    else
+        Lighting.FogEnd   = origFogEnd
+        Lighting.FogStart = origFogStart
+        Lighting.FogColor = origFogColor
+    end
+end)
+
+makeWorldToggle("Shadows", true, function(v)
+    Lighting.GlobalShadows = v
+end)
+
+makeWorldSep()
+makeWorldSectionLabel("Water")
+
+local walkOnWaterConn  = nil
+local walkOnWaterParts = {}
+
+local function removeWalkWater()
+    if walkOnWaterConn then walkOnWaterConn:Disconnect(); walkOnWaterConn = nil end
+    for _, p in ipairs(walkOnWaterParts) do
+        if p and p.Parent then p:Destroy() end
+    end
+    walkOnWaterParts = {}
+end
+
+makeWorldToggle("Walk On Water", false, function(v)
+    removeWalkWater()
+    if v then
+        local function makeSolid(part)
+            if part:IsA("Part") and part.Name == "Water" then
+                local clone = Instance.new("Part")
+                clone.Size         = part.Size
+                clone.CFrame       = part.CFrame
+                clone.Anchored     = true
+                clone.CanCollide   = true
+                clone.Transparency = 1
+                clone.Name         = "WalkWaterPlane"
+                clone.Parent       = workspace
+                table.insert(walkOnWaterParts, clone)
+            end
+        end
+        for _, p in ipairs(workspace:GetDescendants()) do makeSolid(p) end
+        walkOnWaterConn = workspace.DescendantAdded:Connect(makeSolid)
+    end
+end)
+
+makeWorldToggle("Remove Water", false, function(v)
+    for _, p in ipairs(workspace:GetDescendants()) do
+        if p:IsA("Part") and p.Name == "Water" then
+            p.Transparency = v and 1 or 0.5
+            p.CanCollide   = false
+        end
+    end
+end)
+
+makeWorldSep()
+makeWorldSectionLabel("World")
+
+table.insert(cleanupTasks, function()
+    stopDayNight()
+    if fogConn then fogConn:Disconnect(); fogConn = nil end
+    removeWalkWater()
+    Lighting.ClockTime     = origClockTime
+    Lighting.FogEnd        = origFogEnd
+    Lighting.FogStart      = origFogStart
+    Lighting.FogColor      = origFogColor
+    Lighting.GlobalShadows = origShadows
+end)
 
 -- ════════════════════════════════════════════════════
 -- TELEPORT TAB
