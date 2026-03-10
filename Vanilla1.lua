@@ -609,7 +609,7 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- WORLD TAB — ENVIRONMENT (fixed: single section, mutually exclusive, correct order)
+-- WORLD TAB — ENVIRONMENT (fixed: single section, mutually exclusive)
 -- ════════════════════════════════════════════════════
 local worldPage = pages["WorldTab"]
 
@@ -634,22 +634,19 @@ local function startEnvLoop(isDay)
     end)
 end
 
--- Section label — LayoutOrder = 1 so it is always first
+-- Section label (built once, inline)
 local wEnvLabelFrame = Instance.new("Frame", worldPage)
-wEnvLabelFrame.Size = UDim2.new(1, 0, 0, 24)
-wEnvLabelFrame.BackgroundTransparency = 1
-wEnvLabelFrame.LayoutOrder = 1
+wEnvLabelFrame.Size = UDim2.new(1, 0, 0, 24); wEnvLabelFrame.BackgroundTransparency = 1
 local wEnvLbl = Instance.new("TextLabel", wEnvLabelFrame)
 wEnvLbl.Size = UDim2.new(1, -4, 1, 0); wEnvLbl.Position = UDim2.new(0, 4, 0, 0)
 wEnvLbl.BackgroundTransparency = 1; wEnvLbl.Font = Enum.Font.GothamBold; wEnvLbl.TextSize = 10
 wEnvLbl.TextColor3 = SECTION_TEXT; wEnvLbl.TextXAlignment = Enum.TextXAlignment.Left
 wEnvLbl.Text = "  ENVIRONMENT"
 
--- Toggle builder — accepts layoutOrder so list order is deterministic
-local function makeEnvToggle(labelText, layoutOrder)
+-- Single toggle builder scoped only to worldPage
+local function makeEnvToggle(labelText)
     local frame = Instance.new("Frame", worldPage)
     frame.Size = UDim2.new(1, 0, 0, 36)
-    frame.LayoutOrder = layoutOrder
     frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local lbl = Instance.new("TextLabel", frame)
@@ -678,9 +675,8 @@ local function makeEnvToggle(labelText, layoutOrder)
     return tb, setState
 end
 
--- Always Day = LayoutOrder 2, Always Night = LayoutOrder 3
-local dayBtn, setDayVisual     = makeEnvToggle("Always Day", 2)
-local nightBtn, setNightVisual = makeEnvToggle("Always Night", 3)
+local dayBtn, setDayVisual     = makeEnvToggle("Always Day")
+local nightBtn, setNightVisual = makeEnvToggle("Always Night")
 
 dayBtn.MouseButton1Click:Connect(function()
     alwaysDayActive = not alwaysDayActive
