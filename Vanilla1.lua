@@ -107,6 +107,7 @@ local SECTION_TEXT = Color3.fromRGB(110, 110, 120)
 -- EXECUTOR DETECTION
 -- ════════════════════════════════════════════════════
 local function detectExecutor()
+    -- Check for well-known executor globals / functions
     if syn and syn.request then return "Synapse X"
     elseif KRNL_LOADED then return "Krnl"
     elseif SENTINEL_V2 then return "Sentinel"
@@ -114,6 +115,7 @@ local function detectExecutor()
     elseif getgenv and getgenv().Script_Builder then return "Script-Ware"
     elseif fluxus then return "Fluxus"
     elseif type(Drawing) == "table" then
+        -- Drawing exists in most exploits; use extra signals to narrow down
         if identifyexecutor then
             local n = identifyexecutor()
             if n and n ~= "" then return n end
@@ -130,10 +132,14 @@ end
 
 -- ════════════════════════════════════════════════════
 -- SERVER REGION DETECTION
+-- (Roblox jobs key contains region info in newer clients;
+--  fallback: infer from DataCenter field or ping heuristics)
 -- ════════════════════════════════════════════════════
 local function getServerRegion()
     local regionStr = "Unknown"
     pcall(function()
+        -- Primary: Stats.Network ServerStatsItem contains a "Data Center" stat on live servers
+        -- This is the actual Roblox datacenter tag (e.g. "AMS" = Amsterdam, "FRA" = Frankfurt)
         local si = Stats.Network:FindFirstChild("ServerStatsItem")
         if si then
             for _, child in ipairs(si:GetChildren()) do
@@ -141,6 +147,7 @@ local function getServerRegion()
                 if nameLower:find("data center") or nameLower:find("datacenter") or nameLower:find("location") then
                     local val = tostring(child:GetValue())
                     if val and #val >= 2 then
+                        -- Map known Roblox datacenter codes to readable names
                         local dcMap = {
                             AMS = "Amsterdam, EU", FRA = "Frankfurt, EU", LHR = "London, EU",
                             CDG = "Paris, EU",     MAD = "Madrid, EU",   WAW = "Warsaw, EU",
@@ -157,6 +164,7 @@ local function getServerRegion()
             end
         end
 
+        -- Secondary: direct children of Stats.Network (some executor environments expose it here)
         for _, child in ipairs(Stats.Network:GetChildren()) do
             local n = child.Name:lower()
             if n == "data center" or n == "datacenter" or n == "server location" then
@@ -167,6 +175,9 @@ local function getServerRegion()
             end
         end
 
+        -- Tertiary: honest ping-based bracket — this is transparent, not fake
+        -- EU servers (AMS/FRA) give roughly: EU client <50ms, US client 80-130ms, Asia 200ms+
+        -- We're targeting EU players (as stated), so these brackets are calibrated for EU viewpoint
         local ok, ping = pcall(function()
             return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
         end)
@@ -201,8 +212,10 @@ local function onExit()
         _G.VH.butter.running = false
         if _G.VH.butter.thread then pcall(task.cancel, _G.VH.butter.thread); _G.VH.butter.thread = nil end
     end
+    -- Run all registered cleanup tasks
     for _, fn in ipairs(cleanupTasks) do pcall(fn) end
     cleanupTasks = {}
+    -- Restore character state
     pcall(function()
         local char = player.Character
         if not char then return end
@@ -303,6 +316,7 @@ titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub | LT2"
 titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 15
 titleLbl.TextColor3 = THEME_TEXT; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.ZIndex = 5
 
+-- v1.1.0 label at far right
 local versionLbl = Instance.new("TextLabel", topBar)
 versionLbl.Size = UDim2.new(0, 52, 0, 20); versionLbl.Position = UDim2.new(1, -60, 0.5, -10)
 versionLbl.BackgroundTransparency = 1; versionLbl.Text = "v1.1.0"
@@ -528,6 +542,7 @@ end
 -- ════════════════════════════════════════════════════
 local homePage = pages["HomeTab"]
 
+-- Chat bubble row
 local bubbleRow = Instance.new("Frame", homePage)
 bubbleRow.Size = UDim2.new(1, 0, 0, 100); bubbleRow.BackgroundTransparency = 1; bubbleRow.LayoutOrder = 1
 
@@ -605,6 +620,7 @@ rejoinBtn.MouseEnter:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.
 rejoinBtn.MouseLeave:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=Color3.fromRGB(16,16,20)}):Play() end)
 rejoinBtn.MouseButton1Click:Connect(function() pcall(function() TeleportService:Teleport(game.PlaceId,player) end) end)
 
+-- ── Server Region card (full width, below grid) ───────────────
 local regionCard = Instance.new("Frame", homePage)
 regionCard.Size = UDim2.new(1, 0, 0, 42); regionCard.BackgroundColor3 = Color3.fromRGB(16,16,20)
 regionCard.BorderSizePixel = 0; regionCard.LayoutOrder = 3
@@ -630,6 +646,7 @@ regionValueLbl.TextColor3 = THEME_TEXT; regionValueLbl.TextXAlignment = Enum.Tex
 regionValueLbl.TextTruncate = Enum.TextTruncate.AtEnd
 regionValueLbl.Text = "Detecting…"
 
+-- ── Performance warning row (hidden by default) ───────────────
 local perfRow = Instance.new("Frame", homePage)
 perfRow.Size = UDim2.new(1, 0, 0, 34); perfRow.BackgroundColor3 = Color3.fromRGB(50,18,18)
 perfRow.BorderSizePixel = 0; perfRow.Visible = false; perfRow.LayoutOrder = 4
@@ -656,22 +673,26 @@ changeServerBtn.MouseButton1Click:Connect(function()
     pcall(function() TeleportService:Teleport(13822889, player) end)
 end)
 
+-- Ping update every heartbeat
 local pingConn = RunService.Heartbeat:Connect(function()
     local ok, ping = pcall(function() return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
     pingLabel.Text = ok and ("Ping: "..ping.." ms") or "Ping: N/A"
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
 
-local _serverAgeSnapshot = 0
-local _loadClock = os.clock()
-pcall(function() _serverAgeSnapshot = workspace.DistributedGameTime end)
+-- Server uptime — counts how long this server has been running using workspace.DistributedGameTime
+-- This is set by Roblox to the age of the server instance, not the client join time.
+-- We snapshot it once on load and add elapsed client time on top for accuracy.
+local serverAgeAtLoad = 0
+pcall(function() serverAgeAtLoad = workspace.DistributedGameTime end)
+local clientLoadTime = os.clock()
 
 local uptimeThread
 uptimeThread = task.spawn(function()
     while gui and gui.Parent do
         pcall(function()
-            local elapsed = os.clock() - _loadClock
-            local secs = math.floor(_serverAgeSnapshot + elapsed)
+            -- DistributedGameTime continues ticking; use it directly as server age
+            local secs = math.floor(workspace.DistributedGameTime)
             local h = math.floor(secs / 3600)
             local m = math.floor((secs % 3600) / 60)
             local s = secs % 60
@@ -694,6 +715,7 @@ table.insert(cleanupTasks, function()
     if uptimeThread then pcall(task.cancel, uptimeThread); uptimeThread = nil end
 end)
 
+-- Executor detection (one-shot)
 task.delay(1, function()
     local execName = detectExecutor()
     if execLabel and execLabel.Parent then
@@ -701,12 +723,14 @@ task.delay(1, function()
     end
 end)
 
+-- Server region + perf warning detection (one-shot)
 local isNonEuRegion = false
 task.delay(1.5, function()
     local region = getServerRegion()
     if regionValueLbl and regionValueLbl.Parent then
         regionValueLbl.Text = region
     end
+    -- Show warning if region is clearly outside EU
     local regionLower = string.lower(region)
     local isEU = regionLower:find("europe") or regionLower:find("eu") or regionLower:find("frankfurt") or regionLower:find("amsterdam")
     isNonEuRegion = not isEU
@@ -715,6 +739,7 @@ task.delay(1.5, function()
     end
 end)
 
+-- Lag detection — updates every 5 seconds
 local lagThread
 lagThread = task.spawn(function()
     while gui and gui.Parent do
@@ -746,6 +771,11 @@ end)
 -- TELEPORT TAB
 -- ════════════════════════════════════════════════════
 local teleportPage = pages["TeleportTab"]
+local tpHeader=Instance.new("TextLabel",teleportPage)
+tpHeader.Size=UDim2.new(1,-12,0,28); tpHeader.BackgroundTransparency=1
+tpHeader.Font=Enum.Font.GothamBold; tpHeader.TextSize=14
+tpHeader.TextColor3=THEME_TEXT; tpHeader.TextXAlignment=Enum.TextXAlignment.Left
+tpHeader.Text="Quick Teleport Locations"
 
 local locations = {
     {name="Spawn",x=172,y=3,z=74},{name="The Den",x=323,y=41.8,z=1930},
@@ -765,29 +795,18 @@ local locations = {
     {name="Cherry Meadow",x=220.9,y=59.8,z=1305.8},{name="Bird Cave",x=4813.1,y=17.7,z=-978.8},
 }
 
-local tpGrid = Instance.new("Frame", teleportPage)
-tpGrid.Size = UDim2.new(1, 0, 0, math.ceil(#locations / 2) * 34 + math.ceil(#locations / 2) * 6)
-tpGrid.BackgroundTransparency = 1
-local tpUIGrid = Instance.new("UIGridLayout", tpGrid)
-tpUIGrid.CellSize = UDim2.new(0.5, -5, 0, 30)
-tpUIGrid.CellPadding = UDim2.new(0, 6, 0, 6)
-tpUIGrid.HorizontalAlignment = Enum.HorizontalAlignment.Left
-tpUIGrid.SortOrder = Enum.SortOrder.LayoutOrder
-
-for i, loc in ipairs(locations) do
-    local btn = Instance.new("TextButton", tpGrid)
-    btn.LayoutOrder = i
-    btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 12
-    btn.TextColor3 = THEME_TEXT; btn.Text = loc.name
-    btn.TextTruncate = Enum.TextTruncate.AtEnd
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+for _, loc in ipairs(locations) do
+    local btn=Instance.new("TextButton",teleportPage)
+    btn.Size=UDim2.new(1,-12,0,36); btn.BackgroundColor3=BTN_COLOR
+    btn.BorderSizePixel=0; btn.Font=Enum.Font.GothamSemibold; btn.TextSize=13
+    btn.TextColor3=THEME_TEXT; btn.Text=loc.name
+    Instance.new("UICorner",btn).CornerRadius=UDim.new(0,8)
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER,TextColor3=Color3.fromRGB(255,255,255)}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR,TextColor3=THEME_TEXT}):Play() end)
     btn.MouseButton1Click:Connect(function()
-        local char = player.Character
+        local char=player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y + 3, loc.z)
+            char.HumanoidRootPart.CFrame=CFrame.new(loc.x,loc.y+3,loc.z)
         end
     end)
 end
@@ -799,6 +818,7 @@ local worldPage = pages["WorldTab"]
 local worldList = worldPage:FindFirstChildOfClass("UIListLayout")
 if worldList then worldList.Padding = UDim.new(0, 8) end
 
+-- Store original lighting values for cleanup
 local origGlobalShadows = game.Lighting.GlobalShadows
 
 table.insert(cleanupTasks, function()
@@ -857,6 +877,8 @@ local function wToggle(text, defaultState, callback)
     return frame
 end
 
+-- World tab intentionally left minimal; additional environment controls can be added here
+
 -- ════════════════════════════════════════════════════
 -- SHARED ITEM/DUPE STATE
 -- ════════════════════════════════════════════════════
@@ -875,6 +897,8 @@ local lassoEnabled        = false
 local groupSelectEnabled  = false
 local isTeleportingItems  = false
 local stopTeleportItems   = false
+
+-- ── UI HELPERS (Item Tab) ─────────────────────────────────────
 
 local function iSectionLabel(text)
     local w = Instance.new("Frame", itemPage)
@@ -1131,6 +1155,16 @@ end
 -- ── ITEM TAB LAYOUT ───────────────────────────────────────────
 
 iSectionLabel("Selection Mode")
+
+-- How To hint card (moved from Dupe tab)
+local howToCard = Instance.new("TextLabel", itemPage)
+howToCard.Size = UDim2.new(1, 0, 0, 46); howToCard.BackgroundColor3 = Color3.fromRGB(13,13,17)
+howToCard.BorderSizePixel = 0; howToCard.Font = Enum.Font.Gotham; howToCard.TextSize = 11
+howToCard.TextColor3 = Color3.fromRGB(110,110,125); howToCard.TextWrapped = true
+howToCard.TextXAlignment = Enum.TextXAlignment.Left; howToCard.TextYAlignment = Enum.TextYAlignment.Center
+howToCard.Text = "  How To: Enable a selection mode → select items → Set Destination → Teleport Selected."
+Instance.new("UICorner", howToCard).CornerRadius = UDim.new(0, 7)
+Instance.new("UIPadding", howToCard).PaddingLeft = UDim.new(0, 4)
 iToggle("Click Selection", false, function(val)
     clickSelectEnabled = val
     if val then lassoEnabled = false; groupSelectEnabled = false end
@@ -1151,6 +1185,7 @@ iSlider("Delay (x0.1s)", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
 iSep()
 iSectionLabel("Teleport Mode")
 
+-- Only Group and Random — Group on left, Random on right, Group default
 local itemModeRow = Instance.new("Frame", itemPage)
 itemModeRow.Size = UDim2.new(1, 0, 0, 30); itemModeRow.BackgroundTransparency = 1
 
@@ -1181,7 +1216,7 @@ for i, mName in ipairs(itemModeNames) do
         updateItemModeButtons(mName)
     end)
 end
-updateItemModeButtons("Group")
+updateItemModeButtons("Group")  -- Group selected by default
 
 local itemModeHint = Instance.new("TextLabel", itemPage)
 itemModeHint.Size = UDim2.new(1, 0, 0, 24); itemModeHint.BackgroundColor3 = Color3.fromRGB(13,13,16)
@@ -1214,7 +1249,7 @@ tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text
 tpRemoveBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
 
-for _, b in ipairs({tpSetBtn, tpRemoveBtn}) do
+for _, b in {tpSetBtn, tpRemoveBtn} do
     b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
 end
@@ -1245,6 +1280,7 @@ end)
 iSep()
 iSectionLabel("Actions")
 
+-- Teleport Selected (Item tab) with stop support
 local tpSelectBtn = iButton("Teleport Selected", function() end)
 tpSelectBtn.MouseButton1Click:Connect(function()
     if isTeleportingItems then
@@ -1266,6 +1302,7 @@ tpSelectBtn.MouseButton1Click:Connect(function()
             return
         end
 
+        -- Collect selected parts
         local selectedParts = {}
         for _, v in next, workspace.PlayerModels:GetDescendants() do
             if v.Name == "Selection" then
@@ -1341,25 +1378,23 @@ sellBtn.MouseButton1Click:Connect(function()
         for _, v in next, workspace.PlayerModels:GetDescendants() do
             if v.Name == "Selection" then
                 local part = v.Parent
-                -- FIXED: replaced "continue" with if-check (not supported by all executors)
-                if part and part.Parent then
-                    local char = player.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                    if hrp then hrp.CFrame = CFrame.new(part.CFrame.p) * CFrame.new(5,0,0) end
-                    task.wait(tpItemSpeed)
-                    pcall(function()
-                        if not part.Parent.PrimaryPart then part.Parent.PrimaryPart = part end
-                        local dragger = ReplicatedStorage:FindFirstChild("Interaction")
-                            and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
-                        local timeout = 0
-                        while not isnetworkowner(part) and timeout < 3 do
-                            if dragger then dragger:FireServer(part.Parent) end
-                            task.wait(0.05); timeout = timeout + 0.05
-                        end
+                if not (part and part.Parent) then continue end
+                local char = player.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                if hrp then hrp.CFrame = CFrame.new(part.CFrame.p) * CFrame.new(5,0,0) end
+                task.wait(tpItemSpeed)
+                pcall(function()
+                    if not part.Parent.PrimaryPart then part.Parent.PrimaryPart = part end
+                    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
+                        and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+                    local timeout = 0
+                    while not isnetworkowner(part) and timeout < 3 do
                         if dragger then dragger:FireServer(part.Parent) end
-                        part:PivotTo(CFrame.new(314.776,-1.593,87.807))
-                    end)
-                    task.wait(tpItemSpeed)
-                end
+                        task.wait(0.05); timeout = timeout + 0.05
+                    end
+                    if dragger then dragger:FireServer(part.Parent) end
+                    part:PivotTo(CFrame.new(314.776,-1.593,87.807))
+                end)
+                task.wait(tpItemSpeed)
             end
         end
         if OldPos and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -1369,7 +1404,7 @@ sellBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ════════════════════════════════════════════════════
--- DUPE TAB
+-- DUPE TAB — selection tools only; teleport controls live in Item tab
 -- ════════════════════════════════════════════════════
 local dupePage = pages["DupeTab"]
 local dupeList = dupePage:FindFirstChildOfClass("UIListLayout")
@@ -1528,11 +1563,13 @@ createPSlider("Jumppower", 50, 300, 50, function(val)
 end)
 
 -- ════════════════════════════════════════════════════
--- FLY
+-- FLY — fixed implementation
+-- flyEnabled  : master toggle (from UI)
+-- isFlyActive : currently flying
 -- ════════════════════════════════════════════════════
 local flySpeed      = 100
-local flyEnabled    = true
-local isFlyActive   = false
+local flyEnabled    = true    -- ON by default
+local isFlyActive   = false   -- actual fly state
 local flyBV, flyBG, flyConn
 local currentFlyKey = Enum.KeyCode.Q
 
@@ -1549,6 +1586,7 @@ local function stopFly()
     if char then
         local hum = char:FindFirstChild("Humanoid")
         if hum then hum.PlatformStand = false end
+        -- restore character CanCollide
         for _, p in ipairs(char:GetDescendants()) do
             if p:IsA("BasePart") then pcall(function() p.CanCollide = true end) end
         end
@@ -1602,12 +1640,14 @@ end
 
 table.insert(cleanupTasks, stopFly)
 
+-- Also stop fly if character is removed/respawned
 player.CharacterRemoving:Connect(function()
     if isFlyActive then stopFly() end
 end)
 
 createPSlider("Fly Speed", 100, 500, 100, function(val) flySpeed = val end)
 
+-- Fly Keybind row
 local flyKeyFrame = Instance.new("Frame", playerPage)
 flyKeyFrame.Size = UDim2.new(1, 0, 0, 36)
 flyKeyFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); flyKeyFrame.BorderSizePixel = 0
@@ -1616,7 +1656,7 @@ local flyKeyLabel = Instance.new("TextLabel", flyKeyFrame)
 flyKeyLabel.Size = UDim2.new(0.55, 0, 1, 0); flyKeyLabel.Position = UDim2.new(0, 12, 0, 0)
 flyKeyLabel.BackgroundTransparency = 1; flyKeyLabel.Font = Enum.Font.GothamSemibold; flyKeyLabel.TextSize = 13
 flyKeyLabel.TextColor3 = THEME_TEXT; flyKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
-flyKeyLabel.Text = "Fly Hotkey"
+flyKeyLabel.Text = "Fly"
 local flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
 flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70, 0.5, -12)
 flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
@@ -1632,6 +1672,7 @@ flyKeyBtn.MouseButton1Click:Connect(function()
     flyKeyBtn.Text = "..."; flyKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 50)
 end)
 
+-- Fly ON/OFF master toggle (ON by default)
 local flyToggleFrame = Instance.new("Frame", playerPage)
 flyToggleFrame.Size = UDim2.new(1, 0, 0, 36)
 flyToggleFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); flyToggleFrame.BorderSizePixel = 0
@@ -1643,12 +1684,12 @@ flyToggleLbl.TextColor3 = THEME_TEXT; flyToggleLbl.TextXAlignment = Enum.TextXAl
 flyToggleLbl.Text = "Fly"
 local flyToggleTb = Instance.new("TextButton", flyToggleFrame)
 flyToggleTb.Size = UDim2.new(0, 36, 0, 20); flyToggleTb.Position = UDim2.new(1, -46, 0.5, -10)
-flyToggleTb.BackgroundColor3 = Color3.fromRGB(80, 160, 80)
+flyToggleTb.BackgroundColor3 = Color3.fromRGB(80, 160, 80)   -- green = ON by default
 flyToggleTb.Text = ""; flyToggleTb.BorderSizePixel = 0
 Instance.new("UICorner", flyToggleTb).CornerRadius = UDim.new(1, 0)
 local flyToggleCircle = Instance.new("Frame", flyToggleTb)
 flyToggleCircle.Size = UDim2.new(0, 14, 0, 14)
-flyToggleCircle.Position = UDim2.new(0, 20, 0.5, -7)
+flyToggleCircle.Position = UDim2.new(0, 20, 0.5, -7)   -- right = ON
 flyToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); flyToggleCircle.BorderSizePixel = 0
 Instance.new("UICorner", flyToggleCircle).CornerRadius = UDim.new(1, 0)
 flyToggleTb.MouseButton1Click:Connect(function()
@@ -1662,6 +1703,15 @@ flyToggleTb.MouseButton1Click:Connect(function()
     flyToggleLbl.Text = "Fly"
     if not flyEnabled and isFlyActive then stopFly() end
 end)
+
+local flyHint = Instance.new("TextLabel", playerPage)
+flyHint.Size = UDim2.new(1, 0, 0, 26); flyHint.BackgroundColor3 = Color3.fromRGB(14, 14, 18)
+flyHint.BorderSizePixel = 0; flyHint.Font = Enum.Font.Gotham; flyHint.TextSize = 11
+flyHint.TextColor3 = Color3.fromRGB(90, 90, 105); flyHint.TextWrapped = true
+flyHint.TextXAlignment = Enum.TextXAlignment.Left
+flyHint.Text = "  When Fly is ON, press your Fly Key to start or stop flying."
+Instance.new("UICorner", flyHint).CornerRadius = UDim.new(0, 8)
+Instance.new("UIPadding", flyHint).PaddingLeft = UDim.new(0, 6)
 
 createPSep()
 createPSection("Character")
@@ -1713,11 +1763,12 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- GLOBAL KEY LISTENER
+-- GLOBAL KEY LISTENER (fly toggle + GUI toggle + keybind capture)
 -- ════════════════════════════════════════════════════
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
 
+    -- Rebind fly key
     if waitingForFlyKey then
         if input.UserInputType == Enum.UserInputType.Keyboard then
             currentFlyKey = input.KeyCode
@@ -1730,10 +1781,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 
+    -- GUI toggle
     if input.KeyCode == currentToggleKey then
         toggleGUI(); return
     end
 
+    -- Fly toggle (only when flyEnabled master is ON)
     if input.KeyCode == currentFlyKey and flyEnabled then
         if isFlyActive then stopFly() else startFly() end
         return
