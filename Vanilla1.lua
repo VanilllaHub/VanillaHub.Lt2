@@ -609,8 +609,9 @@ local bubbleStroke=Instance.new("UIStroke",bubbleBody)
 bubbleStroke.Color=BORDER_COLOR; bubbleStroke.Thickness=1.2; bubbleStroke.Transparency=0.4
 local bubbleGreeting=Instance.new("TextLabel",bubbleBody)
 bubbleGreeting.Size=UDim2.new(1,-20,0,28); bubbleGreeting.Position=UDim2.new(0,14,0,10)
-bubbleGreeting.BackgroundTransparency=1; bubbleGreeting.Font=Enum.Font.GothamBold; bubbleGreeting.TextSize=17
+bubbleGreeting.BackgroundTransparency=1; bubbleGreeting.Font=Enum.Font.GothamBold; bubbleGreeting.TextSize=15
 bubbleGreeting.TextColor3=THEME_TEXT; bubbleGreeting.TextXAlignment=Enum.TextXAlignment.Left
+bubbleGreeting.TextTruncate=Enum.TextTruncate.AtEnd; bubbleGreeting.ClipsDescendants=false
 bubbleGreeting.Text="Good to see you, "..player.DisplayName.."!"; bubbleGreeting.ZIndex=3
 local bubbleMsg=Instance.new("TextLabel",bubbleBody)
 bubbleMsg.Size=UDim2.new(1,-20,0,36); bubbleMsg.Position=UDim2.new(0,14,0,38)
@@ -621,39 +622,92 @@ bubbleMsg.Text="VanillaHub v1.1.0 is loaded and ready.\nChop, sell, and explore 
 
 -- STATS GRID
 local statsContainer = Instance.new("Frame", homePage)
-statsContainer.Size=UDim2.new(1,0,0,160); statsContainer.BackgroundTransparency=1
+statsContainer.Size=UDim2.new(1,0,0,100); statsContainer.BackgroundTransparency=1
 local gridLayout=Instance.new("UIGridLayout",statsContainer)
-gridLayout.CellSize=UDim2.new(0,148,0,42); gridLayout.CellPadding=UDim2.new(0,10,0,10)
+gridLayout.CellSize=UDim2.new(0,148,0,36); gridLayout.CellPadding=UDim2.new(0,8,0,8)
 gridLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; gridLayout.SortOrder=Enum.SortOrder.LayoutOrder
 
 local function createStatusBox(text, color)
     local box=Instance.new("Frame",statsContainer)
     box.BackgroundColor3=Color3.fromRGB(16,16,20); box.BorderSizePixel=0
-    Instance.new("UICorner",box).CornerRadius=UDim.new(0,8)
+    Instance.new("UICorner",box).CornerRadius=UDim.new(0,7)
     local stroke = Instance.new("UIStroke", box)
-    stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.5
+    stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.55
     local lbl=Instance.new("TextLabel",box)
-    lbl.Size=UDim2.new(1,-8,1,-4); lbl.Position=UDim2.new(0,4,0,2)
-    lbl.BackgroundTransparency=1; lbl.Font=Enum.Font.Gotham; lbl.TextSize=13
-    lbl.TextColor3=color or THEME_TEXT; lbl.Text=text; lbl.TextWrapped=true; lbl.TextXAlignment=Enum.TextXAlignment.Center
+    lbl.Size=UDim2.new(1,-10,1,-4); lbl.Position=UDim2.new(0,5,0,2)
+    lbl.BackgroundTransparency=1; lbl.Font=Enum.Font.Gotham; lbl.TextSize=12
+    lbl.TextColor3=color or THEME_TEXT; lbl.Text=text; lbl.TextWrapped=true
+    lbl.TextXAlignment=Enum.TextXAlignment.Center; lbl.TextTruncate=Enum.TextTruncate.AtEnd
     return lbl
 end
 
-local pingLabel     = createStatusBox("Ping: calculating...")
-local lagLabel      = createStatusBox("Lag: Checking...", Color3.fromRGB(160, 160, 170))
-local regionLabel   = createStatusBox("Server Region: detecting...", Color3.fromRGB(140, 200, 240))
+local pingLabel   = createStatusBox("Ping: …")
+local lagLabel    = createStatusBox("Lag: …", Color3.fromRGB(160, 160, 170))
 createStatusBox("Acc Age: "..player.AccountAge.."d")
-local execLabel     = createStatusBox("Executor: detecting...", Color3.fromRGB(180, 180, 190))
+local execLabel   = createStatusBox("Exec: detecting…", Color3.fromRGB(175, 175, 185))
 
 local rejoinBtn=Instance.new("TextButton",statsContainer)
-rejoinBtn.Size=UDim2.new(0,148,0,42); rejoinBtn.BackgroundColor3=Color3.fromRGB(16,16,20); rejoinBtn.BorderSizePixel=0
-rejoinBtn.Font=Enum.Font.Gotham; rejoinBtn.TextSize=14; rejoinBtn.TextColor3=THEME_TEXT; rejoinBtn.Text="Rejoin"
-Instance.new("UICorner",rejoinBtn).CornerRadius=UDim.new(0,8)
+rejoinBtn.Size=UDim2.new(0,148,0,36); rejoinBtn.BackgroundColor3=Color3.fromRGB(16,16,20); rejoinBtn.BorderSizePixel=0
+rejoinBtn.Font=Enum.Font.Gotham; rejoinBtn.TextSize=13; rejoinBtn.TextColor3=THEME_TEXT; rejoinBtn.Text="Rejoin"
+Instance.new("UICorner",rejoinBtn).CornerRadius=UDim.new(0,7)
 local rjStroke = Instance.new("UIStroke", rejoinBtn)
-rjStroke.Color = SEP_COLOR; rjStroke.Thickness = 1; rjStroke.Transparency = 0.5
+rjStroke.Color = SEP_COLOR; rjStroke.Thickness = 1; rjStroke.Transparency = 0.55
 rejoinBtn.MouseEnter:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=BTN_HOVER}):Play() end)
 rejoinBtn.MouseLeave:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=Color3.fromRGB(16,16,20)}):Play() end)
 rejoinBtn.MouseButton1Click:Connect(function() pcall(function() TeleportService:Teleport(game.PlaceId,player) end) end)
+
+-- ── Server Region card (full width, below grid) ───────────────
+local regionCard = Instance.new("Frame", homePage)
+regionCard.Size = UDim2.new(1, 0, 0, 42); regionCard.BackgroundColor3 = Color3.fromRGB(16,16,20)
+regionCard.BorderSizePixel = 0
+Instance.new("UICorner", regionCard).CornerRadius = UDim.new(0, 7)
+local rcStroke = Instance.new("UIStroke", regionCard)
+rcStroke.Color = SEP_COLOR; rcStroke.Thickness = 1; rcStroke.Transparency = 0.55
+
+local regionIcon = Instance.new("TextLabel", regionCard)
+regionIcon.Size = UDim2.new(0, 26, 1, 0); regionIcon.Position = UDim2.new(0, 10, 0, 0)
+regionIcon.BackgroundTransparency = 1; regionIcon.Font = Enum.Font.GothamBold; regionIcon.TextSize = 14
+regionIcon.TextColor3 = Color3.fromRGB(140, 200, 240); regionIcon.Text = "⊙"
+
+local regionLbl = Instance.new("TextLabel", regionCard)
+regionLbl.Size = UDim2.new(0.5, 0, 1, 0); regionLbl.Position = UDim2.new(0, 36, 0, 0)
+regionLbl.BackgroundTransparency = 1; regionLbl.Font = Enum.Font.GothamBold; regionLbl.TextSize = 12
+regionLbl.TextColor3 = Color3.fromRGB(140, 200, 240); regionLbl.TextXAlignment = Enum.TextXAlignment.Left
+regionLbl.Text = "Server Region"
+
+local regionValueLbl = Instance.new("TextLabel", regionCard)
+regionValueLbl.Size = UDim2.new(0.48, -10, 1, 0); regionValueLbl.Position = UDim2.new(0.52, 0, 0, 0)
+regionValueLbl.BackgroundTransparency = 1; regionValueLbl.Font = Enum.Font.Gotham; regionValueLbl.TextSize = 12
+regionValueLbl.TextColor3 = THEME_TEXT; regionValueLbl.TextXAlignment = Enum.TextXAlignment.Right
+regionValueLbl.TextTruncate = Enum.TextTruncate.AtEnd
+regionValueLbl.Text = "Detecting…"
+
+-- ── Performance warning row (hidden by default) ───────────────
+local perfRow = Instance.new("Frame", homePage)
+perfRow.Size = UDim2.new(1, 0, 0, 34); perfRow.BackgroundColor3 = Color3.fromRGB(50,18,18)
+perfRow.BorderSizePixel = 0; perfRow.Visible = false
+Instance.new("UICorner", perfRow).CornerRadius = UDim.new(0, 7)
+local prStroke = Instance.new("UIStroke", perfRow)
+prStroke.Color = Color3.fromRGB(180,50,50); prStroke.Thickness = 1; prStroke.Transparency = 0.5
+
+local perfMsgLbl = Instance.new("TextLabel", perfRow)
+perfMsgLbl.Size = UDim2.new(1, -110, 1, 0); perfMsgLbl.Position = UDim2.new(0, 10, 0, 0)
+perfMsgLbl.BackgroundTransparency = 1; perfMsgLbl.Font = Enum.Font.GothamSemibold; perfMsgLbl.TextSize = 11
+perfMsgLbl.TextColor3 = Color3.fromRGB(240, 130, 130); perfMsgLbl.TextXAlignment = Enum.TextXAlignment.Left
+perfMsgLbl.TextTruncate = Enum.TextTruncate.AtEnd
+perfMsgLbl.Text = "⚠  High ping / Bad server for performance"
+
+local changeServerBtn = Instance.new("TextButton", perfRow)
+changeServerBtn.Size = UDim2.new(0, 96, 0, 22); changeServerBtn.Position = UDim2.new(1, -104, 0.5, -11)
+changeServerBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40); changeServerBtn.BorderSizePixel = 0
+changeServerBtn.Font = Enum.Font.GothamSemibold; changeServerBtn.TextSize = 11
+changeServerBtn.TextColor3 = Color3.fromRGB(255, 255, 255); changeServerBtn.Text = "Change Server"
+Instance.new("UICorner", changeServerBtn).CornerRadius = UDim.new(0, 6)
+changeServerBtn.MouseEnter:Connect(function() TweenService:Create(changeServerBtn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(200,55,55)}):Play() end)
+changeServerBtn.MouseLeave:Connect(function() TweenService:Create(changeServerBtn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(160,40,40)}):Play() end)
+changeServerBtn.MouseButton1Click:Connect(function()
+    pcall(function() TeleportService:Teleport(13822889, player) end)
+end)
 
 -- Ping update every heartbeat
 local pingConn = RunService.Heartbeat:Connect(function()
@@ -662,7 +716,7 @@ local pingConn = RunService.Heartbeat:Connect(function()
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
 
--- Executor detection (one-shot, deferred slightly so globals are settled)
+-- Executor detection (one-shot)
 task.delay(1, function()
     local execName = detectExecutor()
     if execLabel and execLabel.Parent then
@@ -670,21 +724,22 @@ task.delay(1, function()
     end
 end)
 
--- Server region detection (one-shot)
+-- Server region + perf warning detection (one-shot)
 task.delay(1.5, function()
     local region = getServerRegion()
-    if regionLabel and regionLabel.Parent then
-        regionLabel.Text = "Server Region: " .. region
+    if regionValueLbl and regionValueLbl.Parent then
+        regionValueLbl.Text = region
     end
 end)
 
--- Lag detection — updates every 5 seconds
+-- Lag detection — updates every 5 seconds, shows perf warning if bad
 local lagThread
 lagThread = task.spawn(function()
     while gui and gui.Parent do
         local ok, ping = pcall(function() return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
         if lagLabel and lagLabel.Parent then
             if ok then
+                local isBad = ping > 200
                 if ping > 250 then
                     lagLabel.Text = "Lag: Yes"
                     lagLabel.TextColor3 = Color3.fromRGB(240, 100, 100)
@@ -694,6 +749,9 @@ lagThread = task.spawn(function()
                 else
                     lagLabel.Text = "Lag: No"
                     lagLabel.TextColor3 = Color3.fromRGB(100, 210, 100)
+                end
+                if perfRow and perfRow.Parent then
+                    perfRow.Visible = isBad
                 end
             else
                 lagLabel.Text = "Lag: N/A"
@@ -749,6 +807,129 @@ for _, loc in ipairs(locations) do
         end
     end)
 end
+
+-- ════════════════════════════════════════════════════
+-- WORLD TAB
+-- ════════════════════════════════════════════════════
+local worldPage = pages["WorldTab"]
+local worldList = worldPage:FindFirstChildOfClass("UIListLayout")
+if worldList then worldList.Padding = UDim.new(0, 8) end
+
+-- Store original lighting values for cleanup
+local origFogColor      = game.Lighting.FogColor
+local origFogEnd        = game.Lighting.FogEnd
+local origFogStart      = game.Lighting.FogStart
+local origGlobalShadows = game.Lighting.GlobalShadows
+
+table.insert(cleanupTasks, function()
+    pcall(function()
+        game.Lighting.FogColor      = origFogColor
+        game.Lighting.FogEnd        = origFogEnd
+        game.Lighting.FogStart      = origFogStart
+        game.Lighting.GlobalShadows = origGlobalShadows
+    end)
+end)
+
+local function wSectionLabel(text)
+    local w = Instance.new("Frame", worldPage)
+    w.Size = UDim2.new(1, 0, 0, 22); w.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel", w)
+    lbl.Size = UDim2.new(1, -4, 1, 0); lbl.Position = UDim2.new(0, 4, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
+    lbl.TextColor3 = SECTION_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = "  " .. string.upper(text)
+end
+
+local function wSep()
+    local sep = Instance.new("Frame", worldPage)
+    sep.Size = UDim2.new(1, 0, 0, 1)
+    sep.BackgroundColor3 = SEP_COLOR; sep.BorderSizePixel = 0
+end
+
+local function wToggle(text, defaultState, callback)
+    local frame = Instance.new("Frame", worldPage)
+    frame.Size = UDim2.new(1, 0, 0, 34)
+    frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1; lbl.Text = text; lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 13; lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    local tb = Instance.new("TextButton", frame)
+    tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
+    tb.BackgroundColor3 = defaultState and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    tb.Text = ""; tb.BorderSizePixel = 0
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
+    local circle = Instance.new("Frame", tb)
+    circle.Size = UDim2.new(0, 14, 0, 14)
+    circle.Position = UDim2.new(0, defaultState and 20 or 2, 0.5, -7)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+    local toggled = defaultState
+    if callback then callback(toggled) end
+    tb.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = toggled and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+        }):Play()
+        TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            Position = UDim2.new(0, toggled and 20 or 2, 0.5, -7)
+        }):Play()
+        if callback then callback(toggled) end
+    end)
+    return frame
+end
+
+wSectionLabel("Atmosphere")
+
+-- Fog toggle — grey, barely visible
+wToggle("Fog", false, function(val)
+    pcall(function()
+        if val then
+            game.Lighting.FogColor  = Color3.fromRGB(180, 180, 185) -- neutral grey
+            game.Lighting.FogStart  = 200
+            game.Lighting.FogEnd    = 600  -- very far end = barely visible
+        else
+            game.Lighting.FogColor  = origFogColor
+            game.Lighting.FogEnd    = origFogEnd
+            game.Lighting.FogStart  = origFogStart
+        end
+    end)
+end)
+
+wSep()
+wSectionLabel("Lighting")
+
+-- Shadows toggle — disables GlobalShadows on the Lighting service
+wToggle("Shadows", true, function(val)
+    pcall(function()
+        game.Lighting.GlobalShadows = val
+        -- Also reach into all BaseParts to make sure cast shadows reflect the setting
+        -- (Roblox automatically handles shadow casting from GlobalShadows)
+        if not val then
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    pcall(function() obj.CastShadow = false end)
+                end
+            end
+        else
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("BasePart") then
+                    pcall(function() obj.CastShadow = true end)
+                end
+            end
+        end
+    end)
+end)
+
+table.insert(cleanupTasks, function()
+    -- Restore shadow state on all parts
+    pcall(function()
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then pcall(function() obj.CastShadow = true end) end
+        end
+    end)
+end)
 
 -- ════════════════════════════════════════════════════
 -- SHARED ITEM/DUPE STATE
@@ -1026,6 +1207,16 @@ end
 -- ── ITEM TAB LAYOUT ───────────────────────────────────────────
 
 iSectionLabel("Selection Mode")
+
+-- How To hint card (moved from Dupe tab)
+local howToCard = Instance.new("TextLabel", itemPage)
+howToCard.Size = UDim2.new(1, 0, 0, 46); howToCard.BackgroundColor3 = Color3.fromRGB(13,13,17)
+howToCard.BorderSizePixel = 0; howToCard.Font = Enum.Font.Gotham; howToCard.TextSize = 11
+howToCard.TextColor3 = Color3.fromRGB(110,110,125); howToCard.TextWrapped = true
+howToCard.TextXAlignment = Enum.TextXAlignment.Left; howToCard.TextYAlignment = Enum.TextYAlignment.Center
+howToCard.Text = "  How To: Enable a selection mode → select items → Set Destination → Teleport Selected."
+Instance.new("UICorner", howToCard).CornerRadius = UDim.new(0, 7)
+Instance.new("UIPadding", howToCard).PaddingLeft = UDim.new(0, 4)
 iToggle("Click Selection", false, function(val)
     clickSelectEnabled = val
     if val then lassoEnabled = false; groupSelectEnabled = false end
@@ -1040,24 +1231,75 @@ iToggle("Group Selection", false, function(val)
 end)
 
 iSep()
+iSectionLabel("Teleport Mode")
+
+-- Only Group and Random — Group on left, Random on right, Group default
+local itemModeRow = Instance.new("Frame", itemPage)
+itemModeRow.Size = UDim2.new(1, 0, 0, 30); itemModeRow.BackgroundTransparency = 1
+
+local itemModeButtons = {}
+local itemModeNames = {"Group", "Random"}
+local itemTpMode = "group"
+
+local function updateItemModeButtons(active)
+    for _, mb in ipairs(itemModeButtons) do
+        local isActive = mb.Text == active
+        TweenService:Create(mb, TweenInfo.new(0.18), {
+            BackgroundColor3 = isActive and ACCENT or BTN_COLOR,
+            TextColor3 = isActive and Color3.fromRGB(255,255,255) or THEME_TEXT
+        }):Play()
+    end
+end
+
+for i, mName in ipairs(itemModeNames) do
+    local mb = Instance.new("TextButton", itemModeRow)
+    mb.Size = UDim2.new(0.5, -4, 1, 0)
+    mb.Position = UDim2.new((i-1) * 0.5, i == 1 and 0 or 4, 0, 0)
+    mb.BackgroundColor3 = BTN_COLOR; mb.Font = Enum.Font.GothamSemibold; mb.TextSize = 12
+    mb.TextColor3 = THEME_TEXT; mb.Text = mName; mb.BorderSizePixel = 0
+    Instance.new("UICorner", mb).CornerRadius = UDim.new(0, 7)
+    table.insert(itemModeButtons, mb)
+    mb.MouseButton1Click:Connect(function()
+        itemTpMode = string.lower(mName)
+        updateItemModeButtons(mName)
+    end)
+end
+updateItemModeButtons("Group")  -- Group selected by default
+
+local itemModeHint = Instance.new("TextLabel", itemPage)
+itemModeHint.Size = UDim2.new(1, 0, 0, 24); itemModeHint.BackgroundColor3 = Color3.fromRGB(13,13,16)
+itemModeHint.BorderSizePixel = 0; itemModeHint.Font = Enum.Font.Gotham; itemModeHint.TextSize = 11
+itemModeHint.TextColor3 = Color3.fromRGB(95,95,110); itemModeHint.TextWrapped = true
+itemModeHint.TextXAlignment = Enum.TextXAlignment.Left
+itemModeHint.Text = "  Group: sorted by item type  •  Random: shuffled order"
+Instance.new("UICorner", itemModeHint).CornerRadius = UDim.new(0, 7)
+Instance.new("UIPadding", itemModeHint).PaddingLeft = UDim.new(0, 4)
+
+iButton("Deselect All", function() deselectAll() end)
+
+iSep()
+iSectionLabel("Delay Per Item")
+iSlider("Delay (x0.1s)", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
+
+iSep()
 iSectionLabel("Teleport Destination")
 
 local tpRow = Instance.new("Frame", itemPage)
-tpRow.Size = UDim2.new(1, 0, 0, 34); tpRow.BackgroundTransparency = 1
+tpRow.Size = UDim2.new(1, 0, 0, 30); tpRow.BackgroundTransparency = 1
 
 local tpSetBtn = Instance.new("TextButton", tpRow)
-tpSetBtn.Size = UDim2.new(0.5, -5, 1, 0); tpSetBtn.Position = UDim2.new(0, 0, 0, 0)
+tpSetBtn.Size = UDim2.new(0.5, -4, 1, 0); tpSetBtn.Position = UDim2.new(0, 0, 0, 0)
 tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold
 tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"
 tpSetBtn.BorderSizePixel = 0
-Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
 
 local tpRemoveBtn = Instance.new("TextButton", tpRow)
-tpRemoveBtn.Size = UDim2.new(0.5, -5, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 5, 0, 0)
+tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
 tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSemibold
 tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Remove Destination"
 tpRemoveBtn.BorderSizePixel = 0
-Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
 
 for _, b in {tpSetBtn, tpRemoveBtn} do
     b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
@@ -1086,55 +1328,6 @@ end)
 table.insert(cleanupTasks, function()
     if tpCircle and tpCircle.Parent then tpCircle:Destroy(); tpCircle = nil end
 end)
-
-iSep()
-iSectionLabel("Teleport Speed")
-iSlider("Delay per item (x0.1s)", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
-
-iSep()
-iSectionLabel("Teleport Mode")
-
-local itemModeRow = Instance.new("Frame", itemPage)
-itemModeRow.Size = UDim2.new(1, 0, 0, 34); itemModeRow.BackgroundTransparency = 1
-
-local itemModeButtons = {}
-local itemModeNames = {"Normal", "Random", "Group"}
-local itemTpMode = "normal"
-
-local function updateItemModeButtons(active)
-    for _, mb in ipairs(itemModeButtons) do
-        local isActive = mb.Text == active
-        TweenService:Create(mb, TweenInfo.new(0.2), {
-            BackgroundColor3 = isActive and ACCENT or BTN_COLOR,
-            TextColor3 = isActive and Color3.fromRGB(255,255,255) or THEME_TEXT
-        }):Play()
-    end
-end
-
-for i, mName in ipairs(itemModeNames) do
-    local mb = Instance.new("TextButton", itemModeRow)
-    local xScale = 1 / #itemModeNames
-    mb.Size = UDim2.new(xScale, -4, 1, 0)
-    mb.Position = UDim2.new(xScale * (i-1), i == 1 and 0 or 2, 0, 0)
-    mb.BackgroundColor3 = BTN_COLOR; mb.Font = Enum.Font.GothamSemibold; mb.TextSize = 12
-    mb.TextColor3 = THEME_TEXT; mb.Text = mName; mb.BorderSizePixel = 0
-    Instance.new("UICorner", mb).CornerRadius = UDim.new(0, 8)
-    table.insert(itemModeButtons, mb)
-    mb.MouseButton1Click:Connect(function()
-        itemTpMode = string.lower(mName)
-        updateItemModeButtons(mName)
-    end)
-end
-updateItemModeButtons("Normal")
-
-local itemModeHint = Instance.new("TextLabel", itemPage)
-itemModeHint.Size = UDim2.new(1, 0, 0, 28); itemModeHint.BackgroundColor3 = Color3.fromRGB(14,14,18)
-itemModeHint.BorderSizePixel = 0; itemModeHint.Font = Enum.Font.Gotham; itemModeHint.TextSize = 12
-itemModeHint.TextColor3 = Color3.fromRGB(100,100,115); itemModeHint.TextWrapped = true
-itemModeHint.TextXAlignment = Enum.TextXAlignment.Left
-itemModeHint.Text = "  Normal: sequential  •  Random: shuffled  •  Group: by type"
-Instance.new("UICorner", itemModeHint).CornerRadius = UDim.new(0, 8)
-Instance.new("UIPadding", itemModeHint).PaddingLeft = UDim.new(0, 6)
 
 iSep()
 iSectionLabel("Actions")
@@ -1262,8 +1455,6 @@ sellBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
-iButton("Deselect All", function() deselectAll() end)
-
 -- ════════════════════════════════════════════════════
 -- DUPE TAB — selection tools only; teleport controls live in Item tab
 -- ════════════════════════════════════════════════════
@@ -1273,7 +1464,7 @@ if dupeList then dupeList.Padding = UDim.new(0, 8) end
 
 local function dSectionLabel(text)
     local w = Instance.new("Frame", dupePage)
-    w.Size = UDim2.new(1, 0, 0, 24); w.BackgroundTransparency = 1
+    w.Size = UDim2.new(1, 0, 0, 22); w.BackgroundTransparency = 1
     local lbl = Instance.new("TextLabel", w)
     lbl.Size = UDim2.new(1, -4, 1, 0); lbl.Position = UDim2.new(0, 4, 0, 0)
     lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
@@ -1281,36 +1472,19 @@ local function dSectionLabel(text)
     lbl.Text = "  " .. string.upper(text)
 end
 
-local function dSep()
-    local sep = Instance.new("Frame", dupePage)
-    sep.Size = UDim2.new(1, 0, 0, 1)
-    sep.BackgroundColor3 = SEP_COLOR; sep.BorderSizePixel = 0
-end
-
 local function dButton(text, cb)
     local btn = Instance.new("TextButton", dupePage)
-    btn.Size = UDim2.new(1, 0, 0, 34); btn.BackgroundColor3 = BTN_COLOR
+    btn.Size = UDim2.new(1, 0, 0, 32); btn.BackgroundColor3 = BTN_COLOR
     btn.Text = text; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
     if cb then btn.MouseButton1Click:Connect(cb) end
     return btn
 end
 
-dSectionLabel("Info")
-local dupeNote = Instance.new("TextLabel", dupePage)
-dupeNote.Size = UDim2.new(1, 0, 0, 52); dupeNote.BackgroundColor3 = Color3.fromRGB(14,14,18)
-dupeNote.BorderSizePixel = 0; dupeNote.Font = Enum.Font.Gotham; dupeNote.TextSize = 13
-dupeNote.TextColor3 = Color3.fromRGB(160,160,175); dupeNote.TextWrapped = true
-dupeNote.TextXAlignment = Enum.TextXAlignment.Left; dupeNote.TextYAlignment = Enum.TextYAlignment.Center
-dupeNote.Text = "  Teleport destination, mode, speed, and actions\n  have been moved to the Item tab."
-Instance.new("UICorner", dupeNote).CornerRadius = UDim.new(0, 8)
-Instance.new("UIPadding", dupeNote).PaddingLeft = UDim.new(0, 4)
-
-dSep()
-dSectionLabel("Actions")
+dSectionLabel("Quick Actions")
 dButton("Go to Item Tab", function() switchTab("ItemTab") end)
 dButton("Deselect All", function() deselectAll() end)
 
