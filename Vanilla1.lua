@@ -612,13 +612,13 @@ bubbleGreeting.Size=UDim2.new(1,-20,0,28); bubbleGreeting.Position=UDim2.new(0,1
 bubbleGreeting.BackgroundTransparency=1; bubbleGreeting.Font=Enum.Font.GothamBold; bubbleGreeting.TextSize=15
 bubbleGreeting.TextColor3=THEME_TEXT; bubbleGreeting.TextXAlignment=Enum.TextXAlignment.Left
 bubbleGreeting.TextTruncate=Enum.TextTruncate.AtEnd; bubbleGreeting.ClipsDescendants=false
-bubbleGreeting.Text="Good to see you, "..player.DisplayName.."!"; bubbleGreeting.ZIndex=3
+bubbleGreeting.Text="Hey, "..player.DisplayName.." ♡"; bubbleGreeting.ZIndex=3
 local bubbleMsg=Instance.new("TextLabel",bubbleBody)
 bubbleMsg.Size=UDim2.new(1,-20,0,36); bubbleMsg.Position=UDim2.new(0,14,0,38)
 bubbleMsg.BackgroundTransparency=1; bubbleMsg.Font=Enum.Font.Gotham; bubbleMsg.TextSize=13
 bubbleMsg.TextColor3=Color3.fromRGB(170,170,180); bubbleMsg.TextXAlignment=Enum.TextXAlignment.Left
 bubbleMsg.TextYAlignment=Enum.TextYAlignment.Top; bubbleMsg.TextWrapped=true
-bubbleMsg.Text="VanillaHub v1.1.0 is loaded and ready.\nChop, sell, and explore with ease."; bubbleMsg.ZIndex=3
+bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Let's get to it 🌿"; bubbleMsg.ZIndex=3
 
 -- STATS GRID
 local statsContainer = Instance.new("Frame", homePage)
@@ -695,7 +695,7 @@ perfMsgLbl.Size = UDim2.new(1, -110, 1, 0); perfMsgLbl.Position = UDim2.new(0, 1
 perfMsgLbl.BackgroundTransparency = 1; perfMsgLbl.Font = Enum.Font.GothamSemibold; perfMsgLbl.TextSize = 11
 perfMsgLbl.TextColor3 = Color3.fromRGB(240, 130, 130); perfMsgLbl.TextXAlignment = Enum.TextXAlignment.Left
 perfMsgLbl.TextTruncate = Enum.TextTruncate.AtEnd
-perfMsgLbl.Text = "⚠  High ping / Bad server for performance"
+perfMsgLbl.Text = "⚠  We recommend changing servers for the best performance."
 
 local changeServerBtn = Instance.new("TextButton", perfRow)
 changeServerBtn.Size = UDim2.new(0, 96, 0, 22); changeServerBtn.Position = UDim2.new(1, -104, 0.5, -11)
@@ -725,21 +725,28 @@ task.delay(1, function()
 end)
 
 -- Server region + perf warning detection (one-shot)
+local isNonEuRegion = false
 task.delay(1.5, function()
     local region = getServerRegion()
     if regionValueLbl and regionValueLbl.Parent then
         regionValueLbl.Text = region
     end
+    -- Show warning if region is clearly outside EU
+    local regionLower = string.lower(region)
+    local isEU = regionLower:find("europe") or regionLower:find("eu") or regionLower:find("frankfurt") or regionLower:find("amsterdam")
+    isNonEuRegion = not isEU
+    if perfRow and perfRow.Parent then
+        perfRow.Visible = isNonEuRegion
+    end
 end)
 
--- Lag detection — updates every 5 seconds, shows perf warning if bad
+-- Lag detection — updates every 5 seconds
 local lagThread
 lagThread = task.spawn(function()
     while gui and gui.Parent do
         local ok, ping = pcall(function() return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
         if lagLabel and lagLabel.Parent then
             if ok then
-                local isBad = ping > 200
                 if ping > 250 then
                     lagLabel.Text = "Lag: Yes"
                     lagLabel.TextColor3 = Color3.fromRGB(240, 100, 100)
@@ -749,9 +756,6 @@ lagThread = task.spawn(function()
                 else
                     lagLabel.Text = "Lag: No"
                     lagLabel.TextColor3 = Color3.fromRGB(100, 210, 100)
-                end
-                if perfRow and perfRow.Parent then
-                    perfRow.Visible = isBad
                 end
             else
                 lagLabel.Text = "Lag: N/A"
@@ -816,16 +820,10 @@ local worldList = worldPage:FindFirstChildOfClass("UIListLayout")
 if worldList then worldList.Padding = UDim.new(0, 8) end
 
 -- Store original lighting values for cleanup
-local origFogColor      = game.Lighting.FogColor
-local origFogEnd        = game.Lighting.FogEnd
-local origFogStart      = game.Lighting.FogStart
 local origGlobalShadows = game.Lighting.GlobalShadows
 
 table.insert(cleanupTasks, function()
     pcall(function()
-        game.Lighting.FogColor      = origFogColor
-        game.Lighting.FogEnd        = origFogEnd
-        game.Lighting.FogStart      = origFogStart
         game.Lighting.GlobalShadows = origGlobalShadows
     end)
 end)
@@ -880,27 +878,9 @@ local function wToggle(text, defaultState, callback)
     return frame
 end
 
-wSectionLabel("Atmosphere")
+wSectionLabel("Environment")
 
--- Fog toggle — very light, barely-there grey haze
-wToggle("Fog", false, function(val)
-    pcall(function()
-        if val then
-            game.Lighting.FogColor  = Color3.fromRGB(210, 212, 215) -- cool light grey
-            game.Lighting.FogStart  = 800   -- fog starts far away
-            game.Lighting.FogEnd    = 2000  -- fades out gently — barely visible
-        else
-            game.Lighting.FogColor  = origFogColor
-            game.Lighting.FogEnd    = origFogEnd
-            game.Lighting.FogStart  = origFogStart
-        end
-    end)
-end)
-
-wSep()
-wSectionLabel("Rendering")
-
--- Shadows toggle — single instance, no duplicate
+-- Single Shadows toggle
 wToggle("Shadows", true, function(val)
     pcall(function()
         game.Lighting.GlobalShadows = val
@@ -1474,14 +1454,6 @@ local function dButton(text, cb)
 end
 
 dSectionLabel("Info")
-local dupeInfoLbl = Instance.new("TextLabel", dupePage)
-dupeInfoLbl.Size = UDim2.new(1, 0, 0, 40); dupeInfoLbl.BackgroundColor3 = Color3.fromRGB(13,13,17)
-dupeInfoLbl.BorderSizePixel = 0; dupeInfoLbl.Font = Enum.Font.Gotham; dupeInfoLbl.TextSize = 11
-dupeInfoLbl.TextColor3 = Color3.fromRGB(110,110,125); dupeInfoLbl.TextWrapped = true
-dupeInfoLbl.TextXAlignment = Enum.TextXAlignment.Left; dupeInfoLbl.TextYAlignment = Enum.TextYAlignment.Center
-dupeInfoLbl.Text = "  Teleport controls are in the Item tab."
-Instance.new("UICorner", dupeInfoLbl).CornerRadius = UDim.new(0, 7)
-Instance.new("UIPadding", dupeInfoLbl).PaddingLeft = UDim.new(0, 4)
 
 -- ════════════════════════════════════════════════════
 -- PLAYER TAB
@@ -1705,7 +1677,7 @@ local flyKeyLabel = Instance.new("TextLabel", flyKeyFrame)
 flyKeyLabel.Size = UDim2.new(0.55, 0, 1, 0); flyKeyLabel.Position = UDim2.new(0, 12, 0, 0)
 flyKeyLabel.BackgroundTransparency = 1; flyKeyLabel.Font = Enum.Font.GothamSemibold; flyKeyLabel.TextSize = 13
 flyKeyLabel.TextColor3 = THEME_TEXT; flyKeyLabel.TextXAlignment = Enum.TextXAlignment.Left
-flyKeyLabel.Text = "Fly Keybind"
+flyKeyLabel.Text = "Fly"
 local flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
 flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70, 0.5, -12)
 flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
