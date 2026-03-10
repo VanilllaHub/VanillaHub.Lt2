@@ -686,67 +686,49 @@ end
 -- ── ENVIRONMENT ───────────────────────────────────────────────────────────────
 makeWorldSectionLabel("Environment")
 
--- Day/Night mode buttons (mutually exclusive, same as Group/Random in Item tab)
-local envModeRow = Instance.new("Frame", worldPage)
-envModeRow.Size = UDim2.new(1, 0, 0, 30); envModeRow.BackgroundTransparency = 1
-
-local envModeButtons = {}
-local activeEnvMode  = nil
-
-local function updateEnvModeButtons(active)
-    for _, mb in ipairs(envModeButtons) do
-        local isActive = mb.Text == active
-        TweenService:Create(mb, TweenInfo.new(0.18), {
-            BackgroundColor3 = isActive and ACCENT or BTN_COLOR,
-            TextColor3       = isActive and Color3.fromRGB(255, 255, 255) or THEME_TEXT
-        }):Play()
-    end
-end
-
-local envModeNames = {"Always Day", "Always Night"}
-for i, mName in ipairs(envModeNames) do
-    local mb = Instance.new("TextButton", envModeRow)
-    mb.Size = UDim2.new(0.5, -4, 1, 0)
-    mb.Position = UDim2.new((i - 1) * 0.5, i == 1 and 0 or 4, 0, 0)
-    mb.BackgroundColor3 = BTN_COLOR; mb.Font = Enum.Font.GothamSemibold; mb.TextSize = 12
-    mb.TextColor3 = THEME_TEXT; mb.Text = mName; mb.BorderSizePixel = 0
-    Instance.new("UICorner", mb).CornerRadius = UDim.new(0, 7)
-    mb.MouseEnter:Connect(function()
-        if activeEnvMode ~= mName then
-            TweenService:Create(mb, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play()
-        end
-    end)
-    mb.MouseLeave:Connect(function()
-        if activeEnvMode ~= mName then
-            TweenService:Create(mb, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play()
-        end
-    end)
-    table.insert(envModeButtons, mb)
-    mb.MouseButton1Click:Connect(function()
+local _, setDayState = makeWorldToggle("Always Day", true, function(v)
+    if v then
         stopDayNight()
-        if activeEnvMode == mName then
-            activeEnvMode = nil
-            updateEnvModeButtons(nil)
-            Lighting.ClockTime = origClockTime
-        else
-            activeEnvMode = mName
-            updateEnvModeButtons(mName)
-            if mName == "Always Day" then
-                Lighting.ClockTime = 14
-                dayConn = RunService.Heartbeat:Connect(function()
-                    Lighting.ClockTime = 14
-                end)
-            else
-                Lighting.ClockTime = 0
-                nightConn = RunService.Heartbeat:Connect(function()
-                    Lighting.ClockTime = 0
-                end)
-            end
-        end
-    end)
-end
+        Lighting.ClockTime = 14
+        dayConn = RunService.Heartbeat:Connect(function()
+            Lighting.ClockTime = 14
+        end)
+    else
+        if dayConn then dayConn:Disconnect(); dayConn = nil end
+        Lighting.ClockTime = origClockTime
+    end
+end)
 
-updateEnvModeButtons(nil)
+local _, setNightState = makeWorldToggle("Always Night", false, function(v)
+    if v then
+        stopDayNight()
+        setDayState(false)
+        Lighting.ClockTime = 0
+        nightConn = RunService.Heartbeat:Connect(function()
+            Lighting.ClockTime = 0
+        end)
+    else
+        if nightConn then nightConn:Disconnect(); nightConn = nil end
+        Lighting.ClockTime = origClockTime
+    end
+end)
+
+-- Patch Always Day to turn off Always Night when enabled
+local origSetDayState = setDayState
+setDayState = function(val)
+    if val then
+        stopDayNight()
+        setNightState(false)
+        Lighting.ClockTime = 14
+        dayConn = RunService.Heartbeat:Connect(function()
+            Lighting.ClockTime = 14
+        end)
+    else
+        if dayConn then dayConn:Disconnect(); dayConn = nil end
+        Lighting.ClockTime = origClockTime
+    end
+    origSetDayState(val)
+end
 
 makeWorldToggle("Remove Fog", false, function(v)
     if fogConn then fogConn:Disconnect(); fogConn = nil end
