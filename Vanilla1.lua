@@ -668,7 +668,6 @@ local function makeWorldToggle(labelText, default, callback)
     circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
     local toggled = default
-    if callback then callback(toggled) end
     local function setState(val)
         toggled = val
         TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
@@ -696,14 +695,14 @@ local _, _setDay = makeWorldToggle("Always Day", true, function(v)
     alwaysDayActive = v
     if v then
         alwaysNightActive = false
-        if setNightState then setNightState(false) end
+        setNightState(false)
         stopDayNight()
         Lighting.ClockTime = 14
         dayConn = RunService.Heartbeat:Connect(function()
             Lighting.ClockTime = 14
         end)
     else
-        if dayConn then dayConn:Disconnect(); dayConn = nil end
+        stopDayNight()
         Lighting.ClockTime = origClockTime
     end
 end)
@@ -713,14 +712,14 @@ local _, _setNight = makeWorldToggle("Always Night", false, function(v)
     alwaysNightActive = v
     if v then
         alwaysDayActive = false
-        if setDayState then setDayState(false) end
+        setDayState(false)
         stopDayNight()
         Lighting.ClockTime = 0
         nightConn = RunService.Heartbeat:Connect(function()
             Lighting.ClockTime = 0
         end)
     else
-        if nightConn then nightConn:Disconnect(); nightConn = nil end
+        stopDayNight()
         Lighting.ClockTime = origClockTime
     end
 end)
