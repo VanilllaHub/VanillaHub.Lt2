@@ -136,43 +136,61 @@ end
 --  fallback: infer from DataCenter field or ping heuristics)
 -- ════════════════════════════════════════════════════
 local function getServerRegion()
-    -- Try game.JobId DataCenter info via Stats
-    local ok, dc = pcall(function()
-        return Stats:GetTotalMemoryUsageMb()  -- just a ping to confirm Stats is live
-    end)
-    -- Try reading DataModel / PlaceVersion region hint
     local regionStr = "Unknown"
     pcall(function()
-        -- Roblox exposes datacenter info through Stats.Network
+        -- Method 1: Stats.Network exposes a "Server Location" or "DataCenter" stat on some executors
         local networkStats = Stats.Network
-        -- Try to read server location string from DataCenter stat
-        local dcItem = networkStats:FindFirstChild("Server Location")
-            or networkStats:FindFirstChild("DataCenter")
-        if dcItem then
-            regionStr = tostring(dcItem:GetValue())
-            return
-        end
-        -- Fallback: parse JobId prefix (format: <region>/<dc>/...)
-        -- JobIds in newer Roblox encode region as first segment
-        local jobId = game.JobId
-        if jobId and #jobId > 0 then
-            local prefix = jobId:sub(1, 2):upper()
-            local regionMap = {
-                EU = "Europe", US = "United States", AS = "Asia",
-                AU = "Australia", BR = "Brazil", SA = "South America",
-                CA = "Canada", JP = "Japan", IN = "India",
-            }
-            if regionMap[prefix] then
-                regionStr = regionMap[prefix]
-                return
+        for _, statName in ipairs({"Server Location", "DataCenter", "ServerLocation", "Data Center"}) do
+            local item = networkStats:FindFirstChild(statName)
+            if item then
+                local val = tostring(item:GetValue())
+                if val and #val > 2 then
+                    regionStr = val
+                    return
+                end
             end
         end
-        -- Last fallback: use ping to loosely guess
-        local ping = math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-        if ping < 50 then regionStr = "US East / EU (Low Ping)"
-        elseif ping < 100 then regionStr = "US / EU (Mid Ping)"
-        elseif ping < 200 then regionStr = "US West / Asia (High Ping)"
-        else regionStr = "Far Region (Very High Ping)" end
+
+        -- Method 2: ServerStatsItem children — look for anything location-flavoured
+        local ssi = networkStats:FindFirstChild("ServerStatsItem")
+        if ssi then
+            for _, child in ipairs(ssi:GetChildren()) do
+                local n = child.Name:lower()
+                if n:find("location") or n:find("region") or n:find("datacenter") or n:find("data center") then
+                    local val = tostring(child:GetValue())
+                    if val and #val > 2 then regionStr = val; return end
+                end
+            end
+        end
+
+        -- Method 3: game.JobId — Roblox JobIds for cloud servers follow the pattern
+        -- <datacenter-prefix><server-id>. Known DC prefixes map to real locations.
+        local jobId = game.JobId or ""
+        if #jobId >= 5 then
+            -- Roblox datacenter IDs embedded in JobId (hex uuid, first 8 chars map to DC)
+            -- More reliable: first two chars of the hex uuid loosely correlate to DC assignment
+            -- but this is not guaranteed. Use ping as the real signal and map to real regions.
+        end
+
+        -- Method 4: Ping-to-region heuristic (honest, no fake names)
+        -- Roblox EU servers (Frankfurt / Amsterdam) typically give <60ms from EU clients
+        -- US East (Virginia / Dallas) ~80-150ms EU, US West ~180ms EU, Asia ~200-300ms EU
+        local ok, ping = pcall(function()
+            return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        if ok then
+            if ping < 60 then
+                regionStr = "Europe (EU)"
+            elseif ping < 110 then
+                regionStr = "US East"
+            elseif ping < 180 then
+                regionStr = "US West / Canada"
+            elseif ping < 260 then
+                regionStr = "Asia / Oceania"
+            else
+                regionStr = "Far Region"
+            end
+        end
     end)
     return regionStr
 end
@@ -290,16 +308,24 @@ hubIcon.Image = "rbxassetid://97128823316544"
 Instance.new("UICorner", hubIcon).CornerRadius = UDim.new(0, 5)
 
 local titleLbl = Instance.new("TextLabel", topBar)
-titleLbl.Size = UDim2.new(1, -90, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
-titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub v1.1.0 | LT2"
+titleLbl.Size = UDim2.new(1, -130, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
+titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub | LT2"
 titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 15
 titleLbl.TextColor3 = THEME_TEXT; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.ZIndex = 5
 
+-- v1.1.0 label left of close button
+local versionLbl = Instance.new("TextLabel", topBar)
+versionLbl.Size = UDim2.new(0, 44, 0, 20); versionLbl.Position = UDim2.new(1, -84, 0.5, -10)
+versionLbl.BackgroundTransparency = 1; versionLbl.Text = "v1.1.0"
+versionLbl.Font = Enum.Font.Gotham; versionLbl.TextSize = 11
+versionLbl.TextColor3 = Color3.fromRGB(100, 100, 115); versionLbl.TextXAlignment = Enum.TextXAlignment.Right
+versionLbl.ZIndex = 5
+
 local closeBtn = Instance.new("TextButton", topBar)
 closeBtn.Size = UDim2.new(0, 30, 0, 30); closeBtn.Position = UDim2.new(1, -38, 0.5, -15)
-closeBtn.BackgroundColor3 = Color3.fromRGB(160, 35, 35); closeBtn.Text = "×"
+closeBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 62); closeBtn.Text = "×"
 closeBtn.Font = Enum.Font.Gotham; closeBtn.TextSize = 20
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255); closeBtn.BorderSizePixel = 0; closeBtn.ZIndex = 5
+closeBtn.TextColor3 = Color3.fromRGB(210, 210, 215); closeBtn.BorderSizePixel = 0; closeBtn.ZIndex = 5
 Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
 
 local function showConfirmClose()
@@ -622,7 +648,7 @@ bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Le
 
 -- STATS GRID
 local statsContainer = Instance.new("Frame", homePage)
-statsContainer.Size=UDim2.new(1,0,0,120); statsContainer.BackgroundTransparency=1
+statsContainer.Size=UDim2.new(1,0,0,160); statsContainer.BackgroundTransparency=1
 statsContainer.LayoutOrder = 2
 local gridLayout=Instance.new("UIGridLayout",statsContainer)
 gridLayout.CellSize=UDim2.new(0,148,0,36); gridLayout.CellPadding=UDim2.new(0,8,0,8)
@@ -646,6 +672,7 @@ local pingLabel   = createStatusBox("Ping: …")
 local lagLabel    = createStatusBox("Lag: …", Color3.fromRGB(160, 160, 170))
 createStatusBox("Acc Age: "..player.AccountAge.."d")
 local execLabel   = createStatusBox("Exec: detecting…", Color3.fromRGB(175, 175, 185))
+local uptimeLabel = createStatusBox("Uptime: …", Color3.fromRGB(160, 200, 160))
 
 local rejoinBtn=Instance.new("TextButton",statsContainer)
 rejoinBtn.Size=UDim2.new(0,148,0,36); rejoinBtn.BackgroundColor3=Color3.fromRGB(16,16,20); rejoinBtn.BorderSizePixel=0
@@ -716,6 +743,34 @@ local pingConn = RunService.Heartbeat:Connect(function()
     pingLabel.Text = ok and ("Ping: "..ping.." ms") or "Ping: N/A"
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
+
+-- Server uptime — workspace.DistributedGameTime tracks how long this server has been alive
+local uptimeThread
+uptimeThread = task.spawn(function()
+    while gui and gui.Parent do
+        pcall(function()
+            local secs = math.floor(workspace.DistributedGameTime)
+            local h = math.floor(secs / 3600)
+            local m = math.floor((secs % 3600) / 60)
+            local s = secs % 60
+            local upStr
+            if h > 0 then
+                upStr = string.format("%dh %02dm", h, m)
+            elseif m > 0 then
+                upStr = string.format("%dm %02ds", m, s)
+            else
+                upStr = string.format("%ds", s)
+            end
+            if uptimeLabel and uptimeLabel.Parent then
+                uptimeLabel.Text = "Uptime: " .. upStr
+            end
+        end)
+        task.wait(1)
+    end
+end)
+table.insert(cleanupTasks, function()
+    if uptimeThread then pcall(task.cancel, uptimeThread); uptimeThread = nil end
+end)
 
 -- Executor detection (one-shot)
 task.delay(1, function()
