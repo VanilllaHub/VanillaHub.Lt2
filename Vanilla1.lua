@@ -695,7 +695,7 @@ local _, _setDay = makeWorldToggle("Always Day", true, function(v)
     alwaysDayActive = v
     if v then
         alwaysNightActive = false
-        setNightState(false)
+        if setNightState then setNightState(false) end
         stopDayNight()
         Lighting.ClockTime = 14
         dayConn = RunService.Heartbeat:Connect(function()
@@ -712,7 +712,7 @@ local _, _setNight = makeWorldToggle("Always Night", false, function(v)
     alwaysNightActive = v
     if v then
         alwaysDayActive = false
-        setDayState(false)
+        if setDayState then setDayState(false) end
         stopDayNight()
         Lighting.ClockTime = 0
         nightConn = RunService.Heartbeat:Connect(function()
@@ -752,7 +752,6 @@ makeWorldToggle("Shadows", true, function(v)
     Lighting.GlobalShadows = v
 end)
 
--- ── WATER ─────────────────────────────────────────────────────────────────────
 makeWorldSep()
 makeWorldSectionLabel("Water")
 
@@ -797,11 +796,9 @@ makeWorldToggle("Remove Water", false, function(v)
     end
 end)
 
--- ── WORLD ─────────────────────────────────────────────────────────────────────
 makeWorldSep()
 makeWorldSectionLabel("World")
 
--- ── CLEANUP ───────────────────────────────────────────────────────────────────
 table.insert(cleanupTasks, function()
     stopDayNight()
     if fogConn then fogConn:Disconnect(); fogConn = nil end
@@ -866,8 +863,8 @@ end
 -- ════════════════════════════════════════════════════
 -- SHARED ITEM/DUPE STATE
 -- ════════════════════════════════════════════════════
-local tpCircle       = nil
-local tpItemSpeed    = 0.3
+local tpCircle    = nil
+local tpItemSpeed = 0.3
 
 -- ════════════════════════════════════════════════════
 -- ITEM TAB
@@ -1271,7 +1268,6 @@ tpSelectBtn.MouseButton1Click:Connect(function()
             TweenService:Create(tpSelectBtn,TweenInfo.new(0.2),{BackgroundColor3=BTN_COLOR}):Play()
             return
         end
-
         local selectedParts = {}
         for _, v in next, workspace.PlayerModels:GetDescendants() do
             if v.Name == "Selection" then
@@ -1279,13 +1275,11 @@ tpSelectBtn.MouseButton1Click:Connect(function()
                 if part and part.Parent then table.insert(selectedParts, part) end
             end
         end
-
         local function getItemType(part)
             local m = part.Parent; if not m then return "unknown" end
             local iv = m:FindFirstChild("ItemName")
             return iv and iv.Value or m.Name
         end
-
         if itemTpMode == "random" then
             for i = #selectedParts, 2, -1 do
                 local j = math.random(i)
@@ -1306,7 +1300,6 @@ tpSelectBtn.MouseButton1Click:Connect(function()
                 return getItemType(a) < getItemType(b)
             end)
         end
-
         for _, part in ipairs(selectedParts) do
             if stopTeleportItems then break end
             local char = player.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1627,10 +1620,12 @@ flyKeyBtn.MouseEnter:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.
 flyKeyBtn.MouseLeave:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
 
 local waitingForFlyKey = false
+
 flyKeyBtn.MouseButton1Click:Connect(function()
     if waitingForFlyKey then return end
     waitingForFlyKey = true
-    flyKeyBtn.Text = "..."; flyKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 50)
+    flyKeyBtn.Text = "..."
+    flyKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 50)
 end)
 
 local flyToggleFrame = Instance.new("Frame", playerPage)
@@ -1720,11 +1715,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if waitingForFlyKey then
         if input.UserInputType == Enum.UserInputType.Keyboard then
             currentFlyKey = input.KeyCode
+            if _G.VH then _G.VH.currentFlyKey = currentFlyKey end
             flyKeyBtn.Text = input.KeyCode.Name
             flyKeyBtn.BackgroundColor3 = BTN_COLOR
-            flyToggleLbl.Text = "Fly"
             waitingForFlyKey = false
-            if _G.VH then _G.VH.currentFlyKey = currentFlyKey end
         end
         return
     end
@@ -1732,11 +1726,15 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
 
     if input.KeyCode == currentToggleKey then
-        toggleGUI(); return
+        toggleGUI()
+        return
     end
 
     if input.KeyCode == currentFlyKey then
-        if not flyEnabled then return end
+        if not flyEnabled then
+            if isFlyActive then stopFly() end
+            return
+        end
         if isFlyActive then stopFly() else startFly() end
         return
     end
