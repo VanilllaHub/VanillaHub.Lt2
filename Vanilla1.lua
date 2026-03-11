@@ -740,8 +740,21 @@ makeWorldToggle("Remove Fog", false, function(v)
     end
 end)
 
+makeWorldSep()
+makeWorldSectionLabel("World")
+
 makeWorldToggle("Shadows", true, function(v)
     Lighting.GlobalShadows = v
+end)
+
+makeWorldToggle("Bridge Down", false, function(v)
+    for _, part in ipairs(workspace.Bridge.VerticalLiftBridge.Lift:GetChildren()) do
+        if v then
+            part.CFrame = part.CFrame - Vector3.new(0, 26, 0)
+        else
+            part.CFrame = part.CFrame + Vector3.new(0, 26, 0)
+        end
+    end
 end)
 
 makeWorldSep()
@@ -788,9 +801,6 @@ makeWorldToggle("Remove Water", false, function(v)
     end
 end)
 
-makeWorldSep()
-makeWorldSectionLabel("World")
-
 table.insert(cleanupTasks, function()
     stopDayNight()
     if fogConn then fogConn:Disconnect(); fogConn = nil end
@@ -801,7 +811,6 @@ table.insert(cleanupTasks, function()
     Lighting.FogColor      = origFogColor
     Lighting.GlobalShadows = origShadows
 end)
-
 -- ════════════════════════════════════════════════════
 -- TELEPORT TAB
 -- ════════════════════════════════════════════════════
