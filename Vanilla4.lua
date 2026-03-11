@@ -25,11 +25,6 @@ local camera     = workspace.CurrentCamera
 local RS         = game:GetService("ReplicatedStorage")
 local mouse      = player:GetMouse()
 
--- ════════════════════════════════════════════════════
--- THEME COLOURS
--- ════════════════════════════════════════════════════
--- Selection colours match Vanilla1 Item Tab exactly:
---   outline = RGB(0,172,240)  surface = black  surfaceAlpha=0.5  line=0.09
 local C_SEL_OUTLINE  = Color3.fromRGB(0, 172, 240)
 local C_SEL_SURFACE  = Color3.fromRGB(0, 0, 0)
 local C_PREVIEW      = Color3.fromRGB(80,  160, 255)
@@ -39,62 +34,50 @@ local C_DARK         = Color3.fromRGB(16,  16,  20)
 local C_CARD         = Color3.fromRGB(22,  18,  30)
 local ITEM_GAP       = 0.10
 
--- ════════════════════════════════════════════════════
--- STATE
--- ════════════════════════════════════════════════════
-local selectedItems  = {}   -- [model] = SelectionBox
+local selectedItems  = {}
 local previewPart    = nil
-local previewFollow  = nil  -- RenderStepped connection
+local previewFollow  = nil
 local previewPlaced  = false
 
 local isSorting      = false
 local isStopped      = false
 local sortThread     = nil
-local sortSlots      = nil  -- saved slot list for resume
+local sortSlots      = nil
 local sortIndex      = 1
 local sortTotal      = 0
 local sortDone       = 0
 
 local gridCols   = 3
 local gridLayers = 1
-local gridRows   = 0   -- 0 = auto
+local gridRows   = 0
+local sortDelay  = 0.3
 
-local sortDelay  = 0.3  -- seconds between items
-
--- selection mode flags (mutually exclusive)
 local modeClick = false
 local modeLasso = false
 local modeGroup = false
 
--- lasso UI
-local lassoAnchor  = nil   -- Vector2 where drag started
+local lassoAnchor  = nil
 local lassoActive  = false
 
 -- ════════════════════════════════════════════════════
 -- ITEM HELPERS
--- Owner must be a DIRECT child of the model — this is what separates
--- draggable items from land, terrain, trees, and other workspace props.
 -- ════════════════════════════════════════════════════
 local function getMainPart(model)
     return model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")
         or model:FindFirstChildWhichIsA("BasePart")
 end
 
--- Returns true only for models that are valid draggable items.
--- Owner must be a DIRECT child — this is the exact same gate the Item Tab
--- uses and is what separates draggable items from land/terrain/props.
+-- FIX 1: removed IsDescendantOf(PlayerModels) requirement.
+-- Owner as a direct child is the only gate needed — same as Item Tab.
+-- The old check excluded items nested in sub-folders inside PlayerModels.
 local function isSortable(model)
     if not (model and model:IsA("Model") and model ~= workspace) then return false end
-    -- Owner must be a direct child (land plots don't have this)
-    if not model:FindFirstChild("Owner") then return false end
-    -- Must have a physical part we can move
-    if not getMainPart(model) then return false end
-    -- Skip trees / non-draggable props
-    if model:FindFirstChild("TreeClass") then return false end
+    if not model:FindFirstChild("Owner")    then return false end
+    if not getMainPart(model)               then return false end
+    if model:FindFirstChild("TreeClass")    then return false end
     return true
 end
 
--- From a clicked BasePart, walk up until we find a sortable model.
 local function modelFromTarget(target)
     if not target then return nil end
     local obj = target
@@ -112,7 +95,6 @@ end
 
 -- ════════════════════════════════════════════════════
 -- SELECTION
--- Adorn the Main/WoodSection part, not the model — matches Item Tab.
 -- ════════════════════════════════════════════════════
 local function getAdornPart(model)
     return model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")
@@ -123,15 +105,14 @@ local function highlight(model)
     if selectedItems[model] then return end
     local part = getAdornPart(model)
     if not part then return end
-    -- Already has one (e.g. from a previous failed cleanup)
     if part:FindFirstChild("VH_Sel") then part:FindFirstChild("VH_Sel"):Destroy() end
     local sb = Instance.new("SelectionBox")
     sb.Name              = "VH_Sel"
-    sb.Color3            = C_SEL_OUTLINE          -- RGB(0,172,240) — same as Item Tab
-    sb.SurfaceColor3     = C_SEL_SURFACE          -- black surface tint
-    sb.LineThickness     = 0.09                   -- same as Item Tab
-    sb.SurfaceTransparency = 0.5                  -- same as Item Tab
-    sb.Adornee           = part                   -- adorn the PART, not the model
+    sb.Color3            = C_SEL_OUTLINE
+    sb.SurfaceColor3     = C_SEL_SURFACE
+    sb.LineThickness     = 0.09
+    sb.SurfaceTransparency = 0.5
+    sb.Adornee           = part
     sb.Parent            = part
     selectedItems[model] = sb
 end
@@ -155,9 +136,7 @@ local function selCount()
 end
 
 -- ════════════════════════════════════════════════════
--- LASSO  —  zero-lag design:
---   • RenderStepped ONLY updates the rectangle UI (no iteration)
---   • World-scan happens ONCE on mouse-release
+-- LASSO
 -- ════════════════════════════════════════════════════
 local coreGui    = game:GetService("CoreGui")
 local lassoUI    = Instance.new("Frame", coreGui:FindFirstChild("VanillaHub") or coreGui)
@@ -172,20 +151,19 @@ lassoStroke.Color       = Color3.fromRGB(140, 170, 255)
 lassoStroke.Thickness   = 1.5
 lassoStroke.Transparency = 0
 
--- Cached item list — rebuilt only when needed, not every frame
 local _cachedSortables  = nil
 local _cacheFrame       = 0
 
 local function getSortables()
-    -- Scan PlayerModels descendants (not just children — items can be in sub-folders).
-    -- Cache for 1.5 s so lasso and group-select don't re-scan back to back.
     if _cachedSortables and (time() - _cacheFrame) < 1.5 then
         return _cachedSortables
     end
     local list = {}
     local pm = workspace:FindFirstChild("PlayerModels")
-    local source = pm and pm:GetDescendants() or workspace:GetDescendants()
-    for _, obj in ipairs(source) do
+    -- FIX 2: GetDescendants instead of GetChildren so items in sub-folders
+    -- inside PlayerModels are included, not just top-level children.
+    local src = pm and pm:GetDescendants() or workspace:GetDescendants()
+    for _, obj in ipairs(src) do
         if obj:IsA("Model") and isSortable(obj) then
             table.insert(list, obj)
         end
@@ -203,17 +181,13 @@ local function updateLassoRect(cur)
 end
 
 local function commitLasso()
-    -- Called ONCE on mouse-up — do the scan here, not during drag
     if not lassoAnchor then return end
     local cur  = Vector2.new(mouse.X, mouse.Y)
     local minX = math.min(lassoAnchor.X, cur.X)
     local maxX = math.max(lassoAnchor.X, cur.X)
     local minY = math.min(lassoAnchor.Y, cur.Y)
     local maxY = math.max(lassoAnchor.Y, cur.Y)
-
-    -- Only scan if the box is large enough to be intentional
     if (maxX - minX) < 4 and (maxY - minY) < 4 then return end
-
     for _, model in ipairs(getSortables()) do
         local mp = getMainPart(model)
         if mp then
@@ -226,7 +200,6 @@ local function commitLasso()
     end
 end
 
--- RenderStepped connection only active while lasso is being dragged
 local lassoRenderConn = nil
 
 local function startLasso(x, y)
@@ -254,15 +227,12 @@ end
 
 -- ════════════════════════════════════════════════════
 -- SLOT CALCULATOR
--- Fills X (cols) → Z (rows) → Y (layers), tallest items first.
--- Returns an ordered list so a full layer is placed before the next.
 -- ════════════════════════════════════════════════════
 local function calcSlots(models, anchorCF, cols, layers, rows)
     cols   = math.max(1, cols)
     layers = math.max(1, layers)
     rows   = math.max(0, rows)
 
-    -- Measure every item
     local entries = {}
     for _, m in ipairs(models) do
         local ok, _, sz = pcall(function() return m:GetBoundingBox() end)
@@ -270,7 +240,6 @@ local function calcSlots(models, anchorCF, cols, layers, rows)
         table.insert(entries, { model=m, w=s.X, h=s.Y, d=s.Z })
     end
 
-    -- Tallest first so bottom layer has the tallest items
     table.sort(entries, function(a,b) return a.h > b.h end)
 
     local total    = #entries
@@ -278,7 +247,6 @@ local function calcSlots(models, anchorCF, cols, layers, rows)
         or math.max(1, math.ceil(math.ceil(total/layers)/cols))
     local perLayer = cols * rowsPerLayer
 
-    -- Assign grid position
     for i, e in ipairs(entries) do
         local idx   = i - 1
         e.layer     = math.floor(idx / perLayer)
@@ -287,26 +255,22 @@ local function calcSlots(models, anchorCF, cols, layers, rows)
         e.col       = rem % cols
     end
 
-    -- Max height per layer
     local layH = {}
     for _, e in ipairs(entries) do
         layH[e.layer] = math.max(layH[e.layer] or 0, e.h)
     end
 
-    -- Max depth per (layer, row)
     local rowD = {}
     for _, e in ipairs(entries) do
         if not rowD[e.layer] then rowD[e.layer] = {} end
         rowD[e.layer][e.row] = math.max(rowD[e.layer][e.row] or 0, e.d)
     end
 
-    -- Max width per col
     local colW = {}
     for _, e in ipairs(entries) do
         colW[e.col] = math.max(colW[e.col] or 0, e.w)
     end
 
-    -- Accumulate Y per layer
     local layY = {}; local ay = 0
     local maxLayer = 0
     for _, e in ipairs(entries) do if e.layer > maxLayer then maxLayer = e.layer end end
@@ -314,7 +278,6 @@ local function calcSlots(models, anchorCF, cols, layers, rows)
         layY[l] = ay; ay = ay + (layH[l] or 0) + ITEM_GAP
     end
 
-    -- Accumulate Z per (layer, row)
     local rowZ = {}
     for l = 0, maxLayer do
         rowZ[l] = {}; local az = 0
@@ -327,13 +290,11 @@ local function calcSlots(models, anchorCF, cols, layers, rows)
         end
     end
 
-    -- Accumulate X per col
     local colX = {}; local ax2 = 0
     for c = 0, cols-1 do
         colX[c] = ax2; ax2 = ax2 + (colW[c] or 0) + ITEM_GAP
     end
 
-    -- Build final slot list (already layer-ordered because entries is sorted)
     local slots = {}
     for _, e in ipairs(entries) do
         local lx = colX[e.col]  + e.w/2
@@ -421,7 +382,6 @@ local function buildPreview(sX, sY, sZ)
     sb.Adornee             = previewPart
     sb.Parent              = previewPart
 
-    -- Follow mouse
     previewPlaced = false
     if previewFollow then previewFollow:Disconnect() end
     previewFollow = RunService.RenderStepped:Connect(function()
@@ -443,66 +403,81 @@ local function placePreview()
 end
 
 -- ════════════════════════════════════════════════════
--- SERVER-SIDED SORT ENGINE
---
--- Mirrors the Item Tab (Vanilla3) teleport logic exactly:
---   1. Teleport character 5 studs beside the item's current position
---   2. Loop: fire ClientIsDragging(model), wait 0.05s, check part.ReceiveAge == 0
---      Repeat until owned or 3s timeout
---   3. Fire ClientIsDragging one final time immediately before moving
---   4. part:PivotTo(targetCF) — on the PART, not model:PivotTo
---
--- After all items are placed, character returns to its original position.
+-- SERVER-SIDED SORT ENGINE  (UNCHANGED from working v4)
 -- ════════════════════════════════════════════════════
 local _dragRemote = nil
-local function getDragRemote()
+local function dragRemote()
     if _dragRemote then return _dragRemote end
     local i = RS:FindFirstChild("Interaction")
     _dragRemote = i and i:FindFirstChild("ClientIsDragging")
     return _dragRemote
 end
 
-local function isNetworkOwner(part)
-    return part.ReceiveAge == 0
+local function waitForOwnership(model, timeout)
+    timeout = timeout or 4
+    local deadline = tick() + timeout
+    local remote   = dragRemote()
+    while tick() < deadline do
+        local owned = true
+        for _, p in ipairs(model:GetDescendants()) do
+            if p:IsA("BasePart") and not p.Anchored and p.ReceiveAge ~= 0 then
+                owned = false; break
+            end
+        end
+        if owned then return true end
+        if remote then pcall(remote.FireServer, remote, model) end
+        task.wait(0.05)
+    end
+    return false
+end
+
+local function approachItem(model)
+    local mp  = getMainPart(model); if not mp then return end
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.CFrame = CFrame.new(mp.Position) * CFrame.new(0, 2, 4) end
+end
+
+local function setAnchored(model, state)
+    pcall(function()
+        for _, p in ipairs(model:GetDescendants()) do
+            if p:IsA("BasePart") then p.Anchored = state end
+        end
+        if model.PrimaryPart then model.PrimaryPart.Anchored = state end
+    end)
 end
 
 local function placeItem(model, targetCF)
     if not (model and model.Parent) then return end
-    local mp = getMainPart(model)
+    local mp     = getMainPart(model)
+    local remote = dragRemote()
     if not mp then return end
 
-    local remote = getDragRemote()
-    local hrp    = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    setAnchored(model, false)
+    approachItem(model)
 
-    -- Step 1: teleport character beside the item's current position
-    hrp.CFrame = CFrame.new(mp.CFrame.p) * CFrame.new(5, 0, 0)
-    task.wait(0.05)
-
-    -- Step 2: fire + wait loop until ownership confirmed or timeout
-    local timeout = 0
-    while not isNetworkOwner(mp) and timeout < 3 do
-        if remote then pcall(remote.FireServer, remote, model) end
-        task.wait(0.05)
-        timeout = timeout + 0.05
+    if remote then
+        for _ = 1, 3 do
+            pcall(remote.FireServer, remote, model)
+            task.wait(0.05)
+        end
     end
+    waitForOwnership(model, 3)
 
-    -- Step 3: move character to beside the TARGET position so the server
-    -- places the item exactly there and character acts as a physical blocker
-    hrp.CFrame = CFrame.new(targetCF.p) * CFrame.new(5, 0, 0)
-
-    -- Final fire right before moving (exactly as Item Tab does)
-    if remote then pcall(remote.FireServer, remote, model) end
-
-    -- Step 4: pivot to target — server-replicated because ReceiveAge == 0
     pcall(function()
         if not model.PrimaryPart then model.PrimaryPart = mp end
-        mp:PivotTo(targetCF)
+        model:PivotTo(targetCF)
     end)
+
+    task.wait(0.08)
+
+    setAnchored(model, true)
+    task.wait(0.05)
+
+    if remote then pcall(remote.FireServer, remote, nil) end
 end
 
 -- ════════════════════════════════════════════════════
--- UI PRIMITIVES  (consistent with Item Tab)
+-- UI PRIMITIVES
 -- ════════════════════════════════════════════════════
 local pageList = sorterPage:FindFirstChildOfClass("UIListLayout")
 if pageList then pageList.Padding = UDim.new(0, 8) end
@@ -575,7 +550,7 @@ local function uToggle(text, default, cb)
             {Position = UDim2.new(0, on and 20 or 2, 0.5,-7)}):Play()
         if cb then cb(on) end
     end)
-    return fr, function(v)   -- returns a setter for external forced-off
+    return fr, function(v)
         if v == on then return end
         on = v
         TweenService:Create(tb, TweenInfo.new(0.18),
@@ -800,11 +775,6 @@ end
 -- ════════════════════════════════════════════════════
 local function runSort(slots, startI, total, doneStart)
     local done = doneStart
-
-    -- Save character position to restore after sorting (mirrors Item Tab)
-    local hrp     = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    local savedCF = hrp and hrp.CFrame
-
     sortThread = task.spawn(function()
         for i = startI, total do
             if not isSorting then sortIndex = i; break end
@@ -812,31 +782,20 @@ local function runSort(slots, startI, total, doneStart)
             local slot = slots[i]
             if not (slot.model and slot.model.Parent) then
                 done = done + 1; sortDone = done; sortIndex = i + 1
-                setPb(done/total, "Skipped " .. done .. "/" .. total)
-                continue
+                setPb(done/total, "Skipped " .. done .. "/" .. total); continue
             end
 
             setPb(done/total, "Placing " .. done+1 .. " / " .. total)
-
-            -- Wait sortDelay BEFORE placing (same rhythm as Item Tab:
-            -- teleport to item → wait → place → wait → next)
-            task.wait(sortDelay)
-            if not isSorting then sortIndex = i; break end
-
             placeItem(slot.model, slot.cf)
 
             if not isSorting then sortIndex = i; break end
 
-            task.wait(sortDelay)
-
             unhighlight(slot.model)
             done = done + 1; sortDone = done; sortIndex = i + 1
             setPb(done/total, "Sorting  " .. done .. " / " .. total)
-        end
 
-        -- Restore character position
-        local hrp2 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if hrp2 and savedCF then hrp2.CFrame = savedCF end
+            task.wait(sortDelay)
+        end
 
         isSorting = false; sortThread = nil
 
@@ -856,11 +815,8 @@ end
 -- BUILD UI
 -- ════════════════════════════════════════════════════
 
--- 1 ── STATUS ────────────────────────────────────────
--- (status card already parented above)
 uSep()
 
--- 2 ── SELECTION MODE ────────────────────────────────
 uSection("Selection Mode")
 
 local _, setClickOff = uToggle("Click Select", false, function(v)
@@ -881,7 +837,6 @@ uButton("Deselect All", BTN_COLOR, function() clearAll(); refreshStatus() end)
 
 uSep()
 
--- 3 ── SPEED ─────────────────────────────────────────
 uSection("Sort Speed")
 uSlider("Delay per item (×0.1s)", 1, 20, 3, function(v)
     sortDelay = v / 10
@@ -890,18 +845,14 @@ end)
 
 uSep()
 
--- 4 ── GRID ──────────────────────────────────────────
 uSection("Sort Grid")
-
 uAxisSlider("Width  (items per row)",    "X", 1, 12, 3, function(v) gridCols   = v end)
 uAxisSlider("Height  (vertical layers)", "Y", 1,  5, 1, function(v) gridLayers = v end)
 uAxisSlider("Depth  (rows · 0 = auto)",  "Z", 0, 12, 0, function(v) gridRows   = v end)
-
 uHint("Fills X→Z→Y.  Tallest items go on the bottom layer.  Z=0 calculates rows automatically.")
 
 uSep()
 
--- 5 ── PREVIEW ───────────────────────────────────────
 uSection("Preview")
 
 local previewRow = Instance.new("Frame", sorterPage)
@@ -942,7 +893,6 @@ uHint("Preview follows cursor — left-click to lock its position.")
 
 uSep()
 
--- 6 ── ACTIONS ───────────────────────────────────────
 uSection("Actions")
 
 startBtn = Instance.new("TextButton", sorterPage)
@@ -951,7 +901,6 @@ startBtn.Text = "▶  Start Sorting"; startBtn.Font = Enum.Font.GothamBold
 startBtn.TextSize = 14; startBtn.TextColor3 = Color3.fromRGB(72,72,82); startBtn.BorderSizePixel = 0
 Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0,8)
 
--- Stop / Cancel row
 local actRow = Instance.new("Frame", sorterPage)
 actRow.Size = UDim2.new(1,0,0,32); actRow.BackgroundTransparency = 1
 
@@ -969,7 +918,6 @@ cancelBtn.Text = "✕  Cancel & Clear"; cancelBtn.Font = Enum.Font.GothamBold
 cancelBtn.TextSize = 12; cancelBtn.TextColor3 = Color3.fromRGB(200,100,100); cancelBtn.BorderSizePixel = 0
 Instance.new("UICorner", cancelBtn).CornerRadius = UDim.new(0,8)
 
--- 7 ── PROGRESS ──────────────────────────────────────
 pbContainer.Parent = sorterPage
 
 -- ════════════════════════════════════════════════════
@@ -978,7 +926,6 @@ pbContainer.Parent = sorterPage
 startBtn.MouseButton1Click:Connect(function()
     if isSorting then return end
 
-    -- Resume after stop
     if isStopped and sortSlots then
         isStopped = false; isSorting = true
         pbContainer.Visible = true
@@ -999,7 +946,6 @@ startBtn.MouseButton1Click:Connect(function()
     end
     if #items == 0 then return end
 
-    -- Anchor is at the bottom-left-front corner of the preview box
     local anchorCF = previewPart.CFrame
         * CFrame.new(-previewPart.Size.X/2, -previewPart.Size.Y/2, -previewPart.Size.Z/2)
 
@@ -1035,25 +981,16 @@ end)
 local inputBeganConn = UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-
-    if modeLasso then
-        startLasso(mouse.X, mouse.Y)
-        return
-    end
+    if modeLasso then startLasso(mouse.X, mouse.Y) end
 end)
 
 local mouseUpConn = mouse.Button1Up:Connect(function()
-    -- End lasso
     if modeLasso and lassoActive then
         endLasso(); refreshStatus(); return
     end
-
-    -- Place preview
     if previewPart and previewPart.Parent and not previewPlaced then
         placePreview(); refreshStatus(); return
     end
-
-    -- Click / Group selection
     local target = mouse.Target
     if modeClick then
         local m = modelFromTarget(target)
@@ -1079,9 +1016,9 @@ end)
 table.insert(cleanupTasks, function()
     isSorting = false; isStopped = false
     sortSlots = nil; sortIndex = 1; sortTotal = 0; sortDone = 0
-    if sortThread      then pcall(task.cancel, sortThread); sortThread = nil end
-    if previewFollow   then previewFollow:Disconnect();     previewFollow = nil end
-    if lassoRenderConn then lassoRenderConn:Disconnect();   lassoRenderConn = nil end
+    if sortThread    then pcall(task.cancel, sortThread); sortThread = nil end
+    if previewFollow then previewFollow:Disconnect();     previewFollow = nil end
+    if lassoRenderConn then lassoRenderConn:Disconnect(); lassoRenderConn = nil end
     inputBeganConn:Disconnect()
     mouseUpConn:Disconnect()
     if lassoUI and lassoUI.Parent then lassoUI:Destroy() end
