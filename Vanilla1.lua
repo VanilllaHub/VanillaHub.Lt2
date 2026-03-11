@@ -570,153 +570,119 @@ end
 -- MENU PAGE (launch grid)
 -- ════════════════════════════════════════════════════
 do
-    -- Player greeting row
-    local greetRow = Instance.new("Frame", menuPage)
-    greetRow.Size = UDim2.new(1, -24, 0, 48)
-    greetRow.Position = UDim2.new(0, 12, 0, 12)
-    greetRow.BackgroundTransparency = 1
+    -- Greeting
+    local greetLbl = Instance.new("TextLabel", menuPage)
+    greetLbl.Size = UDim2.new(1, -24, 0, 22)
+    greetLbl.Position = UDim2.new(0, 14, 0, 16)
+    greetLbl.BackgroundTransparency = 1
+    greetLbl.Font = Enum.Font.GothamBold
+    greetLbl.TextSize = 15
+    greetLbl.TextColor3 = Color3.fromRGB(215, 215, 215)
+    greetLbl.TextXAlignment = Enum.TextXAlignment.Left
+    greetLbl.Text = player.DisplayName
 
-    local greetPfp = Instance.new("ImageLabel", greetRow)
-    greetPfp.Size = UDim2.new(0, 38, 0, 38)
-    greetPfp.Position = UDim2.new(0, 0, 0.5, -19)
-    greetPfp.BackgroundColor3 = Color3.fromRGB(30, 30, 34)
-    greetPfp.BorderSizePixel = 0
-    greetPfp.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-    Instance.new("UICorner", greetPfp).CornerRadius = UDim.new(1, 0)
-    local pfpStroke = Instance.new("UIStroke", greetPfp)
-    pfpStroke.Color = Color3.fromRGB(55, 55, 62); pfpStroke.Thickness = 1.5
+    local subLbl = Instance.new("TextLabel", menuPage)
+    subLbl.Size = UDim2.new(1, -24, 0, 14)
+    subLbl.Position = UDim2.new(0, 14, 0, 38)
+    subLbl.BackgroundTransparency = 1
+    subLbl.Font = Enum.Font.Gotham
+    subLbl.TextSize = 10
+    subLbl.TextColor3 = Color3.fromRGB(60, 60, 72)
+    subLbl.TextXAlignment = Enum.TextXAlignment.Left
+    subLbl.Text = "VanillaHub  ·  v1.1.0"
 
-    local greetName = Instance.new("TextLabel", greetRow)
-    greetName.Size = UDim2.new(1, -50, 0, 20)
-    greetName.Position = UDim2.new(0, 48, 0, 5)
-    greetName.BackgroundTransparency = 1
-    greetName.Font = Enum.Font.GothamBold
-    greetName.TextSize = 14
-    greetName.TextColor3 = Color3.fromRGB(225, 225, 225)
-    greetName.TextXAlignment = Enum.TextXAlignment.Left
-    greetName.Text = "Hey, " .. player.DisplayName .. " ♡"
+    -- Divider
+    local div = Instance.new("Frame", menuPage)
+    div.Size = UDim2.new(1, -24, 0, 1)
+    div.Position = UDim2.new(0, 12, 0, 60)
+    div.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
+    div.BorderSizePixel = 0
 
-    local greetSub = Instance.new("TextLabel", greetRow)
-    greetSub.Size = UDim2.new(1, -50, 0, 14)
-    greetSub.Position = UDim2.new(0, 48, 0, 27)
-    greetSub.BackgroundTransparency = 1
-    greetSub.Font = Enum.Font.Gotham
-    greetSub.TextSize = 10
-    greetSub.TextColor3 = Color3.fromRGB(75, 75, 88)
-    greetSub.TextXAlignment = Enum.TextXAlignment.Left
-    greetSub.Text = "v1.1.0  ·  Lumber Tycoon 2"
-
-    -- Separator
-    local sep = Instance.new("Frame", menuPage)
-    sep.Size = UDim2.new(1, -24, 0, 1)
-    sep.Position = UDim2.new(0, 12, 0, 68)
-    sep.BackgroundColor3 = Color3.fromRGB(32, 32, 37)
-    sep.BorderSizePixel = 0
-
-    -- Section label
-    local secLbl = Instance.new("TextLabel", menuPage)
-    secLbl.Size = UDim2.new(1, -24, 0, 12)
-    secLbl.Position = UDim2.new(0, 14, 0, 78)
-    secLbl.BackgroundTransparency = 1
-    secLbl.Font = Enum.Font.GothamBold
-    secLbl.TextSize = 9
-    secLbl.TextColor3 = Color3.fromRGB(65, 65, 78)
-    secLbl.TextXAlignment = Enum.TextXAlignment.Left
-    secLbl.Text = "QUICK ACCESS"
-
-    -- 8 tiles — 4 per row
+    -- 8 clean row buttons
     local menuTiles = {
-        { name = "Home",     abbr = "Ho" },
-        { name = "Player",   abbr = "Pl" },
-        { name = "World",    abbr = "Wo" },
-        { name = "Teleport", abbr = "Tp" },
-        { name = "AutoBuy",  abbr = "AB" },
-        { name = "Slot",     abbr = "Sl" },
-        { name = "Wood",     abbr = "Wd" },
-        { name = "Dupe",     abbr = "Du" },
+        "Home", "Player", "World", "Teleport",
+        "AutoBuy", "Slot", "Wood", "Dupe"
     }
 
-    local gridHolder = Instance.new("Frame", menuPage)
-    gridHolder.Size = UDim2.new(1, -24, 1, -100)
-    gridHolder.Position = UDim2.new(0, 12, 0, 95)
-    gridHolder.BackgroundTransparency = 1
-    gridHolder.ClipsDescendants = false
+    local listHolder = Instance.new("Frame", menuPage)
+    listHolder.Size = UDim2.new(1, -24, 1, -72)
+    listHolder.Position = UDim2.new(0, 12, 0, 68)
+    listHolder.BackgroundTransparency = 1
 
-    local grid = Instance.new("UIGridLayout", gridHolder)
-    grid.CellSize = UDim2.new(0.25, -6, 0.5, -6)
-    grid.CellPadding = UDim2.new(0, 8, 0, 8)
-    grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    grid.VerticalAlignment = Enum.VerticalAlignment.Top
-    grid.SortOrder = Enum.SortOrder.LayoutOrder
+    local listLayout = Instance.new("UIListLayout", listHolder)
+    listLayout.Padding = UDim.new(0, 4)
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    local C_TILE      = Color3.fromRGB(18, 18, 21)
-    local C_TILE_H    = Color3.fromRGB(30, 30, 35)
-    local C_ABBR      = Color3.fromRGB(200, 200, 210)
-    local C_ABBR_H    = Color3.fromRGB(240, 240, 245)
-    local C_NAME      = Color3.fromRGB(110, 110, 122)
-    local C_NAME_H    = Color3.fromRGB(180, 180, 190)
-    local C_BORDER    = Color3.fromRGB(38, 38, 44)
-    local C_BORDER_H  = Color3.fromRGB(70, 70, 80)
+    local C_ROW   = Color3.fromRGB(16, 16, 19)
+    local C_ROW_H = Color3.fromRGB(26, 26, 30)
+    local C_TEXT  = Color3.fromRGB(185, 185, 195)
+    local C_TEXT_H= Color3.fromRGB(230, 230, 235)
+    local C_NUM   = Color3.fromRGB(45, 45, 55)
+    local C_NUM_H = Color3.fromRGB(70, 70, 82)
+    local C_ARR   = Color3.fromRGB(40, 40, 50)
+    local C_ARR_H = Color3.fromRGB(110, 110, 122)
 
-    for i, tile in ipairs(menuTiles) do
-        local cell = Instance.new("TextButton", gridHolder)
-        cell.LayoutOrder = i
-        cell.BackgroundColor3 = C_TILE
-        cell.BorderSizePixel = 0
-        cell.Text = ""
-        cell.AutoButtonColor = false
-        Instance.new("UICorner", cell).CornerRadius = UDim.new(0, 11)
-        local cs = Instance.new("UIStroke", cell)
-        cs.Color = C_BORDER; cs.Thickness = 1; cs.Transparency = 0
+    for i, name in ipairs(menuTiles) do
+        local row = Instance.new("TextButton", listHolder)
+        row.LayoutOrder = i
+        row.Size = UDim2.new(1, 0, 0, 32)
+        row.BackgroundColor3 = C_ROW
+        row.BorderSizePixel = 0
+        row.Text = ""
+        row.AutoButtonColor = false
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
 
-        -- Big abbreviation text centered in upper portion
-        local abbrLbl = Instance.new("TextLabel", cell)
-        abbrLbl.Size = UDim2.new(1, 0, 0.58, 0)
-        abbrLbl.Position = UDim2.new(0, 0, 0, 0)
-        abbrLbl.BackgroundTransparency = 1
-        abbrLbl.Font = Enum.Font.GothamBlack
-        abbrLbl.TextSize = 28
-        abbrLbl.TextColor3 = C_ABBR
-        abbrLbl.TextXAlignment = Enum.TextXAlignment.Center
-        abbrLbl.TextYAlignment = Enum.TextYAlignment.Center
-        abbrLbl.Text = tile.abbr
+        -- Number
+        local numLbl = Instance.new("TextLabel", row)
+        numLbl.Size = UDim2.new(0, 24, 1, 0)
+        numLbl.Position = UDim2.new(0, 10, 0, 0)
+        numLbl.BackgroundTransparency = 1
+        numLbl.Font = Enum.Font.GothamBold
+        numLbl.TextSize = 10
+        numLbl.TextColor3 = C_NUM
+        numLbl.TextXAlignment = Enum.TextXAlignment.Left
+        numLbl.TextYAlignment = Enum.TextYAlignment.Center
+        numLbl.Text = string.format("%02d", i)
 
-        -- Thin line divider inside tile
-        local tileSep = Instance.new("Frame", cell)
-        tileSep.Size = UDim2.new(0.55, 0, 0, 1)
-        tileSep.Position = UDim2.new(0.225, 0, 0.58, 0)
-        tileSep.BackgroundColor3 = Color3.fromRGB(38, 38, 44)
-        tileSep.BorderSizePixel = 0
-
-        -- Tab name label at bottom
-        local nameLbl = Instance.new("TextLabel", cell)
-        nameLbl.Size = UDim2.new(1, -4, 0.38, 0)
-        nameLbl.Position = UDim2.new(0, 2, 0.6, 0)
+        -- Name
+        local nameLbl = Instance.new("TextLabel", row)
+        nameLbl.Size = UDim2.new(1, -72, 1, 0)
+        nameLbl.Position = UDim2.new(0, 36, 0, 0)
         nameLbl.BackgroundTransparency = 1
         nameLbl.Font = Enum.Font.GothamSemibold
-        nameLbl.TextSize = 11
-        nameLbl.TextColor3 = C_NAME
-        nameLbl.TextXAlignment = Enum.TextXAlignment.Center
+        nameLbl.TextSize = 13
+        nameLbl.TextColor3 = C_TEXT
+        nameLbl.TextXAlignment = Enum.TextXAlignment.Left
         nameLbl.TextYAlignment = Enum.TextYAlignment.Center
-        nameLbl.Text = tile.name
+        nameLbl.Text = name
 
-        cell.MouseEnter:Connect(function()
-            TweenService:Create(cell,    TweenInfo.new(0.18), {BackgroundColor3 = C_TILE_H}):Play()
-            TweenService:Create(cs,      TweenInfo.new(0.18), {Color = C_BORDER_H}):Play()
-            TweenService:Create(abbrLbl, TweenInfo.new(0.18), {TextColor3 = C_ABBR_H}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3 = C_NAME_H}):Play()
+        -- Arrow
+        local arrLbl = Instance.new("TextLabel", row)
+        arrLbl.Size = UDim2.new(0, 20, 1, 0)
+        arrLbl.Position = UDim2.new(1, -26, 0, 0)
+        arrLbl.BackgroundTransparency = 1
+        arrLbl.Font = Enum.Font.GothamBold
+        arrLbl.TextSize = 13
+        arrLbl.TextColor3 = C_ARR
+        arrLbl.TextXAlignment = Enum.TextXAlignment.Center
+        arrLbl.TextYAlignment = Enum.TextYAlignment.Center
+        arrLbl.Text = "›"
+
+        row.MouseEnter:Connect(function()
+            TweenService:Create(row,     TweenInfo.new(0.14), {BackgroundColor3 = C_ROW_H}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.14), {TextColor3 = C_TEXT_H}):Play()
+            TweenService:Create(numLbl,  TweenInfo.new(0.14), {TextColor3 = C_NUM_H}):Play()
+            TweenService:Create(arrLbl,  TweenInfo.new(0.14), {TextColor3 = C_ARR_H}):Play()
         end)
-        cell.MouseLeave:Connect(function()
-            TweenService:Create(cell,    TweenInfo.new(0.18), {BackgroundColor3 = C_TILE}):Play()
-            TweenService:Create(cs,      TweenInfo.new(0.18), {Color = C_BORDER}):Play()
-            TweenService:Create(abbrLbl, TweenInfo.new(0.18), {TextColor3 = C_ABBR}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3 = C_NAME}):Play()
+        row.MouseLeave:Connect(function()
+            TweenService:Create(row,     TweenInfo.new(0.14), {BackgroundColor3 = C_ROW}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.14), {TextColor3 = C_TEXT}):Play()
+            TweenService:Create(numLbl,  TweenInfo.new(0.14), {TextColor3 = C_NUM}):Play()
+            TweenService:Create(arrLbl,  TweenInfo.new(0.14), {TextColor3 = C_ARR}):Play()
         end)
-        cell.MouseButton1Down:Connect(function()
-            TweenService:Create(cell, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(42, 42, 48)}):Play()
-        end)
-        cell.MouseButton1Click:Connect(function()
-            switchTab(tile.name .. "Tab")
+        row.MouseButton1Click:Connect(function()
+            switchTab(name .. "Tab")
         end)
     end
 end
