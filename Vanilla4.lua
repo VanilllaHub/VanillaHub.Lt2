@@ -445,19 +445,14 @@ end
 -- ════════════════════════════════════════════════════
 -- SERVER-SIDED SORT ENGINE
 --
--- Per-item placement flow:
---   1. Teleport character next to item (server requires proximity to drag)
---   2. Fire ClientIsDragging(model) rapidly to claim network ownership
---   3. Wait for ReceiveAge == 0 on all unanchored parts (ownership confirmed)
---   4. PivotTo target — replicates to server/all clients because we own it
---   5. Keep the item held: add it to a "held" set
+-- Mirrors the Item Tab (Vanilla3) teleport logic exactly:
+--   1. Teleport character 5 studs beside the item's current position
+--   2. Loop: fire ClientIsDragging(model), wait 0.05s, check part.ReceiveAge == 0
+--      Repeat until owned or 3s timeout
+--   3. Fire ClientIsDragging one final time immediately before moving
+--   4. part:PivotTo(targetCF) — on the PART, not model:PivotTo
 --
--- Preventing placed items from moving:
---   A background Heartbeat loop runs the entire time sorting is active.
---   Every tick it fires ClientIsDragging for every model in the held set.
---   This keeps the server believing we are actively dragging each one,
---   so it never returns physics ownership to the simulation.
---   Without this, ownership expires and physics can push placed items.
+-- After all items are placed, character returns to its original position.
 -- ════════════════════════════════════════════════════
 local _dragRemote = nil
 local function getDragRemote()
@@ -467,110 +462,43 @@ local function getDragRemote()
     return _dragRemote
 end
 
--- Set of models currently being "held" in place by the hold loop
-local heldModels     = {}
-local holdLoopConn   = nil
-
-local function startHoldLoop()
-    if holdLoopConn then return end
-    holdLoopConn = RunService.Heartbeat:Connect(function()
-        local remote = getDragRemote()
-        if not remote then return end
-        for model in pairs(heldModels) do
-            if model and model.Parent then
-                pcall(remote.FireServer, remote, model)
-            else
-                heldModels[model] = nil
-            end
-        end
-    end)
-end
-
-local function stopHoldLoop()
-    if holdLoopConn then holdLoopConn:Disconnect(); holdLoopConn = nil end
-    -- Release all held models
-    local remote = getDragRemote()
-    for model in pairs(heldModels) do
-        if remote and model and model.Parent then
-            pcall(remote.FireServer, remote, nil)
-        end
-    end
-    heldModels = {}
-end
-
-local function holdModel(model)
-    heldModels[model] = true
-end
-
-local function releaseModel(model)
-    heldModels[model] = nil
-end
-
--- Wait until we have network ownership of all unanchored parts.
--- Items that are already fully anchored by the game are considered owned
--- immediately (we can PivotTo anchored parts without ownership).
-local function waitForOwnership(model, timeout)
-    timeout = timeout or 4
-    local deadline = tick() + timeout
-    local remote   = getDragRemote()
-
-    -- Check if all parts are already anchored — if so, no ownership needed
-    local allAnchored = true
-    for _, p in ipairs(model:GetDescendants()) do
-        if p:IsA("BasePart") and not p.Anchored then
-            allAnchored = false; break
-        end
-    end
-    if allAnchored then return true end
-
-    while tick() < deadline do
-        local owned = true
-        for _, p in ipairs(model:GetDescendants()) do
-            if p:IsA("BasePart") and not p.Anchored and p.ReceiveAge ~= 0 then
-                owned = false; break
-            end
-        end
-        if owned then return true end
-        if remote then pcall(remote.FireServer, remote, model) end
-        task.wait(0.05)
-    end
-    return false
-end
-
-local function approachItem(model)
-    local mp  = getMainPart(model); if not mp then return end
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then hrp.CFrame = CFrame.new(mp.Position) * CFrame.new(0, 2, 4) end
+local function isNetworkOwner(part)
+    return part.ReceiveAge == 0
 end
 
 local function placeItem(model, targetCF)
     if not (model and model.Parent) then return end
-    local mp     = getMainPart(model)
-    local remote = getDragRemote()
+    local mp = getMainPart(model)
     if not mp then return end
 
-    approachItem(model)
+    local remote = getDragRemote()
+    local hrp    = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-    -- Rapid-fire ownership request
-    if remote then
-        for _ = 1, 5 do
-            pcall(remote.FireServer, remote, model)
-            task.wait(0.04)
-        end
+    -- Step 1: teleport character beside the item's current position
+    hrp.CFrame = CFrame.new(mp.CFrame.p) * CFrame.new(5, 0, 0)
+    task.wait(0.05)
+
+    -- Step 2: fire + wait loop until ownership confirmed or timeout
+    local timeout = 0
+    while not isNetworkOwner(mp) and timeout < 3 do
+        if remote then pcall(remote.FireServer, remote, model) end
+        task.wait(0.05)
+        timeout = timeout + 0.05
     end
-    waitForOwnership(model, 3)
 
-    -- Move — replicates to server because we own the parts
+    -- Step 3: move character to beside the TARGET position so the server
+    -- places the item exactly there and character acts as a physical blocker
+    hrp.CFrame = CFrame.new(targetCF.p) * CFrame.new(5, 0, 0)
+
+    -- Final fire right before moving (exactly as Item Tab does)
+    if remote then pcall(remote.FireServer, remote, model) end
+
+    -- Step 4: pivot to target — server-replicated because ReceiveAge == 0
     pcall(function()
         if not model.PrimaryPart then model.PrimaryPart = mp end
-        model:PivotTo(targetCF)
+        mp:PivotTo(targetCF)
     end)
-
-    task.wait(0.10)   -- let the new position replicate
-
-    -- Add to the hold loop — keeps server ownership alive so physics
-    -- cannot displace this item while we continue sorting others
-    holdModel(model)
 end
 
 -- ════════════════════════════════════════════════════
@@ -872,7 +800,11 @@ end
 -- ════════════════════════════════════════════════════
 local function runSort(slots, startI, total, doneStart)
     local done = doneStart
-    startHoldLoop()   -- begin holding already-placed items immediately
+
+    -- Save character position to restore after sorting (mirrors Item Tab)
+    local hrp     = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    local savedCF = hrp and hrp.CFrame
+
     sortThread = task.spawn(function()
         for i = startI, total do
             if not isSorting then sortIndex = i; break end
@@ -880,33 +812,39 @@ local function runSort(slots, startI, total, doneStart)
             local slot = slots[i]
             if not (slot.model and slot.model.Parent) then
                 done = done + 1; sortDone = done; sortIndex = i + 1
-                setPb(done/total, "Skipped " .. done .. "/" .. total); continue
+                setPb(done/total, "Skipped " .. done .. "/" .. total)
+                continue
             end
 
             setPb(done/total, "Placing " .. done+1 .. " / " .. total)
+
+            -- Wait sortDelay BEFORE placing (same rhythm as Item Tab:
+            -- teleport to item → wait → place → wait → next)
+            task.wait(sortDelay)
+            if not isSorting then sortIndex = i; break end
 
             placeItem(slot.model, slot.cf)
 
             if not isSorting then sortIndex = i; break end
 
+            task.wait(sortDelay)
+
             unhighlight(slot.model)
             done = done + 1; sortDone = done; sortIndex = i + 1
             setPb(done/total, "Sorting  " .. done .. " / " .. total)
-
-            task.wait(sortDelay)
         end
+
+        -- Restore character position
+        local hrp2 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp2 and savedCF then hrp2.CFrame = savedCF end
 
         isSorting = false; sortThread = nil
 
         if done >= total then
-            -- Sort complete — release all holds, items are in final position
-            stopHoldLoop()
             isStopped = false; sortSlots = nil
             setPb(1, "✔  Done! " .. done .. " items placed.", Color3.fromRGB(90,220,110))
             destroyPreview(); clearAll(); hidePb(3)
         else
-            -- Stopped mid-sort — keep holds active so placed items stay put
-            -- (stopHoldLoop will be called on Cancel or next Resume completion)
             isStopped = true
             setPb(done/math.max(total,1), "⏸  Stopped at " .. done .. " / " .. total)
         end
@@ -1086,7 +1024,6 @@ cancelBtn.MouseButton1Click:Connect(function()
     isSorting = false; isStopped = false
     sortSlots = nil; sortIndex = 1; sortTotal = 0; sortDone = 0
     if sortThread then pcall(task.cancel, sortThread); sortThread = nil end
-    stopHoldLoop()
     destroyPreview(); clearAll()
     pbLabel.Text = "Cancelled."; hidePb(1)
     refreshStatus()
@@ -1142,10 +1079,9 @@ end)
 table.insert(cleanupTasks, function()
     isSorting = false; isStopped = false
     sortSlots = nil; sortIndex = 1; sortTotal = 0; sortDone = 0
-    if sortThread    then pcall(task.cancel, sortThread); sortThread = nil end
-    if previewFollow then previewFollow:Disconnect();     previewFollow = nil end
-    if lassoRenderConn then lassoRenderConn:Disconnect(); lassoRenderConn = nil end
-    stopHoldLoop()
+    if sortThread      then pcall(task.cancel, sortThread); sortThread = nil end
+    if previewFollow   then previewFollow:Disconnect();     previewFollow = nil end
+    if lassoRenderConn then lassoRenderConn:Disconnect();   lassoRenderConn = nil end
     inputBeganConn:Disconnect()
     mouseUpConn:Disconnect()
     if lassoUI and lassoUI.Parent then lassoUI:Destroy() end
