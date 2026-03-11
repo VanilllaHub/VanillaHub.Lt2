@@ -246,24 +246,7 @@ hubIcon.Image = "rbxassetid://97128823316544"
 Instance.new("UICorner", hubIcon).CornerRadius = UDim.new(0, 5)
 
 -- Invisible click region over icon + title for back-to-menu
-local backBtn = Instance.new("TextButton", topBar)
-backBtn.Size = UDim2.new(0, 160, 1, 0)
-backBtn.Position = UDim2.new(0, 0, 0, 0)
-backBtn.BackgroundTransparency = 1
-backBtn.Text = ""
-backBtn.BorderSizePixel = 0
-backBtn.ZIndex = 7
-backBtn.MouseEnter:Connect(function()
-    if not isOnMenuPage then
-        TweenService:Create(hubIcon, TweenInfo.new(0.15), {ImageTransparency = 0.35}):Play()
-    end
-end)
-backBtn.MouseLeave:Connect(function()
-    TweenService:Create(hubIcon, TweenInfo.new(0.15), {ImageTransparency = 0}):Play()
-end)
-backBtn.MouseButton1Click:Connect(function()
-    if showMenuPage then showMenuPage() end
-end)
+-- (handled via InputBegan below, not a TextButton overlay)
 
 local titleLbl = Instance.new("TextLabel", topBar)
 titleLbl.Size = UDim2.new(1, -110, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
@@ -278,13 +261,34 @@ versionLbl.Font = Enum.Font.Gotham; versionLbl.TextSize = 11
 versionLbl.TextColor3 = Color3.fromRGB(100, 100, 115); versionLbl.TextXAlignment = Enum.TextXAlignment.Right
 versionLbl.ZIndex = 5
 
--- DRAG
+-- DRAG + BACK BUTTON (combined topBar handler)
 local dragging, dragStart, startPos = false, nil, nil
+local clickStartPos = nil
+
 topBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        clickStartPos = input.Position
+        -- Check if click is within the back region (icon + title, left 180px)
+        local relX = input.Position.X - topBar.AbsolutePosition.X
+        if relX <= 180 then
+            -- Will handle as back click on InputEnded if not dragged
+            return
+        end
         dragging = true; dragStart = input.Position; startPos = wrapper.Position
     end
 end)
+
+topBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and clickStartPos then
+        local relX = clickStartPos.X - topBar.AbsolutePosition.X
+        local moved = (input.Position - clickStartPos).Magnitude
+        if relX <= 180 and moved < 6 then
+            if showMenuPage then showMenuPage() end
+        end
+        clickStartPos = nil
+    end
+end)
+
 UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
