@@ -740,19 +740,19 @@ makeWorldToggle("Remove Fog", false, function(v)
     end
 end)
 
-makeWorldSep()
-makeWorldSectionLabel("World")
-
 makeWorldToggle("Shadows", true, function(v)
     Lighting.GlobalShadows = v
 end)
 
+makeWorldSep()
+makeWorldSectionLabel("World")
+
 makeWorldToggle("Bridge Down", false, function(v)
     for _, part in ipairs(workspace.Bridge.VerticalLiftBridge.Lift:GetChildren()) do
         if v then
-            part.CFrame = part.CFrame - Vector3.new(0, 26, 0)
+            part.CFrame = part.CFrame - Vector3.new(0, 11, 0)
         else
-            part.CFrame = part.CFrame + Vector3.new(0, 26, 0)
+            part.CFrame = part.CFrame + Vector3.new(0, 11, 0)
         end
     end
 end)
@@ -811,6 +811,7 @@ table.insert(cleanupTasks, function()
     Lighting.FogColor      = origFogColor
     Lighting.GlobalShadows = origShadows
 end)
+
 -- ════════════════════════════════════════════════════
 -- TELEPORT TAB
 -- ════════════════════════════════════════════════════
