@@ -233,6 +233,11 @@ topBarSep.BackgroundColor3 = SEP_COLOR
 topBarSep.BorderSizePixel = 0
 topBarSep.ZIndex = 5
 
+-- Forward declarations so topBar back button can reference them
+local showMenuPage
+local switchTab
+local isOnMenuPage = true
+
 local hubIcon = Instance.new("ImageLabel", topBar)
 hubIcon.Size = UDim2.new(0, 26, 0, 26); hubIcon.Position = UDim2.new(0, 9, 0.5, -13)
 hubIcon.BackgroundTransparency = 1; hubIcon.BorderSizePixel = 0
@@ -257,7 +262,7 @@ backBtn.MouseLeave:Connect(function()
     TweenService:Create(hubIcon, TweenInfo.new(0.15), {ImageTransparency = 0}):Play()
 end)
 backBtn.MouseButton1Click:Connect(function()
-    showMenuPage()
+    if showMenuPage then showMenuPage() end
 end)
 
 local titleLbl = Instance.new("TextLabel", topBar)
@@ -432,9 +437,8 @@ end
 
 -- TAB SWITCHING
 local activeTabButton = nil
-local isOnMenuPage = true
 
-local function showMenuPage()
+showMenuPage = function()
     isOnMenuPage = true
     for _, page in pairs(pages) do
         page.Visible = (page.Name == "MenuPage")
@@ -456,7 +460,7 @@ local function showMenuPage()
     TweenService:Create(titleLbl, TweenInfo.new(0.2), {TextColor3 = THEME_TEXT}):Play()
 end
 
-local function switchTab(targetName)
+switchTab = function(targetName)
     isOnMenuPage = false
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
