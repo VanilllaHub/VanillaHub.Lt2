@@ -1,4 +1,4 @@
--- DESTROY OLD GUI + cleanup (also kills all active connections from a previous run)
+-- DESTROY OLD GUI + cleanup
 if type(_G.VanillaHubCleanup) == "function" then
     pcall(_G.VanillaHubCleanup)
     _G.VanillaHubCleanup = nil
@@ -685,7 +685,6 @@ local function makeWorldToggle(labelText, default, callback)
     return frame, setState
 end
 
--- ── ENVIRONMENT ───────────────────────────────────────────────────────────────
 makeWorldSectionLabel("Environment")
 
 local setDayState
@@ -698,9 +697,7 @@ local _, _setDay = makeWorldToggle("Always Day", true, function(v)
         if setNightState then setNightState(false) end
         stopDayNight()
         Lighting.ClockTime = 14
-        dayConn = RunService.Heartbeat:Connect(function()
-            Lighting.ClockTime = 14
-        end)
+        dayConn = RunService.Heartbeat:Connect(function() Lighting.ClockTime = 14 end)
     else
         stopDayNight()
         Lighting.ClockTime = origClockTime
@@ -715,9 +712,7 @@ local _, _setNight = makeWorldToggle("Always Night", false, function(v)
         if setDayState then setDayState(false) end
         stopDayNight()
         Lighting.ClockTime = 0
-        nightConn = RunService.Heartbeat:Connect(function()
-            Lighting.ClockTime = 0
-        end)
+        nightConn = RunService.Heartbeat:Connect(function() Lighting.ClockTime = 0 end)
     else
         stopDayNight()
         Lighting.ClockTime = origClockTime
@@ -725,12 +720,9 @@ local _, _setNight = makeWorldToggle("Always Night", false, function(v)
 end)
 setNightState = _setNight
 
--- Start day loop immediately since Always Day is on by default
 stopDayNight()
 Lighting.ClockTime = 14
-dayConn = RunService.Heartbeat:Connect(function()
-    Lighting.ClockTime = 14
-end)
+dayConn = RunService.Heartbeat:Connect(function() Lighting.ClockTime = 14 end)
 
 makeWorldToggle("Remove Fog", false, function(v)
     if fogConn then fogConn:Disconnect(); fogConn = nil end
@@ -991,8 +983,6 @@ local function iSlider(text, minV, maxV, defV, cb)
     end)
 end
 
--- ── SELECTION HELPERS ─────────────────────────────────────────
-
 local function selectPart(part)
     if not part then return end
     if part:FindFirstChild("Selection") then return end
@@ -1074,8 +1064,6 @@ local function tryGroupSelect(target)
     end
 end
 
--- ── LASSO OVERLAY ─────────────────────────────────────────────
-
 local lassoFrame = Instance.new("Frame", gui)
 lassoFrame.Name = "VHLassoRect"
 lassoFrame.BackgroundColor3 = Color3.fromRGB(90, 130, 210)
@@ -1130,8 +1118,6 @@ end)
 local function isnetworkowner(part)
     return part.ReceiveAge == 0
 end
-
--- ── ITEM TAB LAYOUT ───────────────────────────────────────────
 
 iSectionLabel("Selection Mode")
 iToggle("Click Selection", false, function(val)
@@ -1707,6 +1693,79 @@ table.insert(cleanupTasks, function()
     infJumpEnabled = false
     if infJumpConn then infJumpConn:Disconnect(); infJumpConn = nil end
 end)
+
+-- ════════════════════════════════════════════════════
+-- MISC (Hard Dragger)
+-- ════════════════════════════════════════════════════
+createPSep()
+createPSection("Misc")
+
+local hardDragEnabled = false
+local hardDragConn    = nil
+local hardDragPart    = nil
+local hardDragOffset  = nil
+
+local function stopHardDrag()
+    if hardDragConn then hardDragConn:Disconnect(); hardDragConn = nil end
+    hardDragPart   = nil
+    hardDragOffset = nil
+end
+
+local function getGrabbedPart()
+    local target = mouse.Target
+    if not target then return nil end
+    local model = target.Parent
+    if not model then return nil end
+    if not model:FindFirstChild("Owner") then
+        model = target:FindFirstAncestorOfClass("Model")
+        if not (model and model:FindFirstChild("Owner")) then return nil end
+    end
+    local part = model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")
+    if not part then return nil end
+    if part.ReceiveAge ~= 0 then return nil end
+    return part
+end
+
+local function startHardDrag(part)
+    stopHardDrag()
+    hardDragPart = part
+    local char = player.Character
+    local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    hardDragOffset = hrp.CFrame:ToObjectSpace(part.CFrame)
+    hardDragConn = RunService.Heartbeat:Connect(function()
+        if not hardDragEnabled then stopHardDrag(); return end
+        local c  = player.Character
+        local rp = c and c:FindFirstChild("HumanoidRootPart")
+        if not rp then stopHardDrag(); return end
+        if not (hardDragPart and hardDragPart.Parent) then stopHardDrag(); return end
+        pcall(function()
+            hardDragPart.Velocity        = Vector3.zero
+            hardDragPart.RotVelocity     = Vector3.zero
+            hardDragPart.AssemblyLinearVelocity  = Vector3.zero
+            hardDragPart.AssemblyAngularVelocity = Vector3.zero
+            hardDragPart.CFrame = rp.CFrame:ToWorldSpace(hardDragOffset)
+        end)
+    end)
+end
+
+mouse.Button1Down:Connect(function()
+    if not hardDragEnabled then return end
+    task.wait(0.05)
+    local part = getGrabbedPart()
+    if part then startHardDrag(part) end
+end)
+
+mouse.Button1Up:Connect(function()
+    if hardDragEnabled then stopHardDrag() end
+end)
+
+createPToggle("Hard Dragger", false, function(val)
+    hardDragEnabled = val
+    if not val then stopHardDrag() end
+end)
+
+table.insert(cleanupTasks, stopHardDrag)
 
 -- ════════════════════════════════════════════════════
 -- GLOBAL KEY LISTENER
