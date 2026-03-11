@@ -103,6 +103,7 @@ local BG_TOP       = Color3.fromRGB(12, 12, 14)
 local BORDER_COLOR = Color3.fromRGB(40, 40, 45)
 local SEP_COLOR    = Color3.fromRGB(35, 35, 40)
 local SECTION_TEXT = Color3.fromRGB(110, 110, 120)
+local CAT_TEXT     = Color3.fromRGB(70, 70, 82)
 
 -- ════════════════════════════════════════════════════
 -- EXECUTOR DETECTION
@@ -282,13 +283,13 @@ side.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 68)
 side.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 local sidePad = Instance.new("UIPadding", side)
-sidePad.PaddingTop = UDim.new(0, 10)
+sidePad.PaddingTop = UDim.new(0, 8)
 sidePad.PaddingBottom = UDim.new(0, 10)
 sidePad.PaddingLeft = UDim.new(0, 8)
 sidePad.PaddingRight = UDim.new(0, 8)
 
 local sideLayout = Instance.new("UIListLayout", side)
-sideLayout.Padding = UDim.new(0, 5)
+sideLayout.Padding = UDim.new(0, 3)
 sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 sideLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -308,6 +309,31 @@ content.Size = UDim2.new(1, -156, 1, -40)
 content.Position = UDim2.new(0, 156, 0, 40)
 content.BackgroundColor3 = BG_DARK
 content.BorderSizePixel = 0
+
+-- ════════════════════════════════════════════════════
+-- CATEGORY LABEL HELPER
+-- ════════════════════════════════════════════════════
+local function makeCategoryLabel(text, layoutOrder)
+    local lbl = Instance.new("TextLabel", side)
+    lbl.Name = "CAT_" .. text
+    lbl.LayoutOrder = layoutOrder
+    lbl.Size = UDim2.new(1, 0, 0, 18)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 9
+    lbl.TextColor3 = CAT_TEXT
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = "  " .. string.upper(text)
+    return lbl
+end
+
+local function makeCategorySpacer(layoutOrder)
+    local sp = Instance.new("Frame", side)
+    sp.LayoutOrder = layoutOrder
+    sp.Size = UDim2.new(1, 0, 0, 5)
+    sp.BackgroundTransparency = 1
+    return sp
+end
 
 -- ════════════════════════════════════════════════════
 -- WELCOME POPUP
@@ -346,9 +372,35 @@ task.spawn(function()
 end)
 
 -- ════════════════════════════════════════════════════
--- TABS
+-- TABS DEFINITION (ordered with category grouping)
 -- ════════════════════════════════════════════════════
-local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
+--[[
+    Categories:
+      CORE        → Home, Settings
+      CHARACTER   → Player
+      WORLD       → World, Teleport
+      ITEMS & ECO → Item, Wood, Slot, Dupe, Sorter, AutoBuy
+      CREATIVE    → Pixel Art, Build
+      UTILITY     → Vehicle, Search
+]]
+
+local tabCategories = {
+    { category = "Core",          tabs = {"Home", "Settings"} },
+    { category = "Character",     tabs = {"Player"} },
+    { category = "World",         tabs = {"World", "Teleport"} },
+    { category = "Items & Eco",   tabs = {"Item", "Wood", "Slot", "Dupe", "Sorter", "AutoBuy"} },
+    { category = "Creative",      tabs = {"Pixel Art", "Build"} },
+    { category = "Utility",       tabs = {"Vehicle", "Search"} },
+}
+
+-- Flat ordered tab list (for page creation etc.)
+local tabs = {}
+for _, group in ipairs(tabCategories) do
+    for _, t in ipairs(group.tabs) do
+        table.insert(tabs, t)
+    end
+end
+
 local pages = {}
 
 for _, name in ipairs(tabs) do
@@ -389,37 +441,54 @@ local function switchTab(targetName)
     end
 end
 
-for _, name in ipairs(tabs) do
-    local btn = Instance.new("TextButton", side)
-    btn.Name = name
-    btn.Size = UDim2.new(1, 0, 0, 34)
-    btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
-    btn.BorderSizePixel = 0
-    btn.Text = name
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(110, 110, 120)
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-    local btnPad = Instance.new("UIPadding", btn)
-    btnPad.PaddingLeft = UDim.new(0, 12)
-    btn.MouseEnter:Connect(function()
-        if activeTabButton ~= btn then
-            TweenService:Create(btn, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(28, 28, 32),
-                TextColor3 = Color3.fromRGB(175, 175, 185)
-            }):Play()
-        end
-    end)
-    btn.MouseLeave:Connect(function()
-        if activeTabButton ~= btn then
-            TweenService:Create(btn, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(16, 16, 18),
-                TextColor3 = Color3.fromRGB(110, 110, 120)
-            }):Play()
-        end
-    end)
-    btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
+-- BUILD CATEGORIZED SIDEBAR
+local layoutOrder = 1
+for _, group in ipairs(tabCategories) do
+    -- Category spacer (except first)
+    if layoutOrder > 1 then
+        makeCategorySpacer(layoutOrder)
+        layoutOrder = layoutOrder + 1
+    end
+
+    -- Category label
+    makeCategoryLabel(group.category, layoutOrder)
+    layoutOrder = layoutOrder + 1
+
+    -- Tab buttons
+    for _, name in ipairs(group.tabs) do
+        local btn = Instance.new("TextButton", side)
+        btn.Name = name
+        btn.LayoutOrder = layoutOrder
+        btn.Size = UDim2.new(1, 0, 0, 32)
+        btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
+        btn.BorderSizePixel = 0
+        btn.Text = name
+        btn.Font = Enum.Font.GothamSemibold
+        btn.TextSize = 12
+        btn.TextColor3 = Color3.fromRGB(110, 110, 120)
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+        local btnPad = Instance.new("UIPadding", btn)
+        btnPad.PaddingLeft = UDim.new(0, 12)
+        btn.MouseEnter:Connect(function()
+            if activeTabButton ~= btn then
+                TweenService:Create(btn, TweenInfo.new(0.18), {
+                    BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+                    TextColor3 = Color3.fromRGB(175, 175, 185)
+                }):Play()
+            end
+        end)
+        btn.MouseLeave:Connect(function()
+            if activeTabButton ~= btn then
+                TweenService:Create(btn, TweenInfo.new(0.18), {
+                    BackgroundColor3 = Color3.fromRGB(16, 16, 18),
+                    TextColor3 = Color3.fromRGB(110, 110, 120)
+                }):Play()
+            end
+        end)
+        btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
+        layoutOrder = layoutOrder + 1
+    end
 end
 
 switchTab("HomeTab")
