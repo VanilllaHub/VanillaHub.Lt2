@@ -446,6 +446,38 @@ local function setAnchored(model, state)
     end)
 end
 
+-- Noclip: disable/restore CanCollide on every part of the model
+local function setNoclip(model, state)
+    pcall(function()
+        for _, p in ipairs(model:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = not state end
+        end
+    end)
+end
+
+-- Character noclip: disable/restore CanCollide on all character parts
+local _noclipConn = nil
+local function setCharNoclip(state)
+    if _noclipConn then _noclipConn:Disconnect(); _noclipConn = nil end
+    local char = player.Character
+    if not char then return end
+    if state then
+        -- Use Stepped to keep cancollide off every frame (character resets it)
+        _noclipConn = RunService.Stepped:Connect(function()
+            local c = player.Character
+            if not c then return end
+            for _, p in ipairs(c:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = false end
+            end
+        end)
+    else
+        -- Restore character parts
+        for _, p in ipairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = true end
+        end
+    end
+end
+
 local function placeItem(model, targetCF)
     if not (model and model.Parent) then return end
     local mp     = getMainPart(model)
@@ -453,6 +485,9 @@ local function placeItem(model, targetCF)
     if not mp then return end
 
     setAnchored(model, false)
+    setNoclip(model, true)    -- item noclip ON while moving
+    setCharNoclip(true)       -- character noclip ON while teleporting
+
     approachItem(model)
 
     if remote then
@@ -471,6 +506,7 @@ local function placeItem(model, targetCF)
     task.wait(0.08)
 
     setAnchored(model, true)
+    setNoclip(model, false)   -- item noclip OFF — item is placed
     task.wait(0.05)
 
     if remote then pcall(remote.FireServer, remote, nil) end
@@ -801,10 +837,12 @@ local function runSort(slots, startI, total, doneStart)
 
         if done >= total then
             isStopped = false; sortSlots = nil
+            setCharNoclip(false)  -- restore character collision
             setPb(1, "✔  Done! " .. done .. " items placed.", Color3.fromRGB(90,220,110))
             destroyPreview(); clearAll(); hidePb(3)
         else
             isStopped = true
+            setCharNoclip(false)  -- restore while paused
             setPb(done/math.max(total,1), "⏸  Stopped at " .. done .. " / " .. total)
         end
         refreshStatus()
@@ -970,6 +1008,7 @@ cancelBtn.MouseButton1Click:Connect(function()
     isSorting = false; isStopped = false
     sortSlots = nil; sortIndex = 1; sortTotal = 0; sortDone = 0
     if sortThread then pcall(task.cancel, sortThread); sortThread = nil end
+    setCharNoclip(false)  -- always restore on cancel
     destroyPreview(); clearAll()
     pbLabel.Text = "Cancelled."; hidePb(1)
     refreshStatus()
@@ -1019,6 +1058,7 @@ table.insert(cleanupTasks, function()
     if sortThread    then pcall(task.cancel, sortThread); sortThread = nil end
     if previewFollow then previewFollow:Disconnect();     previewFollow = nil end
     if lassoRenderConn then lassoRenderConn:Disconnect(); lassoRenderConn = nil end
+    setCharNoclip(false)
     inputBeganConn:Disconnect()
     mouseUpConn:Disconnect()
     if lassoUI and lassoUI.Parent then lassoUI:Destroy() end
