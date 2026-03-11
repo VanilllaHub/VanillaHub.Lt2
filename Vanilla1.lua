@@ -745,35 +745,6 @@ makeWorldToggle("Shadows", true, function(v)
 end)
 
 makeWorldSep()
-makeWorldSectionLabel("World")
-
-local bridgeOrigCFrames = {}
-
-makeWorldToggle("Bridge Down", false, function(v)
-    local ok, lift = pcall(function()
-        return workspace.Bridge.VerticalLiftBridge.Lift
-    end)
-    if not ok or not lift then return end
-
-    if v then
-        bridgeOrigCFrames = {}
-        for _, part in ipairs(lift:GetChildren()) do
-            if part:IsA("BasePart") then
-                bridgeOrigCFrames[part] = part.CFrame
-                part.CFrame = part.CFrame + Vector3.new(0, -11, 0)
-            end
-        end
-    else
-        for _, part in ipairs(lift:GetChildren()) do
-            if part:IsA("BasePart") and bridgeOrigCFrames[part] then
-                part.CFrame = bridgeOrigCFrames[part]
-            end
-        end
-        bridgeOrigCFrames = {}
-    end
-end)
-
-makeWorldSep()
 makeWorldSectionLabel("Water")
 
 local walkOnWaterConn  = nil
@@ -816,6 +787,9 @@ makeWorldToggle("Remove Water", false, function(v)
         end
     end
 end)
+
+makeWorldSep()
+makeWorldSectionLabel("World")
 
 table.insert(cleanupTasks, function()
     stopDayNight()
