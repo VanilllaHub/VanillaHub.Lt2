@@ -103,6 +103,7 @@ local BG_TOP       = Color3.fromRGB(12, 12, 14)
 local BORDER_COLOR = Color3.fromRGB(40, 40, 45)
 local SEP_COLOR    = Color3.fromRGB(35, 35, 40)
 local SECTION_TEXT = Color3.fromRGB(110, 110, 120)
+local CAT_TEXT     = Color3.fromRGB(70, 70, 82)
 
 -- ════════════════════════════════════════════════════
 -- EXECUTOR DETECTION
@@ -239,6 +240,26 @@ hubIcon.ScaleType = Enum.ScaleType.Fit; hubIcon.ZIndex = 6
 hubIcon.Image = "rbxassetid://97128823316544"
 Instance.new("UICorner", hubIcon).CornerRadius = UDim.new(0, 5)
 
+-- Invisible click region over icon + title for back-to-menu
+local backBtn = Instance.new("TextButton", topBar)
+backBtn.Size = UDim2.new(0, 160, 1, 0)
+backBtn.Position = UDim2.new(0, 0, 0, 0)
+backBtn.BackgroundTransparency = 1
+backBtn.Text = ""
+backBtn.BorderSizePixel = 0
+backBtn.ZIndex = 7
+backBtn.MouseEnter:Connect(function()
+    if not isOnMenuPage then
+        TweenService:Create(hubIcon, TweenInfo.new(0.15), {ImageTransparency = 0.35}):Play()
+    end
+end)
+backBtn.MouseLeave:Connect(function()
+    TweenService:Create(hubIcon, TweenInfo.new(0.15), {ImageTransparency = 0}):Play()
+end)
+backBtn.MouseButton1Click:Connect(function()
+    if not isOnMenuPage then showMenuPage() end
+end)
+
 local titleLbl = Instance.new("TextLabel", topBar)
 titleLbl.Size = UDim2.new(1, -110, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
 titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub | LT2"
@@ -282,13 +303,13 @@ side.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 68)
 side.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 local sidePad = Instance.new("UIPadding", side)
-sidePad.PaddingTop = UDim.new(0, 10)
-sidePad.PaddingBottom = UDim.new(0, 10)
+sidePad.PaddingTop = UDim.new(0, 6)
+sidePad.PaddingBottom = UDim.new(0, 6)
 sidePad.PaddingLeft = UDim.new(0, 8)
 sidePad.PaddingRight = UDim.new(0, 8)
 
 local sideLayout = Instance.new("UIListLayout", side)
-sideLayout.Padding = UDim.new(0, 5)
+sideLayout.Padding = UDim.new(0, 2)
 sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 sideLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -308,6 +329,31 @@ content.Size = UDim2.new(1, -156, 1, -40)
 content.Position = UDim2.new(0, 156, 0, 40)
 content.BackgroundColor3 = BG_DARK
 content.BorderSizePixel = 0
+
+-- ════════════════════════════════════════════════════
+-- CATEGORY LABEL HELPER
+-- ════════════════════════════════════════════════════
+local function makeCategoryLabel(text, layoutOrder)
+    local lbl = Instance.new("TextLabel", side)
+    lbl.Name = "CAT_" .. text
+    lbl.LayoutOrder = layoutOrder
+    lbl.Size = UDim2.new(1, 0, 0, 13)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 8
+    lbl.TextColor3 = CAT_TEXT
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = "  " .. string.upper(text)
+    return lbl
+end
+
+local function makeCategorySpacer(layoutOrder)
+    local sp = Instance.new("Frame", side)
+    sp.LayoutOrder = layoutOrder
+    sp.Size = UDim2.new(1, 0, 0, 3)
+    sp.BackgroundTransparency = 1
+    return sp
+end
 
 -- ════════════════════════════════════════════════════
 -- WELCOME POPUP
@@ -346,10 +392,45 @@ task.spawn(function()
 end)
 
 -- ════════════════════════════════════════════════════
--- TABS
+-- TABS DEFINITION (ordered with category grouping)
 -- ════════════════════════════════════════════════════
-local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
+--[[
+    Categories:
+      CORE        → Home, Settings
+      CHARACTER   → Player
+      WORLD       → World, Teleport
+      ITEMS & ECO → Item, Wood, Slot, Dupe, Sorter, AutoBuy
+      CREATIVE    → Pixel Art, Build
+      UTILITY     → Vehicle, Search
+]]
+
+local tabCategories = {
+    { category = "Core",          tabs = {"Home", "Settings"} },
+    { category = "Character",     tabs = {"Player"} },
+    { category = "World",         tabs = {"World", "Teleport"} },
+    { category = "Items & Eco",   tabs = {"Item", "Wood", "Slot", "Dupe", "Sorter", "AutoBuy"} },
+    { category = "Creative",      tabs = {"Pixel Art", "Build"} },
+    { category = "Utility",       tabs = {"Vehicle", "Search"} },
+}
+
+-- Flat ordered tab list (for page creation etc.)
+local tabs = {}
+for _, group in ipairs(tabCategories) do
+    for _, t in ipairs(group.tabs) do
+        table.insert(tabs, t)
+    end
+end
+
 local pages = {}
+
+-- ── MENU PAGE (icon grid shown on launch) ──────────────
+local menuPage = Instance.new("Frame", content)
+menuPage.Name = "MenuPage"
+menuPage.Size = UDim2.new(1, 0, 1, 0)
+menuPage.BackgroundTransparency = 1
+menuPage.BorderSizePixel = 0
+menuPage.Visible = true
+pages["MenuPage"] = menuPage
 
 for _, name in ipairs(tabs) do
     local page = Instance.new("ScrollingFrame", content)
@@ -371,7 +452,25 @@ end
 
 -- TAB SWITCHING
 local activeTabButton = nil
+local isOnMenuPage = true
+
+local function showMenuPage()
+    isOnMenuPage = true
+    for _, page in pairs(pages) do
+        page.Visible = (page.Name == "MenuPage")
+    end
+    if activeTabButton then
+        TweenService:Create(activeTabButton, TweenInfo.new(0.22), {
+            BackgroundColor3 = Color3.fromRGB(16, 16, 18),
+            TextColor3 = Color3.fromRGB(110, 110, 120)
+        }):Play()
+        activeTabButton = nil
+    end
+    TweenService:Create(titleLbl, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(110, 110, 120)}):Play()
+end
+
 local function switchTab(targetName)
+    isOnMenuPage = false
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {
@@ -387,42 +486,60 @@ local function switchTab(targetName)
             TextColor3 = THEME_TEXT
         }):Play()
     end
+    TweenService:Create(titleLbl, TweenInfo.new(0.2), {TextColor3 = THEME_TEXT}):Play()
 end
 
-for _, name in ipairs(tabs) do
-    local btn = Instance.new("TextButton", side)
-    btn.Name = name
-    btn.Size = UDim2.new(1, 0, 0, 34)
-    btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
-    btn.BorderSizePixel = 0
-    btn.Text = name
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(110, 110, 120)
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-    local btnPad = Instance.new("UIPadding", btn)
-    btnPad.PaddingLeft = UDim.new(0, 12)
-    btn.MouseEnter:Connect(function()
-        if activeTabButton ~= btn then
-            TweenService:Create(btn, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(28, 28, 32),
-                TextColor3 = Color3.fromRGB(175, 175, 185)
-            }):Play()
-        end
-    end)
-    btn.MouseLeave:Connect(function()
-        if activeTabButton ~= btn then
-            TweenService:Create(btn, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(16, 16, 18),
-                TextColor3 = Color3.fromRGB(110, 110, 120)
-            }):Play()
-        end
-    end)
-    btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
+-- BUILD CATEGORIZED SIDEBAR
+local layoutOrder = 1
+for _, group in ipairs(tabCategories) do
+    -- Category spacer (except first)
+    if layoutOrder > 1 then
+        makeCategorySpacer(layoutOrder)
+        layoutOrder = layoutOrder + 1
+    end
+
+    -- Category label
+    makeCategoryLabel(group.category, layoutOrder)
+    layoutOrder = layoutOrder + 1
+
+    -- Tab buttons
+    for _, name in ipairs(group.tabs) do
+        local btn = Instance.new("TextButton", side)
+        btn.Name = name
+        btn.LayoutOrder = layoutOrder
+        btn.Size = UDim2.new(1, 0, 0, 28)
+        btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
+        btn.BorderSizePixel = 0
+        btn.Text = name
+        btn.Font = Enum.Font.GothamSemibold
+        btn.TextSize = 12
+        btn.TextColor3 = Color3.fromRGB(110, 110, 120)
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+        local btnPad = Instance.new("UIPadding", btn)
+        btnPad.PaddingLeft = UDim.new(0, 12)
+        btn.MouseEnter:Connect(function()
+            if activeTabButton ~= btn then
+                TweenService:Create(btn, TweenInfo.new(0.18), {
+                    BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+                    TextColor3 = Color3.fromRGB(175, 175, 185)
+                }):Play()
+            end
+        end)
+        btn.MouseLeave:Connect(function()
+            if activeTabButton ~= btn then
+                TweenService:Create(btn, TweenInfo.new(0.18), {
+                    BackgroundColor3 = Color3.fromRGB(16, 16, 18),
+                    TextColor3 = Color3.fromRGB(110, 110, 120)
+                }):Play()
+            end
+        end)
+        btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
+        layoutOrder = layoutOrder + 1
+    end
 end
 
-switchTab("HomeTab")
+showMenuPage()
 
 -- ════════════════════════════════════════════════════
 -- GUI TOGGLE
@@ -461,6 +578,112 @@ local function toggleGUI()
         t.Completed:Connect(function()
             main.Visible = false
             isAnimatingGUI = false
+        end)
+    end
+end
+
+-- ════════════════════════════════════════════════════
+-- MENU PAGE (launch grid)
+-- ════════════════════════════════════════════════════
+do
+    -- Title
+    local menuTitle = Instance.new("TextLabel", menuPage)
+    menuTitle.Size = UDim2.new(1, 0, 0, 36)
+    menuTitle.Position = UDim2.new(0, 0, 0, 10)
+    menuTitle.BackgroundTransparency = 1
+    menuTitle.Font = Enum.Font.GothamBold
+    menuTitle.TextSize = 18
+    menuTitle.TextColor3 = THEME_TEXT
+    menuTitle.TextXAlignment = Enum.TextXAlignment.Center
+    menuTitle.Text = "VanillaHub"
+
+    local menuSub = Instance.new("TextLabel", menuPage)
+    menuSub.Size = UDim2.new(1, 0, 0, 16)
+    menuSub.Position = UDim2.new(0, 0, 0, 44)
+    menuSub.BackgroundTransparency = 1
+    menuSub.Font = Enum.Font.Gotham
+    menuSub.TextSize = 11
+    menuSub.TextColor3 = Color3.fromRGB(90, 90, 105)
+    menuSub.TextXAlignment = Enum.TextXAlignment.Center
+    menuSub.Text = "Lumber Tycoon 2  •  v1.1.0"
+
+    -- 8 icon tiles: the most useful tabs
+    local menuTiles = {
+        { name = "Home",     color = Color3.fromRGB(180, 60,  55),  icon = "🏠" },
+        { name = "Player",   color = Color3.fromRGB(55,  100, 190), icon = "👤" },
+        { name = "World",    color = Color3.fromRGB(160, 100, 40),  icon = "🌍" },
+        { name = "Teleport", color = Color3.fromRGB(40,  140, 80),  icon = "📍" },
+        { name = "AutoBuy",  color = Color3.fromRGB(185, 155, 30),  icon = "🛒" },
+        { name = "Slot",     color = Color3.fromRGB(120, 55,  175), icon = "🔲" },
+        { name = "Wood",     color = Color3.fromRGB(45,  110, 80),  icon = "🌲" },
+        { name = "Dupe",     color = Color3.fromRGB(160, 50,  145), icon = "♊" },
+    }
+
+    local gridHolder = Instance.new("Frame", menuPage)
+    gridHolder.Size = UDim2.new(1, -28, 0, 210)
+    gridHolder.Position = UDim2.new(0, 14, 0, 70)
+    gridHolder.BackgroundTransparency = 1
+
+    local grid = Instance.new("UIGridLayout", gridHolder)
+    grid.CellSize = UDim2.new(0.25, -6, 0, 95)
+    grid.CellPadding = UDim2.new(0, 8, 0, 8)
+    grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    grid.VerticalAlignment = Enum.VerticalAlignment.Top
+    grid.SortOrder = Enum.SortOrder.LayoutOrder
+
+    for i, tile in ipairs(menuTiles) do
+        local cell = Instance.new("TextButton", gridHolder)
+        cell.LayoutOrder = i
+        cell.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+        cell.BorderSizePixel = 0
+        cell.Text = ""
+        cell.AutoButtonColor = false
+        Instance.new("UICorner", cell).CornerRadius = UDim.new(0, 12)
+        local cellStroke = Instance.new("UIStroke", cell)
+        cellStroke.Color = BORDER_COLOR
+        cellStroke.Thickness = 1
+        cellStroke.Transparency = 0.5
+
+        -- Colored icon box
+        local iconBox = Instance.new("Frame", cell)
+        iconBox.Size = UDim2.new(0, 44, 0, 44)
+        iconBox.Position = UDim2.new(0.5, -22, 0, 10)
+        iconBox.BackgroundColor3 = tile.color
+        iconBox.BorderSizePixel = 0
+        Instance.new("UICorner", iconBox).CornerRadius = UDim.new(0, 10)
+
+        local iconLbl = Instance.new("TextLabel", iconBox)
+        iconLbl.Size = UDim2.new(1, 0, 1, 0)
+        iconLbl.BackgroundTransparency = 1
+        iconLbl.Font = Enum.Font.GothamBold
+        iconLbl.TextSize = 22
+        iconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+        iconLbl.Text = tile.icon
+
+        local nameLbl = Instance.new("TextLabel", cell)
+        nameLbl.Size = UDim2.new(1, -4, 0, 18)
+        nameLbl.Position = UDim2.new(0, 2, 1, -22)
+        nameLbl.BackgroundTransparency = 1
+        nameLbl.Font = Enum.Font.GothamSemibold
+        nameLbl.TextSize = 12
+        nameLbl.TextColor3 = THEME_TEXT
+        nameLbl.TextXAlignment = Enum.TextXAlignment.Center
+        nameLbl.Text = tile.name
+
+        -- Hover
+        cell.MouseEnter:Connect(function()
+            TweenService:Create(cell, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(28, 28, 34)}):Play()
+            TweenService:Create(iconBox, TweenInfo.new(0.15), {
+                BackgroundColor3 = tile.color:Lerp(Color3.fromRGB(255,255,255), 0.15)
+            }):Play()
+        end)
+        cell.MouseLeave:Connect(function()
+            TweenService:Create(cell, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(18, 18, 22)}):Play()
+            TweenService:Create(iconBox, TweenInfo.new(0.15), {BackgroundColor3 = tile.color}):Play()
+        end)
+        cell.MouseButton1Click:Connect(function()
+            switchTab(tile.name .. "Tab")
         end)
     end
 end
@@ -1807,6 +2030,7 @@ _G.VH = {
     THEME_TEXT       = THEME_TEXT,
     ACCENT           = ACCENT,
     switchTab        = switchTab,
+    showMenuPage     = showMenuPage,
     toggleGUI        = toggleGUI,
     stopFly          = stopFly,
     startFly         = startFly,
