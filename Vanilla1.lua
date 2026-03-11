@@ -283,13 +283,13 @@ side.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 68)
 side.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 local sidePad = Instance.new("UIPadding", side)
-sidePad.PaddingTop = UDim.new(0, 8)
-sidePad.PaddingBottom = UDim.new(0, 10)
+sidePad.PaddingTop = UDim.new(0, 6)
+sidePad.PaddingBottom = UDim.new(0, 6)
 sidePad.PaddingLeft = UDim.new(0, 8)
 sidePad.PaddingRight = UDim.new(0, 8)
 
 local sideLayout = Instance.new("UIListLayout", side)
-sideLayout.Padding = UDim.new(0, 3)
+sideLayout.Padding = UDim.new(0, 2)
 sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 sideLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -317,10 +317,10 @@ local function makeCategoryLabel(text, layoutOrder)
     local lbl = Instance.new("TextLabel", side)
     lbl.Name = "CAT_" .. text
     lbl.LayoutOrder = layoutOrder
-    lbl.Size = UDim2.new(1, 0, 0, 18)
+    lbl.Size = UDim2.new(1, 0, 0, 13)
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 9
+    lbl.TextSize = 8
     lbl.TextColor3 = CAT_TEXT
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Text = "  " .. string.upper(text)
@@ -330,7 +330,7 @@ end
 local function makeCategorySpacer(layoutOrder)
     local sp = Instance.new("Frame", side)
     sp.LayoutOrder = layoutOrder
-    sp.Size = UDim2.new(1, 0, 0, 5)
+    sp.Size = UDim2.new(1, 0, 0, 3)
     sp.BackgroundTransparency = 1
     return sp
 end
@@ -459,7 +459,7 @@ for _, group in ipairs(tabCategories) do
         local btn = Instance.new("TextButton", side)
         btn.Name = name
         btn.LayoutOrder = layoutOrder
-        btn.Size = UDim2.new(1, 0, 0, 32)
+        btn.Size = UDim2.new(1, 0, 0, 28)
         btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
         btn.BorderSizePixel = 0
         btn.Text = name
