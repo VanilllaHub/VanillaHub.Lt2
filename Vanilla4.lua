@@ -28,14 +28,16 @@ local mouse      = player:GetMouse()
 -- ════════════════════════════════════════════════════
 -- THEME COLOURS
 -- ════════════════════════════════════════════════════
-local C_HIGHLIGHT = Color3.fromRGB(255, 180, 0)
-local C_PREVIEW   = Color3.fromRGB(80,  160, 255)
-local C_PLACED    = Color3.fromRGB(60,  210, 100)
-local C_DANGER    = Color3.fromRGB(200, 50,  50)
-local C_GREEN     = Color3.fromRGB(35,  100, 50)
-local C_DARK      = Color3.fromRGB(16,  16,  20)
-local C_CARD      = Color3.fromRGB(22,  18,  30)
-local ITEM_GAP    = 0.10
+-- Selection colours match Vanilla1 Item Tab exactly:
+--   outline = RGB(0,172,240)  surface = black  surfaceAlpha=0.5  line=0.09
+local C_SEL_OUTLINE  = Color3.fromRGB(0, 172, 240)
+local C_SEL_SURFACE  = Color3.fromRGB(0, 0, 0)
+local C_PREVIEW      = Color3.fromRGB(80,  160, 255)
+local C_PLACED       = Color3.fromRGB(60,  210, 100)
+local C_GREEN        = Color3.fromRGB(35,  100, 50)
+local C_DARK         = Color3.fromRGB(16,  16,  20)
+local C_CARD         = Color3.fromRGB(22,  18,  30)
+local ITEM_GAP       = 0.10
 
 -- ════════════════════════════════════════════════════
 -- STATE
@@ -70,26 +72,45 @@ local lassoActive  = false
 
 -- ════════════════════════════════════════════════════
 -- ITEM HELPERS
+-- Mirrors Vanilla1 Item Tab selection logic exactly:
+--   • Item must live under workspace.PlayerModels
+--   • Its direct parent must have an "Owner" StringValue
+--   • We adorn the Main or WoodSection part, not the model,
+--     so land/terrain/other models are never accidentally picked
 -- ════════════════════════════════════════════════════
 local function getMainPart(model)
-    return model:FindFirstChild("Main") or model:FindFirstChildWhichIsA("BasePart")
+    return model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")
+        or model:FindFirstChildWhichIsA("BasePart")
 end
 
+-- Returns true only for models that are valid draggable items.
+-- Requires Owner as a DIRECT child (not just anywhere in hierarchy)
+-- so that plot land, terrain, and other workspace objects are excluded.
 local function isSortable(model)
     if not (model and model:IsA("Model") and model ~= workspace) then return false end
+    -- Must be under workspace.PlayerModels (same gate as Item Tab)
+    local pm = workspace:FindFirstChild("PlayerModels")
+    if not pm then return false end
+    if not model:IsDescendantOf(pm) then return false end
+    -- Must have Owner as a direct child
+    if not model:FindFirstChild("Owner") then return false end
+    -- Must have a physical part we can move
     if not getMainPart(model) then return false end
+    -- Skip trees / non-draggable props
     if model:FindFirstChild("TreeClass") then return false end
-    return model:FindFirstChild("Owner") ~= nil
-        or model:FindFirstChild("ItemName") ~= nil
-        or model:FindFirstChild("PurchasedBoxItemName") ~= nil
-        or model:FindFirstChild("DraggableItem") ~= nil
+    return true
 end
 
+-- From a clicked BasePart, resolve the correct sortable model.
+-- Mirrors Item Tab: walks up to the model whose direct parent has Owner.
 local function modelFromTarget(target)
     if not target then return nil end
-    local m = target:FindFirstAncestorOfClass("Model")
-    if m and isSortable(m) then return m end
-    if isSortable(target.Parent) then return target.Parent end
+    -- Walk up through ancestor models
+    local obj = target
+    while obj do
+        if obj:IsA("Model") and isSortable(obj) then return obj end
+        obj = obj.Parent
+    end
     return nil
 end
 
@@ -100,17 +121,28 @@ end
 
 -- ════════════════════════════════════════════════════
 -- SELECTION
+-- Adorn the Main/WoodSection part, not the model — matches Item Tab.
 -- ════════════════════════════════════════════════════
+local function getAdornPart(model)
+    return model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")
+        or model:FindFirstChildWhichIsA("BasePart")
+end
+
 local function highlight(model)
     if selectedItems[model] then return end
+    local part = getAdornPart(model)
+    if not part then return end
+    -- Already has one (e.g. from a previous failed cleanup)
+    if part:FindFirstChild("VH_Sel") then part:FindFirstChild("VH_Sel"):Destroy() end
     local sb = Instance.new("SelectionBox")
-    sb.Color3              = C_HIGHLIGHT
-    sb.SurfaceColor3       = C_HIGHLIGHT
-    sb.LineThickness       = 0.06
-    sb.SurfaceTransparency = 0.80
-    sb.Adornee             = model
-    sb.Parent              = model
-    selectedItems[model]   = sb
+    sb.Name              = "VH_Sel"
+    sb.Color3            = C_SEL_OUTLINE          -- RGB(0,172,240) — same as Item Tab
+    sb.SurfaceColor3     = C_SEL_SURFACE          -- black surface tint
+    sb.LineThickness     = 0.09                   -- same as Item Tab
+    sb.SurfaceTransparency = 0.5                  -- same as Item Tab
+    sb.Adornee           = part                   -- adorn the PART, not the model
+    sb.Parent            = part
+    selectedItems[model] = sb
 end
 
 local function unhighlight(model)
@@ -154,14 +186,16 @@ local _cachedSortables  = nil
 local _cacheFrame       = 0
 
 local function getSortables()
-    -- Rebuild cache at most once every 90 frames (~1.5s) to keep lasso fast
+    -- Only scan workspace.PlayerModels — same scope as isSortable requires.
+    -- Cache for 1.5 s so lasso commit and group-select don't re-scan unnecessarily.
     if _cachedSortables and (time() - _cacheFrame) < 1.5 then
         return _cachedSortables
     end
     local list = {}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("Model") and isSortable(obj) then
-            table.insert(list, obj)
+    local pm = workspace:FindFirstChild("PlayerModels")
+    if pm then
+        for _, obj in ipairs(pm:GetChildren()) do
+            if isSortable(obj) then table.insert(list, obj) end
         end
     end
     _cachedSortables = list
@@ -419,16 +453,17 @@ end
 -- ════════════════════════════════════════════════════
 -- SERVER-SIDED SORT ENGINE
 --
--- How ownership transfer works in this game:
---   1. Teleport the character next to the item so the server considers
---      the client "close enough" to drag.
---   2. Fire RS.Interaction.ClientIsDragging(model) — this tells the server
---      to hand network ownership of the model's parts to us.
---   3. Once we own the parts, PivotTo() replicates to everyone.
---   4. Release ownership by firing ClientIsDragging(nil) or just moving away.
+-- Per-item flow:
+--   1. Teleport character next to item (server requires proximity to drag)
+--   2. Fire ClientIsDragging(model) to acquire network ownership
+--   3. Wait for ReceiveAge == 0 (ownership confirmed)
+--   4. PivotTo target — replicates to server because we own the parts
+--   5. Anchor every BasePart in the model so physics can't knock it away
+--      (still replicates because we own them)
+--   6. Release ownership — part stays anchored on the server
 --
--- This is the same thing a legitimate drag-and-drop does in one click.
--- We just automate: approach → grab ownership → PivotTo → release → next.
+-- Step 5 is what v3 was missing. Without it, later items passing near an
+-- already-placed item can push it via Roblox physics simulation.
 -- ════════════════════════════════════════════════════
 local _dragRemote = nil
 local function dragRemote()
@@ -438,7 +473,7 @@ local function dragRemote()
     return _dragRemote
 end
 
--- Wait until ReceiveAge == 0 (we own all parts in the model)
+-- Wait until we have network ownership of all unanchored parts
 local function waitForOwnership(model, timeout)
     timeout = timeout or 4
     local deadline = tick() + timeout
@@ -457,23 +492,35 @@ local function waitForOwnership(model, timeout)
     return false
 end
 
--- Move character close to the item so the server is happy
 local function approachItem(model)
     local mp  = getMainPart(model); if not mp then return end
     local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if hrp then hrp.CFrame = CFrame.new(mp.Position) * CFrame.new(0, 2, 4) end
 end
 
--- The actual per-item placement — fully server-replicated
+-- Anchor/unanchor all BaseParts in a model (replicates while we own them)
+local function setAnchored(model, state)
+    pcall(function()
+        for _, p in ipairs(model:GetDescendants()) do
+            if p:IsA("BasePart") then p.Anchored = state end
+        end
+        -- Also set the primary part if present
+        if model.PrimaryPart then model.PrimaryPart.Anchored = state end
+    end)
+end
+
 local function placeItem(model, targetCF)
     if not (model and model.Parent) then return end
     local mp     = getMainPart(model)
     local remote = dragRemote()
     if not mp then return end
 
+    -- Unanchor first (in case it was left anchored from a previous sort)
+    setAnchored(model, false)
+
     approachItem(model)
 
-    -- Request ownership
+    -- Request network ownership
     if remote then
         for _ = 1, 3 do
             pcall(remote.FireServer, remote, model)
@@ -482,16 +529,19 @@ local function placeItem(model, targetCF)
     end
     waitForOwnership(model, 3)
 
-    -- PivotTo is server-replicated once we own the parts
+    -- Move server-side via PivotTo (replicates because we own the parts)
     pcall(function()
-        if not model:FindFirstChild("PrimaryPart") then
-            model.PrimaryPart = mp
-        end
+        if not model.PrimaryPart then model.PrimaryPart = mp end
         model:PivotTo(targetCF)
     end)
 
-    -- Brief hold to let physics settle on the server
-    task.wait(0.12)
+    task.wait(0.08)   -- let the server receive the new CFrame
+
+    -- Anchor in place — replicates while we still own the parts.
+    -- This prevents any passing item from knocking this one away.
+    setAnchored(model, true)
+
+    task.wait(0.05)   -- let anchor state replicate
 
     -- Release ownership
     if remote then pcall(remote.FireServer, remote, nil) end
