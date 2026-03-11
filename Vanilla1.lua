@@ -748,11 +748,9 @@ makeWorldSep()
 makeWorldSectionLabel("World")
 
 makeWorldToggle("Bridge Down", false, function(v)
-    for _, part in ipairs(workspace.Bridge.VerticalLiftBridge.Lift:GetChildren()) do
-        if v then
+    if v then
+        for _, part in ipairs(workspace.Bridge.VerticalLiftBridge.Lift:GetChildren()) do
             part.CFrame = part.CFrame - Vector3.new(0, 11, 0)
-        else
-            part.CFrame = part.CFrame + Vector3.new(0, 11, 0)
         end
     end
 end)
