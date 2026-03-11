@@ -570,148 +570,150 @@ end
 -- MENU PAGE (launch grid)
 -- ════════════════════════════════════════════════════
 do
-    -- Greeting header row (avatar + text)
-    local headerRow = Instance.new("Frame", menuPage)
-    headerRow.Size = UDim2.new(1, -32, 0, 52)
-    headerRow.Position = UDim2.new(0, 16, 0, 14)
-    headerRow.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
-    headerRow.BorderSizePixel = 0
-    Instance.new("UICorner", headerRow).CornerRadius = UDim.new(0, 10)
-    local headerStroke = Instance.new("UIStroke", headerRow)
-    headerStroke.Color = Color3.fromRGB(38, 38, 44)
-    headerStroke.Thickness = 1
-    headerStroke.Transparency = 0
+    -- Player greeting row
+    local greetRow = Instance.new("Frame", menuPage)
+    greetRow.Size = UDim2.new(1, -24, 0, 48)
+    greetRow.Position = UDim2.new(0, 12, 0, 12)
+    greetRow.BackgroundTransparency = 1
 
-    local headerPfp = Instance.new("ImageLabel", headerRow)
-    headerPfp.Size = UDim2.new(0, 34, 0, 34)
-    headerPfp.Position = UDim2.new(0, 10, 0.5, -17)
-    headerPfp.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
-    headerPfp.BorderSizePixel = 0
-    headerPfp.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-    Instance.new("UICorner", headerPfp).CornerRadius = UDim.new(1, 0)
+    local greetPfp = Instance.new("ImageLabel", greetRow)
+    greetPfp.Size = UDim2.new(0, 38, 0, 38)
+    greetPfp.Position = UDim2.new(0, 0, 0.5, -19)
+    greetPfp.BackgroundColor3 = Color3.fromRGB(30, 30, 34)
+    greetPfp.BorderSizePixel = 0
+    greetPfp.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+    Instance.new("UICorner", greetPfp).CornerRadius = UDim.new(1, 0)
+    local pfpStroke = Instance.new("UIStroke", greetPfp)
+    pfpStroke.Color = Color3.fromRGB(55, 55, 62); pfpStroke.Thickness = 1.5
 
-    local headerGreet = Instance.new("TextLabel", headerRow)
-    headerGreet.Size = UDim2.new(1, -60, 0, 17)
-    headerGreet.Position = UDim2.new(0, 52, 0, 9)
-    headerGreet.BackgroundTransparency = 1
-    headerGreet.Font = Enum.Font.GothamBold
-    headerGreet.TextSize = 13
-    headerGreet.TextColor3 = Color3.fromRGB(220, 220, 220)
-    headerGreet.TextXAlignment = Enum.TextXAlignment.Left
-    headerGreet.Text = "Hey, " .. player.DisplayName .. " ♡"
+    local greetName = Instance.new("TextLabel", greetRow)
+    greetName.Size = UDim2.new(1, -50, 0, 20)
+    greetName.Position = UDim2.new(0, 48, 0, 5)
+    greetName.BackgroundTransparency = 1
+    greetName.Font = Enum.Font.GothamBold
+    greetName.TextSize = 14
+    greetName.TextColor3 = Color3.fromRGB(225, 225, 225)
+    greetName.TextXAlignment = Enum.TextXAlignment.Left
+    greetName.Text = "Hey, " .. player.DisplayName .. " ♡"
 
-    local headerSub = Instance.new("TextLabel", headerRow)
-    headerSub.Size = UDim2.new(1, -60, 0, 14)
-    headerSub.Position = UDim2.new(0, 52, 0, 28)
-    headerSub.BackgroundTransparency = 1
-    headerSub.Font = Enum.Font.Gotham
-    headerSub.TextSize = 10
-    headerSub.TextColor3 = Color3.fromRGB(80, 80, 92)
-    headerSub.TextXAlignment = Enum.TextXAlignment.Left
-    headerSub.Text = "VanillaHub  ·  LT2  ·  v1.1.0"
+    local greetSub = Instance.new("TextLabel", greetRow)
+    greetSub.Size = UDim2.new(1, -50, 0, 14)
+    greetSub.Position = UDim2.new(0, 48, 0, 27)
+    greetSub.BackgroundTransparency = 1
+    greetSub.Font = Enum.Font.Gotham
+    greetSub.TextSize = 10
+    greetSub.TextColor3 = Color3.fromRGB(75, 75, 88)
+    greetSub.TextXAlignment = Enum.TextXAlignment.Left
+    greetSub.Text = "v1.1.0  ·  Lumber Tycoon 2"
 
-    -- Thin divider
-    local menuDiv = Instance.new("Frame", menuPage)
-    menuDiv.Size = UDim2.new(1, -32, 0, 1)
-    menuDiv.Position = UDim2.new(0, 16, 0, 76)
-    menuDiv.BackgroundColor3 = Color3.fromRGB(28, 28, 33)
-    menuDiv.BorderSizePixel = 0
+    -- Separator
+    local sep = Instance.new("Frame", menuPage)
+    sep.Size = UDim2.new(1, -24, 0, 1)
+    sep.Position = UDim2.new(0, 12, 0, 68)
+    sep.BackgroundColor3 = Color3.fromRGB(32, 32, 37)
+    sep.BorderSizePixel = 0
 
-    -- Quick access label
-    local quickLbl = Instance.new("TextLabel", menuPage)
-    quickLbl.Size = UDim2.new(1, -32, 0, 14)
-    quickLbl.Position = UDim2.new(0, 16, 0, 84)
-    quickLbl.BackgroundTransparency = 1
-    quickLbl.Font = Enum.Font.GothamBold
-    quickLbl.TextSize = 9
-    quickLbl.TextColor3 = Color3.fromRGB(60, 60, 72)
-    quickLbl.TextXAlignment = Enum.TextXAlignment.Left
-    quickLbl.Text = "QUICK ACCESS"
+    -- Section label
+    local secLbl = Instance.new("TextLabel", menuPage)
+    secLbl.Size = UDim2.new(1, -24, 0, 12)
+    secLbl.Position = UDim2.new(0, 14, 0, 78)
+    secLbl.BackgroundTransparency = 1
+    secLbl.Font = Enum.Font.GothamBold
+    secLbl.TextSize = 9
+    secLbl.TextColor3 = Color3.fromRGB(65, 65, 78)
+    secLbl.TextXAlignment = Enum.TextXAlignment.Left
+    secLbl.Text = "QUICK ACCESS"
 
-    -- 8 tiles
+    -- 8 tiles — 4 per row
     local menuTiles = {
-        { name = "Home"     },
-        { name = "Player"   },
-        { name = "World"    },
-        { name = "Teleport" },
-        { name = "AutoBuy"  },
-        { name = "Slot"     },
-        { name = "Wood"     },
-        { name = "Dupe"     },
+        { name = "Home",     abbr = "Ho" },
+        { name = "Player",   abbr = "Pl" },
+        { name = "World",    abbr = "Wo" },
+        { name = "Teleport", abbr = "Tp" },
+        { name = "AutoBuy",  abbr = "AB" },
+        { name = "Slot",     abbr = "Sl" },
+        { name = "Wood",     abbr = "Wd" },
+        { name = "Dupe",     abbr = "Du" },
     }
 
     local gridHolder = Instance.new("Frame", menuPage)
-    gridHolder.Size = UDim2.new(1, -32, 0, 210)
-    gridHolder.Position = UDim2.new(0, 16, 0, 102)
+    gridHolder.Size = UDim2.new(1, -24, 1, -100)
+    gridHolder.Position = UDim2.new(0, 12, 0, 95)
     gridHolder.BackgroundTransparency = 1
+    gridHolder.ClipsDescendants = false
 
     local grid = Instance.new("UIGridLayout", gridHolder)
-    grid.CellSize = UDim2.new(0, 110, 0, 95)
+    grid.CellSize = UDim2.new(0.25, -6, 0.5, -6)
     grid.CellPadding = UDim2.new(0, 8, 0, 8)
-    grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
     grid.VerticalAlignment = Enum.VerticalAlignment.Top
     grid.SortOrder = Enum.SortOrder.LayoutOrder
 
-    local TILE_BG       = Color3.fromRGB(16, 16, 19)
-    local TILE_BG_HOVER = Color3.fromRGB(26, 26, 30)
-    local ICON_BG       = Color3.fromRGB(26, 26, 30)
-    local ICON_BG_HOVER = Color3.fromRGB(38, 38, 44)
+    local C_TILE      = Color3.fromRGB(18, 18, 21)
+    local C_TILE_H    = Color3.fromRGB(30, 30, 35)
+    local C_ABBR      = Color3.fromRGB(200, 200, 210)
+    local C_ABBR_H    = Color3.fromRGB(240, 240, 245)
+    local C_NAME      = Color3.fromRGB(110, 110, 122)
+    local C_NAME_H    = Color3.fromRGB(180, 180, 190)
+    local C_BORDER    = Color3.fromRGB(38, 38, 44)
+    local C_BORDER_H  = Color3.fromRGB(70, 70, 80)
 
     for i, tile in ipairs(menuTiles) do
         local cell = Instance.new("TextButton", gridHolder)
         cell.LayoutOrder = i
-        cell.BackgroundColor3 = TILE_BG
+        cell.BackgroundColor3 = C_TILE
         cell.BorderSizePixel = 0
         cell.Text = ""
         cell.AutoButtonColor = false
-        Instance.new("UICorner", cell).CornerRadius = UDim.new(0, 10)
-        local cellStroke = Instance.new("UIStroke", cell)
-        cellStroke.Color = Color3.fromRGB(36, 36, 42)
-        cellStroke.Thickness = 1
-        cellStroke.Transparency = 0
+        Instance.new("UICorner", cell).CornerRadius = UDim.new(0, 11)
+        local cs = Instance.new("UIStroke", cell)
+        cs.Color = C_BORDER; cs.Thickness = 1; cs.Transparency = 0
 
-        -- Icon box (monochrome)
-        local iconBox = Instance.new("Frame", cell)
-        iconBox.Size = UDim2.new(0, 40, 0, 40)
-        iconBox.Position = UDim2.new(0.5, -20, 0, 12)
-        iconBox.BackgroundColor3 = ICON_BG
-        iconBox.BorderSizePixel = 0
-        Instance.new("UICorner", iconBox).CornerRadius = UDim.new(0, 9)
-        local iconStroke2 = Instance.new("UIStroke", iconBox)
-        iconStroke2.Color = Color3.fromRGB(44, 44, 52)
-        iconStroke2.Thickness = 1
-        iconStroke2.Transparency = 0
+        -- Big abbreviation text centered in upper portion
+        local abbrLbl = Instance.new("TextLabel", cell)
+        abbrLbl.Size = UDim2.new(1, 0, 0.58, 0)
+        abbrLbl.Position = UDim2.new(0, 0, 0, 0)
+        abbrLbl.BackgroundTransparency = 1
+        abbrLbl.Font = Enum.Font.GothamBlack
+        abbrLbl.TextSize = 28
+        abbrLbl.TextColor3 = C_ABBR
+        abbrLbl.TextXAlignment = Enum.TextXAlignment.Center
+        abbrLbl.TextYAlignment = Enum.TextYAlignment.Center
+        abbrLbl.Text = tile.abbr
 
-        local iconLbl = Instance.new("TextLabel", iconBox)
-        iconLbl.Size = UDim2.new(1, 0, 1, 0)
-        iconLbl.BackgroundTransparency = 1
-        iconLbl.Font = Enum.Font.GothamBold
-        iconLbl.TextSize = 16
-        iconLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
-        iconLbl.TextXAlignment = Enum.TextXAlignment.Center
-        iconLbl.Text = string.sub(tile.name, 1, 2)
+        -- Thin line divider inside tile
+        local tileSep = Instance.new("Frame", cell)
+        tileSep.Size = UDim2.new(0.55, 0, 0, 1)
+        tileSep.Position = UDim2.new(0.225, 0, 0.58, 0)
+        tileSep.BackgroundColor3 = Color3.fromRGB(38, 38, 44)
+        tileSep.BorderSizePixel = 0
 
+        -- Tab name label at bottom
         local nameLbl = Instance.new("TextLabel", cell)
-        nameLbl.Size = UDim2.new(1, -6, 0, 16)
-        nameLbl.Position = UDim2.new(0, 3, 1, -22)
+        nameLbl.Size = UDim2.new(1, -4, 0.38, 0)
+        nameLbl.Position = UDim2.new(0, 2, 0.6, 0)
         nameLbl.BackgroundTransparency = 1
         nameLbl.Font = Enum.Font.GothamSemibold
         nameLbl.TextSize = 11
-        nameLbl.TextColor3 = Color3.fromRGB(160, 160, 170)
+        nameLbl.TextColor3 = C_NAME
         nameLbl.TextXAlignment = Enum.TextXAlignment.Center
+        nameLbl.TextYAlignment = Enum.TextYAlignment.Center
         nameLbl.Text = tile.name
 
         cell.MouseEnter:Connect(function()
-            TweenService:Create(cell,    TweenInfo.new(0.15), {BackgroundColor3 = TILE_BG_HOVER}):Play()
-            TweenService:Create(iconBox, TweenInfo.new(0.15), {BackgroundColor3 = ICON_BG_HOVER}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(210, 210, 220)}):Play()
-            TweenService:Create(iconLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(220, 220, 230)}):Play()
+            TweenService:Create(cell,    TweenInfo.new(0.18), {BackgroundColor3 = C_TILE_H}):Play()
+            TweenService:Create(cs,      TweenInfo.new(0.18), {Color = C_BORDER_H}):Play()
+            TweenService:Create(abbrLbl, TweenInfo.new(0.18), {TextColor3 = C_ABBR_H}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3 = C_NAME_H}):Play()
         end)
         cell.MouseLeave:Connect(function()
-            TweenService:Create(cell,    TweenInfo.new(0.15), {BackgroundColor3 = TILE_BG}):Play()
-            TweenService:Create(iconBox, TweenInfo.new(0.15), {BackgroundColor3 = ICON_BG}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(160, 160, 170)}):Play()
-            TweenService:Create(iconLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(180, 180, 190)}):Play()
+            TweenService:Create(cell,    TweenInfo.new(0.18), {BackgroundColor3 = C_TILE}):Play()
+            TweenService:Create(cs,      TweenInfo.new(0.18), {Color = C_BORDER}):Play()
+            TweenService:Create(abbrLbl, TweenInfo.new(0.18), {TextColor3 = C_ABBR}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3 = C_NAME}):Play()
+        end)
+        cell.MouseButton1Down:Connect(function()
+            TweenService:Create(cell, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(42, 42, 48)}):Play()
         end)
         cell.MouseButton1Click:Connect(function()
             switchTab(tile.name .. "Tab")
