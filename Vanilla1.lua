@@ -394,7 +394,12 @@ end)
 ]]
 
 local tabCategories = {
-    { tabs = {"Home", "Player", "World", "Teleport", "Wood", "Slot", "Dupe", "Item", "Sorter", "AutoBuy", "Build", "Pixel Art", "Vehicle", "Search", "Settings"} },
+    { category = "Core",          tabs = {"Home", "Settings"} },
+    { category = "Character",     tabs = {"Player"} },
+    { category = "World",         tabs = {"World", "Teleport"} },
+    { category = "Items & Eco",   tabs = {"Item", "Wood", "Slot", "Dupe", "Sorter", "AutoBuy"} },
+    { category = "Creative",      tabs = {"Pixel Art", "Build"} },
+    { category = "Utility",       tabs = {"Vehicle", "Search"} },
 }
 
 -- Flat ordered tab list (for page creation etc.)
@@ -562,126 +567,122 @@ local function toggleGUI()
 end
 
 -- ════════════════════════════════════════════════════
--- MENU PAGE
+-- MENU PAGE (launch grid)
 -- ════════════════════════════════════════════════════
 do
-    -- Title block
-    local mTitle = Instance.new("TextLabel", menuPage)
-    mTitle.Size = UDim2.new(1, -24, 0, 18)
-    mTitle.Position = UDim2.new(0, 14, 0, 16)
-    mTitle.BackgroundTransparency = 1
-    mTitle.Font = Enum.Font.GothamBold
-    mTitle.TextSize = 13
-    mTitle.TextColor3 = Color3.fromRGB(200, 200, 205)
-    mTitle.TextXAlignment = Enum.TextXAlignment.Left
-    mTitle.Text = "VanillaHub"
+    -- Greeting
+    local greetLbl = Instance.new("TextLabel", menuPage)
+    greetLbl.Size = UDim2.new(1, -24, 0, 22)
+    greetLbl.Position = UDim2.new(0, 14, 0, 16)
+    greetLbl.BackgroundTransparency = 1
+    greetLbl.Font = Enum.Font.GothamBold
+    greetLbl.TextSize = 15
+    greetLbl.TextColor3 = Color3.fromRGB(215, 215, 215)
+    greetLbl.TextXAlignment = Enum.TextXAlignment.Left
+    greetLbl.Text = player.DisplayName
 
-    local mSub = Instance.new("TextLabel", menuPage)
-    mSub.Size = UDim2.new(1, -24, 0, 12)
-    mSub.Position = UDim2.new(0, 14, 0, 34)
-    mSub.BackgroundTransparency = 1
-    mSub.Font = Enum.Font.Gotham
-    mSub.TextSize = 10
-    mSub.TextColor3 = Color3.fromRGB(48, 48, 58)
-    mSub.TextXAlignment = Enum.TextXAlignment.Left
-    mSub.Text = "Lumber Tycoon 2  ·  v1.1.0"
+    local subLbl = Instance.new("TextLabel", menuPage)
+    subLbl.Size = UDim2.new(1, -24, 0, 14)
+    subLbl.Position = UDim2.new(0, 14, 0, 38)
+    subLbl.BackgroundTransparency = 1
+    subLbl.Font = Enum.Font.Gotham
+    subLbl.TextSize = 10
+    subLbl.TextColor3 = Color3.fromRGB(60, 60, 72)
+    subLbl.TextXAlignment = Enum.TextXAlignment.Left
+    subLbl.Text = "VanillaHub  ·  v1.1.0"
 
-    local mDiv = Instance.new("Frame", menuPage)
-    mDiv.Size = UDim2.new(1, -24, 0, 1)
-    mDiv.Position = UDim2.new(0, 12, 0, 54)
-    mDiv.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
-    mDiv.BorderSizePixel = 0
+    -- Divider
+    local div = Instance.new("Frame", menuPage)
+    div.Size = UDim2.new(1, -24, 0, 1)
+    div.Position = UDim2.new(0, 12, 0, 60)
+    div.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
+    div.BorderSizePixel = 0
 
-    -- All 15 tabs as a clean scrollable list
-    local allTabs = {
-        "Home", "Player", "World", "Teleport", "Wood",
-        "Slot", "Dupe", "Item", "Sorter", "AutoBuy",
-        "Build", "Pixel Art", "Vehicle", "Search", "Settings"
+    -- 8 clean row buttons
+    local menuTiles = {
+        "Home", "Player", "World", "Teleport",
+        "AutoBuy", "Slot", "Wood", "Dupe"
     }
 
-    local listScroll = Instance.new("ScrollingFrame", menuPage)
-    listScroll.Size = UDim2.new(1, -24, 1, -64)
-    listScroll.Position = UDim2.new(0, 12, 0, 60)
-    listScroll.BackgroundTransparency = 1
-    listScroll.BorderSizePixel = 0
-    listScroll.ScrollBarThickness = 0
-    listScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    listScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+    local listHolder = Instance.new("Frame", menuPage)
+    listHolder.Size = UDim2.new(1, -24, 1, -72)
+    listHolder.Position = UDim2.new(0, 12, 0, 68)
+    listHolder.BackgroundTransparency = 1
 
-    local listLayout = Instance.new("UIListLayout", listScroll)
-    listLayout.Padding = UDim.new(0, 3)
+    local listLayout = Instance.new("UIListLayout", listHolder)
+    listLayout.Padding = UDim.new(0, 4)
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
     listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        listScroll.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 4)
-    end)
 
-    local C_ROW   = Color3.fromRGB(14, 14, 17)
-    local C_ROW_H = Color3.fromRGB(22, 22, 26)
-    local C_TEXT  = Color3.fromRGB(155, 155, 165)
-    local C_TEXT_H= Color3.fromRGB(215, 215, 220)
-    local C_IDX   = Color3.fromRGB(36, 36, 44)
-    local C_IDX_H = Color3.fromRGB(65, 65, 75)
-    local C_CHV   = Color3.fromRGB(32, 32, 40)
-    local C_CHV_H = Color3.fromRGB(90, 90, 105)
+    local C_ROW   = Color3.fromRGB(16, 16, 19)
+    local C_ROW_H = Color3.fromRGB(26, 26, 30)
+    local C_TEXT  = Color3.fromRGB(185, 185, 195)
+    local C_TEXT_H= Color3.fromRGB(230, 230, 235)
+    local C_NUM   = Color3.fromRGB(45, 45, 55)
+    local C_NUM_H = Color3.fromRGB(70, 70, 82)
+    local C_ARR   = Color3.fromRGB(40, 40, 50)
+    local C_ARR_H = Color3.fromRGB(110, 110, 122)
 
-    for i, tabName in ipairs(allTabs) do
-        local row = Instance.new("TextButton", listScroll)
+    for i, name in ipairs(menuTiles) do
+        local row = Instance.new("TextButton", listHolder)
         row.LayoutOrder = i
-        row.Size = UDim2.new(1, 0, 0, 28)
+        row.Size = UDim2.new(1, 0, 0, 32)
         row.BackgroundColor3 = C_ROW
         row.BorderSizePixel = 0
         row.Text = ""
         row.AutoButtonColor = false
-        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
 
-        local idxLbl = Instance.new("TextLabel", row)
-        idxLbl.Size = UDim2.new(0, 22, 1, 0)
-        idxLbl.Position = UDim2.new(0, 8, 0, 0)
-        idxLbl.BackgroundTransparency = 1
-        idxLbl.Font = Enum.Font.GothamBold
-        idxLbl.TextSize = 9
-        idxLbl.TextColor3 = C_IDX
-        idxLbl.TextXAlignment = Enum.TextXAlignment.Left
-        idxLbl.TextYAlignment = Enum.TextYAlignment.Center
-        idxLbl.Text = string.format("%02d", i)
+        -- Number
+        local numLbl = Instance.new("TextLabel", row)
+        numLbl.Size = UDim2.new(0, 24, 1, 0)
+        numLbl.Position = UDim2.new(0, 10, 0, 0)
+        numLbl.BackgroundTransparency = 1
+        numLbl.Font = Enum.Font.GothamBold
+        numLbl.TextSize = 10
+        numLbl.TextColor3 = C_NUM
+        numLbl.TextXAlignment = Enum.TextXAlignment.Left
+        numLbl.TextYAlignment = Enum.TextYAlignment.Center
+        numLbl.Text = string.format("%02d", i)
 
+        -- Name
         local nameLbl = Instance.new("TextLabel", row)
-        nameLbl.Size = UDim2.new(1, -54, 1, 0)
-        nameLbl.Position = UDim2.new(0, 32, 0, 0)
+        nameLbl.Size = UDim2.new(1, -72, 1, 0)
+        nameLbl.Position = UDim2.new(0, 36, 0, 0)
         nameLbl.BackgroundTransparency = 1
         nameLbl.Font = Enum.Font.GothamSemibold
-        nameLbl.TextSize = 12
+        nameLbl.TextSize = 13
         nameLbl.TextColor3 = C_TEXT
         nameLbl.TextXAlignment = Enum.TextXAlignment.Left
         nameLbl.TextYAlignment = Enum.TextYAlignment.Center
-        nameLbl.Text = tabName
+        nameLbl.Text = name
 
-        local chv = Instance.new("TextLabel", row)
-        chv.Size = UDim2.new(0, 14, 1, 0)
-        chv.Position = UDim2.new(1, -18, 0, 0)
-        chv.BackgroundTransparency = 1
-        chv.Font = Enum.Font.GothamBold
-        chv.TextSize = 11
-        chv.TextColor3 = C_CHV
-        chv.TextXAlignment = Enum.TextXAlignment.Center
-        chv.TextYAlignment = Enum.TextYAlignment.Center
-        chv.Text = ">"
+        -- Arrow
+        local arrLbl = Instance.new("TextLabel", row)
+        arrLbl.Size = UDim2.new(0, 20, 1, 0)
+        arrLbl.Position = UDim2.new(1, -26, 0, 0)
+        arrLbl.BackgroundTransparency = 1
+        arrLbl.Font = Enum.Font.GothamBold
+        arrLbl.TextSize = 13
+        arrLbl.TextColor3 = C_ARR
+        arrLbl.TextXAlignment = Enum.TextXAlignment.Center
+        arrLbl.TextYAlignment = Enum.TextYAlignment.Center
+        arrLbl.Text = "›"
 
         row.MouseEnter:Connect(function()
-            TweenService:Create(row,     TweenInfo.new(0.1), {BackgroundColor3 = C_ROW_H}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.1), {TextColor3 = C_TEXT_H}):Play()
-            TweenService:Create(idxLbl,  TweenInfo.new(0.1), {TextColor3 = C_IDX_H}):Play()
-            TweenService:Create(chv,     TweenInfo.new(0.1), {TextColor3 = C_CHV_H}):Play()
+            TweenService:Create(row,     TweenInfo.new(0.14), {BackgroundColor3 = C_ROW_H}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.14), {TextColor3 = C_TEXT_H}):Play()
+            TweenService:Create(numLbl,  TweenInfo.new(0.14), {TextColor3 = C_NUM_H}):Play()
+            TweenService:Create(arrLbl,  TweenInfo.new(0.14), {TextColor3 = C_ARR_H}):Play()
         end)
         row.MouseLeave:Connect(function()
-            TweenService:Create(row,     TweenInfo.new(0.1), {BackgroundColor3 = C_ROW}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.1), {TextColor3 = C_TEXT}):Play()
-            TweenService:Create(idxLbl,  TweenInfo.new(0.1), {TextColor3 = C_IDX}):Play()
-            TweenService:Create(chv,     TweenInfo.new(0.1), {TextColor3 = C_CHV}):Play()
+            TweenService:Create(row,     TweenInfo.new(0.14), {BackgroundColor3 = C_ROW}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.14), {TextColor3 = C_TEXT}):Play()
+            TweenService:Create(numLbl,  TweenInfo.new(0.14), {TextColor3 = C_NUM}):Play()
+            TweenService:Create(arrLbl,  TweenInfo.new(0.14), {TextColor3 = C_ARR}):Play()
         end)
         row.MouseButton1Click:Connect(function()
-            switchTab(tabName .. "Tab")
+            switchTab(name .. "Tab")
         end)
     end
 end
@@ -2008,229 +2009,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         return
     end
 end)
-
--- ════════════════════════════════════════════════════
--- SEARCH TAB
--- ════════════════════════════════════════════════════
-do
-    local searchPage = pages["SearchTab"]
-
-    -- Search input box
-    local searchBar = Instance.new("Frame", searchPage)
-    searchBar.Size = UDim2.new(1, -24, 0, 34)
-    searchBar.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-    searchBar.BorderSizePixel = 0
-    searchBar.LayoutOrder = 1
-    Instance.new("UICorner", searchBar).CornerRadius = UDim.new(0, 8)
-    local sbStroke = Instance.new("UIStroke", searchBar)
-    sbStroke.Color = Color3.fromRGB(38, 38, 46); sbStroke.Thickness = 1
-
-    local searchInput = Instance.new("TextBox", searchBar)
-    searchInput.Size = UDim2.new(1, -14, 1, 0)
-    searchInput.Position = UDim2.new(0, 10, 0, 0)
-    searchInput.BackgroundTransparency = 1
-    searchInput.Font = Enum.Font.Gotham
-    searchInput.TextSize = 12
-    searchInput.TextColor3 = Color3.fromRGB(200, 200, 210)
-    searchInput.PlaceholderText = "Search items, players, locations..."
-    searchInput.PlaceholderColor3 = Color3.fromRGB(55, 55, 65)
-    searchInput.Text = ""
-    searchInput.TextXAlignment = Enum.TextXAlignment.Left
-    searchInput.ClearTextOnFocus = false
-
-    -- Focus stroke highlight
-    searchInput.Focused:Connect(function()
-        TweenService:Create(sbStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(90, 90, 105)}):Play()
-    end)
-    searchInput.FocusLost:Connect(function()
-        TweenService:Create(sbStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(38, 38, 46)}):Play()
-    end)
-
-    -- Result count label
-    local countLbl = Instance.new("TextLabel", searchPage)
-    countLbl.Size = UDim2.new(1, -24, 0, 14)
-    countLbl.BackgroundTransparency = 1
-    countLbl.Font = Enum.Font.Gotham
-    countLbl.TextSize = 10
-    countLbl.TextColor3 = Color3.fromRGB(48, 48, 58)
-    countLbl.TextXAlignment = Enum.TextXAlignment.Left
-    countLbl.LayoutOrder = 2
-    countLbl.Text = ""
-
-    -- Results scroll area
-    local resultScroll = Instance.new("ScrollingFrame", searchPage)
-    resultScroll.Size = UDim2.new(1, -24, 1, -80)
-    resultScroll.BackgroundTransparency = 1
-    resultScroll.BorderSizePixel = 0
-    resultScroll.ScrollBarThickness = 3
-    resultScroll.ScrollBarImageColor3 = Color3.fromRGB(50, 50, 60)
-    resultScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    resultScroll.LayoutOrder = 3
-
-    local resultLayout = Instance.new("UIListLayout", resultScroll)
-    resultLayout.Padding = UDim.new(0, 3)
-    resultLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    resultLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        resultScroll.CanvasSize = UDim2.new(0, 0, 0, resultLayout.AbsoluteContentSize.Y + 4)
-    end)
-
-    -- Searchable data — items in game, teleport locations, tabs
-    local searchData = {
-        -- Tabs
-        { label = "Home",           tag = "Tab",      action = function() switchTab("HomeTab") end },
-        { label = "Player",         tag = "Tab",      action = function() switchTab("PlayerTab") end },
-        { label = "World",          tag = "Tab",      action = function() switchTab("WorldTab") end },
-        { label = "Teleport",       tag = "Tab",      action = function() switchTab("TeleportTab") end },
-        { label = "Wood",           tag = "Tab",      action = function() switchTab("WoodTab") end },
-        { label = "Slot",           tag = "Tab",      action = function() switchTab("SlotTab") end },
-        { label = "Dupe",           tag = "Tab",      action = function() switchTab("DupeTab") end },
-        { label = "Item",           tag = "Tab",      action = function() switchTab("ItemTab") end },
-        { label = "Sorter",         tag = "Tab",      action = function() switchTab("SorterTab") end },
-        { label = "AutoBuy",        tag = "Tab",      action = function() switchTab("AutoBuyTab") end },
-        { label = "Build",          tag = "Tab",      action = function() switchTab("BuildTab") end },
-        { label = "Pixel Art",      tag = "Tab",      action = function() switchTab("Pixel ArtTab") end },
-        { label = "Vehicle",        tag = "Tab",      action = function() switchTab("VehicleTab") end },
-        { label = "Settings",       tag = "Tab",      action = function() switchTab("SettingsTab") end },
-        -- Teleport locations
-        { label = "Spawn",          tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "The Den",        tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "LightHouse",     tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Safari",         tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Volcano",        tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Cave",           tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Swamp",          tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Taiga",          tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Snow",           tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Woodruff's Shop",tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Bob's Shack",    tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Land Store",     tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Link's Logic",   tag = "Location", action = function() switchTab("TeleportTab") end },
-        { label = "Fancy Furnishings", tag = "Location", action = function() switchTab("TeleportTab") end },
-        -- World toggles
-        { label = "Always Day",     tag = "Toggle",   action = function() switchTab("WorldTab") end },
-        { label = "Always Night",   tag = "Toggle",   action = function() switchTab("WorldTab") end },
-        { label = "Remove Fog",     tag = "Toggle",   action = function() switchTab("WorldTab") end },
-        { label = "Remove Shadows", tag = "Toggle",   action = function() switchTab("WorldTab") end },
-        { label = "Walk On Water",  tag = "Toggle",   action = function() switchTab("WorldTab") end },
-        { label = "Remove Water",   tag = "Toggle",   action = function() switchTab("WorldTab") end },
-        -- Player
-        { label = "Fly",            tag = "Feature",  action = function() switchTab("PlayerTab") end },
-        { label = "Noclip",         tag = "Feature",  action = function() switchTab("PlayerTab") end },
-        { label = "Walkspeed",      tag = "Feature",  action = function() switchTab("PlayerTab") end },
-        { label = "Jumppower",      tag = "Feature",  action = function() switchTab("PlayerTab") end },
-        { label = "Infinite Jump",  tag = "Feature",  action = function() switchTab("PlayerTab") end },
-        { label = "Hard Dragger",   tag = "Feature",  action = function() switchTab("PlayerTab") end },
-    }
-
-    local TAG_COLORS = {
-        Tab      = Color3.fromRGB(70, 90, 130),
-        Location = Color3.fromRGB(55, 90, 70),
-        Toggle   = Color3.fromRGB(85, 70, 100),
-        Feature  = Color3.fromRGB(90, 75, 50),
-    }
-    local TAG_TEXT = {
-        Tab      = Color3.fromRGB(120, 150, 200),
-        Location = Color3.fromRGB(100, 175, 130),
-        Toggle   = Color3.fromRGB(160, 130, 195),
-        Feature  = Color3.fromRGB(190, 160, 100),
-    }
-
-    local activeRows = {}
-
-    local function clearResults()
-        for _, r in ipairs(activeRows) do r:Destroy() end
-        activeRows = {}
-    end
-
-    local function buildResults(query)
-        clearResults()
-        query = query:lower():gsub("^%s+",""):gsub("%s+$","")
-        if query == "" then
-            countLbl.Text = ""
-            return
-        end
-
-        local matches = {}
-        for _, entry in ipairs(searchData) do
-            if entry.label:lower():find(query, 1, true) then
-                table.insert(matches, entry)
-            end
-        end
-
-        countLbl.Text = #matches .. " result" .. (#matches == 1 and "" or "s")
-
-        for i, entry in ipairs(matches) do
-            local row = Instance.new("TextButton", resultScroll)
-            row.LayoutOrder = i
-            row.Size = UDim2.new(1, 0, 0, 30)
-            row.BackgroundColor3 = Color3.fromRGB(14, 14, 17)
-            row.BorderSizePixel = 0
-            row.Text = ""
-            row.AutoButtonColor = false
-            Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
-            table.insert(activeRows, row)
-
-            -- Tag pill
-            local tagBg = Instance.new("Frame", row)
-            tagBg.Size = UDim2.new(0, 58, 0, 16)
-            tagBg.Position = UDim2.new(1, -66, 0.5, -8)
-            tagBg.BackgroundColor3 = TAG_COLORS[entry.tag] or Color3.fromRGB(40,40,48)
-            tagBg.BorderSizePixel = 0
-            Instance.new("UICorner", tagBg).CornerRadius = UDim.new(0, 4)
-            local tagLbl = Instance.new("TextLabel", tagBg)
-            tagLbl.Size = UDim2.new(1, 0, 1, 0)
-            tagLbl.BackgroundTransparency = 1
-            tagLbl.Font = Enum.Font.GothamBold
-            tagLbl.TextSize = 9
-            tagLbl.TextColor3 = TAG_TEXT[entry.tag] or Color3.fromRGB(180,180,190)
-            tagLbl.TextXAlignment = Enum.TextXAlignment.Center
-            tagLbl.Text = entry.tag:upper()
-
-            -- Label
-            local lbl = Instance.new("TextLabel", row)
-            lbl.Size = UDim2.new(1, -80, 1, 0)
-            lbl.Position = UDim2.new(0, 10, 0, 0)
-            lbl.BackgroundTransparency = 1
-            lbl.Font = Enum.Font.GothamSemibold
-            lbl.TextSize = 12
-            lbl.TextColor3 = Color3.fromRGB(160, 160, 170)
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.TextYAlignment = Enum.TextYAlignment.Center
-            lbl.Text = entry.label
-
-            row.MouseEnter:Connect(function()
-                TweenService:Create(row, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(22,22,26)}):Play()
-                TweenService:Create(lbl, TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(215,215,220)}):Play()
-            end)
-            row.MouseLeave:Connect(function()
-                TweenService:Create(row, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(14,14,17)}):Play()
-                TweenService:Create(lbl, TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(160,160,170)}):Play()
-            end)
-            row.MouseButton1Click:Connect(function()
-                entry.action()
-            end)
-        end
-
-        if #matches == 0 then
-            countLbl.Text = "No results"
-            local noRes = Instance.new("TextLabel", resultScroll)
-            noRes.LayoutOrder = 1
-            noRes.Size = UDim2.new(1, 0, 0, 40)
-            noRes.BackgroundTransparency = 1
-            noRes.Font = Enum.Font.Gotham
-            noRes.TextSize = 11
-            noRes.TextColor3 = Color3.fromRGB(45, 45, 55)
-            noRes.TextXAlignment = Enum.TextXAlignment.Center
-            noRes.TextYAlignment = Enum.TextYAlignment.Center
-            noRes.Text = "Nothing found for \"" .. query .. "\""
-            table.insert(activeRows, noRes)
-        end
-    end
-
-    searchInput:GetPropertyChangedSignal("Text"):Connect(function()
-        buildResults(searchInput.Text)
-    end)
-end
 
 -- ════════════════════════════════════════════════════
 -- SHARED GLOBALS
