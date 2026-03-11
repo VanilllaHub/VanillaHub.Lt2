@@ -1700,15 +1700,21 @@ end)
 createPSep()
 createPSection("Misc")
 
-local hardDragEnabled = false
-local hardDragConn    = nil
-local hardDragPart    = nil
-local hardDragOffset  = nil
+local hardDragEnabled  = false
+local hardDragConn     = nil
+local hardDragPart     = nil
+local hardDragOffset   = nil
+local hardDragAnchored = false -- track if WE anchored it
 
 local function stopHardDrag()
     if hardDragConn then hardDragConn:Disconnect(); hardDragConn = nil end
-    hardDragPart   = nil
-    hardDragOffset = nil
+    -- restore anchored state
+    if hardDragPart and hardDragPart.Parent and hardDragAnchored then
+        pcall(function() hardDragPart.Anchored = false end)
+    end
+    hardDragAnchored = false
+    hardDragPart     = nil
+    hardDragOffset   = nil
 end
 
 local function getGrabbedPart()
@@ -1732,7 +1738,15 @@ local function startHardDrag(part)
     local char = player.Character
     local hrp  = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
+
     hardDragOffset = hrp.CFrame:ToObjectSpace(part.CFrame)
+
+    -- anchor it so physics absolutely cannot fight us
+    if not part.Anchored then
+        pcall(function() part.Anchored = true end)
+        hardDragAnchored = true
+    end
+
     hardDragConn = RunService.Heartbeat:Connect(function()
         if not hardDragEnabled then stopHardDrag(); return end
         local c  = player.Character
@@ -1740,8 +1754,7 @@ local function startHardDrag(part)
         if not rp then stopHardDrag(); return end
         if not (hardDragPart and hardDragPart.Parent) then stopHardDrag(); return end
         pcall(function()
-            hardDragPart.Velocity        = Vector3.zero
-            hardDragPart.RotVelocity     = Vector3.zero
+            hardDragPart.Anchored = true
             hardDragPart.AssemblyLinearVelocity  = Vector3.zero
             hardDragPart.AssemblyAngularVelocity = Vector3.zero
             hardDragPart.CFrame = rp.CFrame:ToWorldSpace(hardDragOffset)
@@ -1766,7 +1779,6 @@ createPToggle("Hard Dragger", false, function(val)
 end)
 
 table.insert(cleanupTasks, stopHardDrag)
-
 -- ════════════════════════════════════════════════════
 -- GLOBAL KEY LISTENER
 -- ════════════════════════════════════════════════════
