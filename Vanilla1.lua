@@ -760,7 +760,7 @@ makeWorldToggle("Bridge Down", false, function(v)
         for _, part in ipairs(lift:GetChildren()) do
             if part:IsA("BasePart") then
                 bridgeOrigCFrames[part] = part.CFrame
-                part.CFrame = part.CFrame * CFrame.new(0, -11, 0)
+                part.CFrame = part.CFrame - Vector3.new(0, 11, 0)
             end
         end
     else
