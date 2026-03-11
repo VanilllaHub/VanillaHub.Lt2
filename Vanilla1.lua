@@ -570,101 +570,148 @@ end
 -- MENU PAGE (launch grid)
 -- ════════════════════════════════════════════════════
 do
-    -- Title
-    local menuTitle = Instance.new("TextLabel", menuPage)
-    menuTitle.Size = UDim2.new(1, 0, 0, 36)
-    menuTitle.Position = UDim2.new(0, 0, 0, 10)
-    menuTitle.BackgroundTransparency = 1
-    menuTitle.Font = Enum.Font.GothamBold
-    menuTitle.TextSize = 18
-    menuTitle.TextColor3 = THEME_TEXT
-    menuTitle.TextXAlignment = Enum.TextXAlignment.Center
-    menuTitle.Text = "VanillaHub"
+    -- Greeting header row (avatar + text)
+    local headerRow = Instance.new("Frame", menuPage)
+    headerRow.Size = UDim2.new(1, -32, 0, 52)
+    headerRow.Position = UDim2.new(0, 16, 0, 14)
+    headerRow.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
+    headerRow.BorderSizePixel = 0
+    Instance.new("UICorner", headerRow).CornerRadius = UDim.new(0, 10)
+    local headerStroke = Instance.new("UIStroke", headerRow)
+    headerStroke.Color = Color3.fromRGB(38, 38, 44)
+    headerStroke.Thickness = 1
+    headerStroke.Transparency = 0
 
-    local menuSub = Instance.new("TextLabel", menuPage)
-    menuSub.Size = UDim2.new(1, 0, 0, 16)
-    menuSub.Position = UDim2.new(0, 0, 0, 44)
-    menuSub.BackgroundTransparency = 1
-    menuSub.Font = Enum.Font.Gotham
-    menuSub.TextSize = 11
-    menuSub.TextColor3 = Color3.fromRGB(90, 90, 105)
-    menuSub.TextXAlignment = Enum.TextXAlignment.Center
-    menuSub.Text = "Lumber Tycoon 2  •  v1.1.0"
+    local headerPfp = Instance.new("ImageLabel", headerRow)
+    headerPfp.Size = UDim2.new(0, 34, 0, 34)
+    headerPfp.Position = UDim2.new(0, 10, 0.5, -17)
+    headerPfp.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
+    headerPfp.BorderSizePixel = 0
+    headerPfp.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+    Instance.new("UICorner", headerPfp).CornerRadius = UDim.new(1, 0)
 
-    -- 8 icon tiles: the most useful tabs
+    local headerGreet = Instance.new("TextLabel", headerRow)
+    headerGreet.Size = UDim2.new(1, -60, 0, 17)
+    headerGreet.Position = UDim2.new(0, 52, 0, 9)
+    headerGreet.BackgroundTransparency = 1
+    headerGreet.Font = Enum.Font.GothamBold
+    headerGreet.TextSize = 13
+    headerGreet.TextColor3 = Color3.fromRGB(220, 220, 220)
+    headerGreet.TextXAlignment = Enum.TextXAlignment.Left
+    headerGreet.Text = "Hey, " .. player.DisplayName .. " ♡"
+
+    local headerSub = Instance.new("TextLabel", headerRow)
+    headerSub.Size = UDim2.new(1, -60, 0, 14)
+    headerSub.Position = UDim2.new(0, 52, 0, 28)
+    headerSub.BackgroundTransparency = 1
+    headerSub.Font = Enum.Font.Gotham
+    headerSub.TextSize = 10
+    headerSub.TextColor3 = Color3.fromRGB(80, 80, 92)
+    headerSub.TextXAlignment = Enum.TextXAlignment.Left
+    headerSub.Text = "VanillaHub  ·  LT2  ·  v1.1.0"
+
+    -- Thin divider
+    local menuDiv = Instance.new("Frame", menuPage)
+    menuDiv.Size = UDim2.new(1, -32, 0, 1)
+    menuDiv.Position = UDim2.new(0, 16, 0, 76)
+    menuDiv.BackgroundColor3 = Color3.fromRGB(28, 28, 33)
+    menuDiv.BorderSizePixel = 0
+
+    -- Quick access label
+    local quickLbl = Instance.new("TextLabel", menuPage)
+    quickLbl.Size = UDim2.new(1, -32, 0, 14)
+    quickLbl.Position = UDim2.new(0, 16, 0, 84)
+    quickLbl.BackgroundTransparency = 1
+    quickLbl.Font = Enum.Font.GothamBold
+    quickLbl.TextSize = 9
+    quickLbl.TextColor3 = Color3.fromRGB(60, 60, 72)
+    quickLbl.TextXAlignment = Enum.TextXAlignment.Left
+    quickLbl.Text = "QUICK ACCESS"
+
+    -- 8 tiles
     local menuTiles = {
-        { name = "Home",     color = Color3.fromRGB(180, 60,  55),  icon = "🏠" },
-        { name = "Player",   color = Color3.fromRGB(55,  100, 190), icon = "👤" },
-        { name = "World",    color = Color3.fromRGB(160, 100, 40),  icon = "🌍" },
-        { name = "Teleport", color = Color3.fromRGB(40,  140, 80),  icon = "📍" },
-        { name = "AutoBuy",  color = Color3.fromRGB(185, 155, 30),  icon = "🛒" },
-        { name = "Slot",     color = Color3.fromRGB(120, 55,  175), icon = "🔲" },
-        { name = "Wood",     color = Color3.fromRGB(45,  110, 80),  icon = "🌲" },
-        { name = "Dupe",     color = Color3.fromRGB(160, 50,  145), icon = "♊" },
+        { name = "Home"     },
+        { name = "Player"   },
+        { name = "World"    },
+        { name = "Teleport" },
+        { name = "AutoBuy"  },
+        { name = "Slot"     },
+        { name = "Wood"     },
+        { name = "Dupe"     },
     }
 
     local gridHolder = Instance.new("Frame", menuPage)
-    gridHolder.Size = UDim2.new(1, -32, 0, 220)
-    gridHolder.Position = UDim2.new(0, 16, 0, 68)
+    gridHolder.Size = UDim2.new(1, -32, 0, 210)
+    gridHolder.Position = UDim2.new(0, 16, 0, 102)
     gridHolder.BackgroundTransparency = 1
 
     local grid = Instance.new("UIGridLayout", gridHolder)
-    grid.CellSize = UDim2.new(0, 110, 0, 100)
-    grid.CellPadding = UDim2.new(0, 10, 0, 10)
+    grid.CellSize = UDim2.new(0, 110, 0, 95)
+    grid.CellPadding = UDim2.new(0, 8, 0, 8)
     grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
     grid.VerticalAlignment = Enum.VerticalAlignment.Top
     grid.SortOrder = Enum.SortOrder.LayoutOrder
 
+    local TILE_BG       = Color3.fromRGB(16, 16, 19)
+    local TILE_BG_HOVER = Color3.fromRGB(26, 26, 30)
+    local ICON_BG       = Color3.fromRGB(26, 26, 30)
+    local ICON_BG_HOVER = Color3.fromRGB(38, 38, 44)
+
     for i, tile in ipairs(menuTiles) do
         local cell = Instance.new("TextButton", gridHolder)
         cell.LayoutOrder = i
-        cell.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+        cell.BackgroundColor3 = TILE_BG
         cell.BorderSizePixel = 0
         cell.Text = ""
         cell.AutoButtonColor = false
-        Instance.new("UICorner", cell).CornerRadius = UDim.new(0, 12)
+        Instance.new("UICorner", cell).CornerRadius = UDim.new(0, 10)
         local cellStroke = Instance.new("UIStroke", cell)
-        cellStroke.Color = BORDER_COLOR
+        cellStroke.Color = Color3.fromRGB(36, 36, 42)
         cellStroke.Thickness = 1
-        cellStroke.Transparency = 0.5
+        cellStroke.Transparency = 0
 
-        -- Colored icon box
+        -- Icon box (monochrome)
         local iconBox = Instance.new("Frame", cell)
-        iconBox.Size = UDim2.new(0, 44, 0, 44)
-        iconBox.Position = UDim2.new(0.5, -22, 0, 10)
-        iconBox.BackgroundColor3 = tile.color
+        iconBox.Size = UDim2.new(0, 40, 0, 40)
+        iconBox.Position = UDim2.new(0.5, -20, 0, 12)
+        iconBox.BackgroundColor3 = ICON_BG
         iconBox.BorderSizePixel = 0
-        Instance.new("UICorner", iconBox).CornerRadius = UDim.new(0, 10)
+        Instance.new("UICorner", iconBox).CornerRadius = UDim.new(0, 9)
+        local iconStroke2 = Instance.new("UIStroke", iconBox)
+        iconStroke2.Color = Color3.fromRGB(44, 44, 52)
+        iconStroke2.Thickness = 1
+        iconStroke2.Transparency = 0
 
         local iconLbl = Instance.new("TextLabel", iconBox)
         iconLbl.Size = UDim2.new(1, 0, 1, 0)
         iconLbl.BackgroundTransparency = 1
         iconLbl.Font = Enum.Font.GothamBold
-        iconLbl.TextSize = 22
-        iconLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        iconLbl.TextSize = 16
+        iconLbl.TextColor3 = Color3.fromRGB(180, 180, 190)
         iconLbl.TextXAlignment = Enum.TextXAlignment.Center
-        iconLbl.Text = tile.icon
+        iconLbl.Text = string.sub(tile.name, 1, 2)
 
         local nameLbl = Instance.new("TextLabel", cell)
-        nameLbl.Size = UDim2.new(1, -4, 0, 18)
-        nameLbl.Position = UDim2.new(0, 2, 1, -22)
+        nameLbl.Size = UDim2.new(1, -6, 0, 16)
+        nameLbl.Position = UDim2.new(0, 3, 1, -22)
         nameLbl.BackgroundTransparency = 1
         nameLbl.Font = Enum.Font.GothamSemibold
-        nameLbl.TextSize = 12
-        nameLbl.TextColor3 = THEME_TEXT
+        nameLbl.TextSize = 11
+        nameLbl.TextColor3 = Color3.fromRGB(160, 160, 170)
         nameLbl.TextXAlignment = Enum.TextXAlignment.Center
         nameLbl.Text = tile.name
 
-        -- Hover
         cell.MouseEnter:Connect(function()
-            TweenService:Create(cell, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(28, 28, 34)}):Play()
-            TweenService:Create(iconBox, TweenInfo.new(0.15), {
-                BackgroundColor3 = tile.color:Lerp(Color3.fromRGB(255,255,255), 0.15)
-            }):Play()
+            TweenService:Create(cell,    TweenInfo.new(0.15), {BackgroundColor3 = TILE_BG_HOVER}):Play()
+            TweenService:Create(iconBox, TweenInfo.new(0.15), {BackgroundColor3 = ICON_BG_HOVER}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(210, 210, 220)}):Play()
+            TweenService:Create(iconLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(220, 220, 230)}):Play()
         end)
         cell.MouseLeave:Connect(function()
-            TweenService:Create(cell, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(18, 18, 22)}):Play()
-            TweenService:Create(iconBox, TweenInfo.new(0.15), {BackgroundColor3 = tile.color}):Play()
+            TweenService:Create(cell,    TweenInfo.new(0.15), {BackgroundColor3 = TILE_BG}):Play()
+            TweenService:Create(iconBox, TweenInfo.new(0.15), {BackgroundColor3 = ICON_BG}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(160, 160, 170)}):Play()
+            TweenService:Create(iconLbl, TweenInfo.new(0.15), {TextColor3 = Color3.fromRGB(180, 180, 190)}):Play()
         end)
         cell.MouseButton1Click:Connect(function()
             switchTab(tile.name .. "Tab")
