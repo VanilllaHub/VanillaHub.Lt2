@@ -1700,85 +1700,62 @@ end)
 createPSep()
 createPSection("Misc")
 
-local hardDragEnabled  = false
-local hardDragConn     = nil
-local hardDragPart     = nil
-local hardDragOffset   = nil
-local hardDragAnchored = false -- track if WE anchored it
+local hardDragEnabled = false
+local draggerConn     = nil
 
 local function stopHardDrag()
-    if hardDragConn then hardDragConn:Disconnect(); hardDragConn = nil end
-    -- restore anchored state
-    if hardDragPart and hardDragPart.Parent and hardDragAnchored then
-        pcall(function() hardDragPart.Anchored = false end)
-    end
-    hardDragAnchored = false
-    hardDragPart     = nil
-    hardDragOffset   = nil
+    if draggerConn then draggerConn:Disconnect(); draggerConn = nil end
 end
 
-local function getGrabbedPart()
-    local target = mouse.Target
-    if not target then return nil end
-    local model = target.Parent
-    if not model then return nil end
-    if not model:FindFirstChild("Owner") then
-        model = target:FindFirstAncestorOfClass("Model")
-        if not (model and model:FindFirstChild("Owner")) then return nil end
-    end
-    local part = model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")
-    if not part then return nil end
-    if part.ReceiveAge ~= 0 then return nil end
-    return part
-end
-
-local function startHardDrag(part)
+local function startDraggerWatch()
     stopHardDrag()
-    hardDragPart = part
-    local char = player.Character
-    local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    hardDragOffset = hrp.CFrame:ToObjectSpace(part.CFrame)
-
-    -- anchor it so physics absolutely cannot fight us
-    if not part.Anchored then
-        pcall(function() part.Anchored = true end)
-        hardDragAnchored = true
-    end
-
-    hardDragConn = RunService.Heartbeat:Connect(function()
-        if not hardDragEnabled then stopHardDrag(); return end
-        local c  = player.Character
-        local rp = c and c:FindFirstChild("HumanoidRootPart")
-        if not rp then stopHardDrag(); return end
-        if not (hardDragPart and hardDragPart.Parent) then stopHardDrag(); return end
-        pcall(function()
-            hardDragPart.Anchored = true
-            hardDragPart.AssemblyLinearVelocity  = Vector3.zero
-            hardDragPart.AssemblyAngularVelocity = Vector3.zero
-            hardDragPart.CFrame = rp.CFrame:ToWorldSpace(hardDragOffset)
+    draggerConn = workspace.ChildAdded:Connect(function(a)
+        if a.Name ~= "Dragger" then return end
+        local bg = a:WaitForChild("BodyGyro", 2)
+        local bp = a:WaitForChild("BodyPosition", 2)
+        if not (bg and bp) then return end
+        task.spawn(function()
+            while a and a.Parent do
+                if hardDragEnabled then
+                    bp.P         = 120000
+                    bp.D         = 1000
+                    bp.maxForce  = Vector3.new(math.huge, math.huge, math.huge)
+                    bg.maxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                else
+                    bp.P         = 10000
+                    bp.D         = 800
+                    bp.maxForce  = Vector3.new(17000, 17000, 17000)
+                    bg.maxTorque = Vector3.new(200, 200, 200)
+                end
+                task.wait()
+            end
         end)
     end)
 end
 
-mouse.Button1Down:Connect(function()
-    if not hardDragEnabled then return end
-    task.wait(0.05)
-    local part = getGrabbedPart()
-    if part then startHardDrag(part) end
-end)
-
-mouse.Button1Up:Connect(function()
-    if hardDragEnabled then stopHardDrag() end
-end)
+startDraggerWatch()
 
 createPToggle("Hard Dragger", false, function(val)
     hardDragEnabled = val
-    if not val then stopHardDrag() end
+    if not val then
+        local d = workspace:FindFirstChild("Dragger")
+        if d then
+            local bp = d:FindFirstChild("BodyPosition")
+            local bg = d:FindFirstChild("BodyGyro")
+            if bp then
+                bp.P        = 10000
+                bp.D        = 800
+                bp.maxForce = Vector3.new(17000, 17000, 17000)
+            end
+            if bg then
+                bg.maxTorque = Vector3.new(200, 200, 200)
+            end
+        end
+    end
 end)
 
 table.insert(cleanupTasks, stopHardDrag)
+
 -- ════════════════════════════════════════════════════
 -- GLOBAL KEY LISTENER
 -- ════════════════════════════════════════════════════
