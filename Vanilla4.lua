@@ -72,11 +72,8 @@ local lassoActive  = false
 
 -- ════════════════════════════════════════════════════
 -- ITEM HELPERS
--- Mirrors Vanilla1 Item Tab selection logic exactly:
---   • Item must live under workspace.PlayerModels
---   • Its direct parent must have an "Owner" StringValue
---   • We adorn the Main or WoodSection part, not the model,
---     so land/terrain/other models are never accidentally picked
+-- Owner must be a DIRECT child of the model — this is what separates
+-- draggable items from land, terrain, trees, and other workspace props.
 -- ════════════════════════════════════════════════════
 local function getMainPart(model)
     return model:FindFirstChild("Main") or model:FindFirstChild("WoodSection")
@@ -84,15 +81,11 @@ local function getMainPart(model)
 end
 
 -- Returns true only for models that are valid draggable items.
--- Requires Owner as a DIRECT child (not just anywhere in hierarchy)
--- so that plot land, terrain, and other workspace objects are excluded.
+-- Owner must be a DIRECT child — this is the exact same gate the Item Tab
+-- uses and is what separates draggable items from land/terrain/props.
 local function isSortable(model)
     if not (model and model:IsA("Model") and model ~= workspace) then return false end
-    -- Must be under workspace.PlayerModels (same gate as Item Tab)
-    local pm = workspace:FindFirstChild("PlayerModels")
-    if not pm then return false end
-    if not model:IsDescendantOf(pm) then return false end
-    -- Must have Owner as a direct child
+    -- Owner must be a direct child (land plots don't have this)
     if not model:FindFirstChild("Owner") then return false end
     -- Must have a physical part we can move
     if not getMainPart(model) then return false end
@@ -101,13 +94,11 @@ local function isSortable(model)
     return true
 end
 
--- From a clicked BasePart, resolve the correct sortable model.
--- Mirrors Item Tab: walks up to the model whose direct parent has Owner.
+-- From a clicked BasePart, walk up until we find a sortable model.
 local function modelFromTarget(target)
     if not target then return nil end
-    -- Walk up through ancestor models
     local obj = target
-    while obj do
+    while obj and obj ~= workspace do
         if obj:IsA("Model") and isSortable(obj) then return obj end
         obj = obj.Parent
     end
@@ -186,16 +177,17 @@ local _cachedSortables  = nil
 local _cacheFrame       = 0
 
 local function getSortables()
-    -- Only scan workspace.PlayerModels — same scope as isSortable requires.
-    -- Cache for 1.5 s so lasso commit and group-select don't re-scan unnecessarily.
+    -- Scan PlayerModels descendants (not just children — items can be in sub-folders).
+    -- Cache for 1.5 s so lasso and group-select don't re-scan back to back.
     if _cachedSortables and (time() - _cacheFrame) < 1.5 then
         return _cachedSortables
     end
     local list = {}
     local pm = workspace:FindFirstChild("PlayerModels")
-    if pm then
-        for _, obj in ipairs(pm:GetChildren()) do
-            if isSortable(obj) then table.insert(list, obj) end
+    local source = pm and pm:GetDescendants() or workspace:GetDescendants()
+    for _, obj in ipairs(source) do
+        if obj:IsA("Model") and isSortable(obj) then
+            table.insert(list, obj)
         end
     end
     _cachedSortables = list
@@ -453,31 +445,84 @@ end
 -- ════════════════════════════════════════════════════
 -- SERVER-SIDED SORT ENGINE
 --
--- Per-item flow:
+-- Per-item placement flow:
 --   1. Teleport character next to item (server requires proximity to drag)
---   2. Fire ClientIsDragging(model) to acquire network ownership
---   3. Wait for ReceiveAge == 0 (ownership confirmed)
---   4. PivotTo target — replicates to server because we own the parts
---   5. Anchor every BasePart in the model so physics can't knock it away
---      (still replicates because we own them)
---   6. Release ownership — part stays anchored on the server
+--   2. Fire ClientIsDragging(model) rapidly to claim network ownership
+--   3. Wait for ReceiveAge == 0 on all unanchored parts (ownership confirmed)
+--   4. PivotTo target — replicates to server/all clients because we own it
+--   5. Keep the item held: add it to a "held" set
 --
--- Step 5 is what v3 was missing. Without it, later items passing near an
--- already-placed item can push it via Roblox physics simulation.
+-- Preventing placed items from moving:
+--   A background Heartbeat loop runs the entire time sorting is active.
+--   Every tick it fires ClientIsDragging for every model in the held set.
+--   This keeps the server believing we are actively dragging each one,
+--   so it never returns physics ownership to the simulation.
+--   Without this, ownership expires and physics can push placed items.
 -- ════════════════════════════════════════════════════
 local _dragRemote = nil
-local function dragRemote()
+local function getDragRemote()
     if _dragRemote then return _dragRemote end
     local i = RS:FindFirstChild("Interaction")
     _dragRemote = i and i:FindFirstChild("ClientIsDragging")
     return _dragRemote
 end
 
--- Wait until we have network ownership of all unanchored parts
+-- Set of models currently being "held" in place by the hold loop
+local heldModels     = {}
+local holdLoopConn   = nil
+
+local function startHoldLoop()
+    if holdLoopConn then return end
+    holdLoopConn = RunService.Heartbeat:Connect(function()
+        local remote = getDragRemote()
+        if not remote then return end
+        for model in pairs(heldModels) do
+            if model and model.Parent then
+                pcall(remote.FireServer, remote, model)
+            else
+                heldModels[model] = nil
+            end
+        end
+    end)
+end
+
+local function stopHoldLoop()
+    if holdLoopConn then holdLoopConn:Disconnect(); holdLoopConn = nil end
+    -- Release all held models
+    local remote = getDragRemote()
+    for model in pairs(heldModels) do
+        if remote and model and model.Parent then
+            pcall(remote.FireServer, remote, nil)
+        end
+    end
+    heldModels = {}
+end
+
+local function holdModel(model)
+    heldModels[model] = true
+end
+
+local function releaseModel(model)
+    heldModels[model] = nil
+end
+
+-- Wait until we have network ownership of all unanchored parts.
+-- Items that are already fully anchored by the game are considered owned
+-- immediately (we can PivotTo anchored parts without ownership).
 local function waitForOwnership(model, timeout)
     timeout = timeout or 4
     local deadline = tick() + timeout
-    local remote   = dragRemote()
+    local remote   = getDragRemote()
+
+    -- Check if all parts are already anchored — if so, no ownership needed
+    local allAnchored = true
+    for _, p in ipairs(model:GetDescendants()) do
+        if p:IsA("BasePart") and not p.Anchored then
+            allAnchored = false; break
+        end
+    end
+    if allAnchored then return true end
+
     while tick() < deadline do
         local owned = true
         for _, p in ipairs(model:GetDescendants()) do
@@ -498,53 +543,34 @@ local function approachItem(model)
     if hrp then hrp.CFrame = CFrame.new(mp.Position) * CFrame.new(0, 2, 4) end
 end
 
--- Anchor/unanchor all BaseParts in a model (replicates while we own them)
-local function setAnchored(model, state)
-    pcall(function()
-        for _, p in ipairs(model:GetDescendants()) do
-            if p:IsA("BasePart") then p.Anchored = state end
-        end
-        -- Also set the primary part if present
-        if model.PrimaryPart then model.PrimaryPart.Anchored = state end
-    end)
-end
-
 local function placeItem(model, targetCF)
     if not (model and model.Parent) then return end
     local mp     = getMainPart(model)
-    local remote = dragRemote()
+    local remote = getDragRemote()
     if not mp then return end
-
-    -- Unanchor first (in case it was left anchored from a previous sort)
-    setAnchored(model, false)
 
     approachItem(model)
 
-    -- Request network ownership
+    -- Rapid-fire ownership request
     if remote then
-        for _ = 1, 3 do
+        for _ = 1, 5 do
             pcall(remote.FireServer, remote, model)
-            task.wait(0.05)
+            task.wait(0.04)
         end
     end
     waitForOwnership(model, 3)
 
-    -- Move server-side via PivotTo (replicates because we own the parts)
+    -- Move — replicates to server because we own the parts
     pcall(function()
         if not model.PrimaryPart then model.PrimaryPart = mp end
         model:PivotTo(targetCF)
     end)
 
-    task.wait(0.08)   -- let the server receive the new CFrame
+    task.wait(0.10)   -- let the new position replicate
 
-    -- Anchor in place — replicates while we still own the parts.
-    -- This prevents any passing item from knocking this one away.
-    setAnchored(model, true)
-
-    task.wait(0.05)   -- let anchor state replicate
-
-    -- Release ownership
-    if remote then pcall(remote.FireServer, remote, nil) end
+    -- Add to the hold loop — keeps server ownership alive so physics
+    -- cannot displace this item while we continue sorting others
+    holdModel(model)
 end
 
 -- ════════════════════════════════════════════════════
@@ -846,6 +872,7 @@ end
 -- ════════════════════════════════════════════════════
 local function runSort(slots, startI, total, doneStart)
     local done = doneStart
+    startHoldLoop()   -- begin holding already-placed items immediately
     sortThread = task.spawn(function()
         for i = startI, total do
             if not isSorting then sortIndex = i; break end
@@ -872,10 +899,14 @@ local function runSort(slots, startI, total, doneStart)
         isSorting = false; sortThread = nil
 
         if done >= total then
+            -- Sort complete — release all holds, items are in final position
+            stopHoldLoop()
             isStopped = false; sortSlots = nil
             setPb(1, "✔  Done! " .. done .. " items placed.", Color3.fromRGB(90,220,110))
             destroyPreview(); clearAll(); hidePb(3)
         else
+            -- Stopped mid-sort — keep holds active so placed items stay put
+            -- (stopHoldLoop will be called on Cancel or next Resume completion)
             isStopped = true
             setPb(done/math.max(total,1), "⏸  Stopped at " .. done .. " / " .. total)
         end
@@ -1055,6 +1086,7 @@ cancelBtn.MouseButton1Click:Connect(function()
     isSorting = false; isStopped = false
     sortSlots = nil; sortIndex = 1; sortTotal = 0; sortDone = 0
     if sortThread then pcall(task.cancel, sortThread); sortThread = nil end
+    stopHoldLoop()
     destroyPreview(); clearAll()
     pbLabel.Text = "Cancelled."; hidePb(1)
     refreshStatus()
@@ -1113,6 +1145,7 @@ table.insert(cleanupTasks, function()
     if sortThread    then pcall(task.cancel, sortThread); sortThread = nil end
     if previewFollow then previewFollow:Disconnect();     previewFollow = nil end
     if lassoRenderConn then lassoRenderConn:Disconnect(); lassoRenderConn = nil end
+    stopHoldLoop()
     inputBeganConn:Disconnect()
     mouseUpConn:Disconnect()
     if lassoUI and lassoUI.Parent then lassoUI:Destroy() end
