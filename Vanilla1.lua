@@ -257,7 +257,7 @@ backBtn.MouseLeave:Connect(function()
     TweenService:Create(hubIcon, TweenInfo.new(0.15), {ImageTransparency = 0}):Play()
 end)
 backBtn.MouseButton1Click:Connect(function()
-    if not isOnMenuPage then showMenuPage() end
+    showMenuPage()
 end)
 
 local titleLbl = Instance.new("TextLabel", topBar)
@@ -331,29 +331,9 @@ content.BackgroundColor3 = BG_DARK
 content.BorderSizePixel = 0
 
 -- ════════════════════════════════════════════════════
--- CATEGORY LABEL HELPER
+-- CATEGORY LABEL HELPER (removed - no categories)
 -- ════════════════════════════════════════════════════
-local function makeCategoryLabel(text, layoutOrder)
-    local lbl = Instance.new("TextLabel", side)
-    lbl.Name = "CAT_" .. text
-    lbl.LayoutOrder = layoutOrder
-    lbl.Size = UDim2.new(1, 0, 0, 13)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 8
-    lbl.TextColor3 = CAT_TEXT
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = "  " .. string.upper(text)
-    return lbl
-end
-
-local function makeCategorySpacer(layoutOrder)
-    local sp = Instance.new("Frame", side)
-    sp.LayoutOrder = layoutOrder
-    sp.Size = UDim2.new(1, 0, 0, 3)
-    sp.BackgroundTransparency = 1
-    return sp
-end
+-- (intentionally empty)
 
 -- ════════════════════════════════════════════════════
 -- WELCOME POPUP
@@ -466,7 +446,14 @@ local function showMenuPage()
         }):Play()
         activeTabButton = nil
     end
-    TweenService:Create(titleLbl, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(110, 110, 120)}):Play()
+    -- Hide sidebar and separator, expand content to full width
+    side.Visible = false
+    sideSep.Visible = false
+    content.Size = UDim2.new(1, 0, 1, -40)
+    content.Position = UDim2.new(0, 0, 0, 40)
+    -- Also resize menuPage to fill the full content
+    menuPage.Size = UDim2.new(1, 0, 1, 0)
+    TweenService:Create(titleLbl, TweenInfo.new(0.2), {TextColor3 = THEME_TEXT}):Play()
 end
 
 local function switchTab(targetName)
@@ -478,6 +465,11 @@ local function switchTab(targetName)
             TextColor3 = Color3.fromRGB(110, 110, 120)
         }):Play()
     end
+    -- Show sidebar and separator, restore content area
+    side.Visible = true
+    sideSep.Visible = true
+    content.Size = UDim2.new(1, -156, 1, -40)
+    content.Position = UDim2.new(0, 156, 0, 40)
     local btn = side:FindFirstChild(targetName:gsub("Tab",""))
     if btn then
         activeTabButton = btn
@@ -486,57 +478,41 @@ local function switchTab(targetName)
             TextColor3 = THEME_TEXT
         }):Play()
     end
-    TweenService:Create(titleLbl, TweenInfo.new(0.2), {TextColor3 = THEME_TEXT}):Play()
+    TweenService:Create(titleLbl, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(160, 160, 175)}):Play()
 end
 
--- BUILD CATEGORIZED SIDEBAR
-local layoutOrder = 1
-for _, group in ipairs(tabCategories) do
-    -- Category spacer (except first)
-    if layoutOrder > 1 then
-        makeCategorySpacer(layoutOrder)
-        layoutOrder = layoutOrder + 1
-    end
-
-    -- Category label
-    makeCategoryLabel(group.category, layoutOrder)
-    layoutOrder = layoutOrder + 1
-
-    -- Tab buttons
-    for _, name in ipairs(group.tabs) do
-        local btn = Instance.new("TextButton", side)
-        btn.Name = name
-        btn.LayoutOrder = layoutOrder
-        btn.Size = UDim2.new(1, 0, 0, 28)
-        btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
-        btn.BorderSizePixel = 0
-        btn.Text = name
-        btn.Font = Enum.Font.GothamSemibold
-        btn.TextSize = 12
-        btn.TextColor3 = Color3.fromRGB(110, 110, 120)
-        btn.TextXAlignment = Enum.TextXAlignment.Left
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-        local btnPad = Instance.new("UIPadding", btn)
-        btnPad.PaddingLeft = UDim.new(0, 12)
-        btn.MouseEnter:Connect(function()
-            if activeTabButton ~= btn then
-                TweenService:Create(btn, TweenInfo.new(0.18), {
-                    BackgroundColor3 = Color3.fromRGB(28, 28, 32),
-                    TextColor3 = Color3.fromRGB(175, 175, 185)
-                }):Play()
-            end
-        end)
-        btn.MouseLeave:Connect(function()
-            if activeTabButton ~= btn then
-                TweenService:Create(btn, TweenInfo.new(0.18), {
-                    BackgroundColor3 = Color3.fromRGB(16, 16, 18),
-                    TextColor3 = Color3.fromRGB(110, 110, 120)
-                }):Play()
-            end
-        end)
-        btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
-        layoutOrder = layoutOrder + 1
-    end
+-- BUILD FLAT SIDEBAR (no categories)
+for _, name in ipairs(tabs) do
+    local btn = Instance.new("TextButton", side)
+    btn.Name = name
+    btn.Size = UDim2.new(1, 0, 0, 34)
+    btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 13
+    btn.TextColor3 = Color3.fromRGB(110, 110, 120)
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+    local btnPad = Instance.new("UIPadding", btn)
+    btnPad.PaddingLeft = UDim.new(0, 12)
+    btn.MouseEnter:Connect(function()
+        if activeTabButton ~= btn then
+            TweenService:Create(btn, TweenInfo.new(0.18), {
+                BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+                TextColor3 = Color3.fromRGB(175, 175, 185)
+            }):Play()
+        end
+    end)
+    btn.MouseLeave:Connect(function()
+        if activeTabButton ~= btn then
+            TweenService:Create(btn, TweenInfo.new(0.18), {
+                BackgroundColor3 = Color3.fromRGB(16, 16, 18),
+                TextColor3 = Color3.fromRGB(110, 110, 120)
+            }):Play()
+        end
+    end)
+    btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
 end
 
 showMenuPage()
@@ -620,13 +596,13 @@ do
     }
 
     local gridHolder = Instance.new("Frame", menuPage)
-    gridHolder.Size = UDim2.new(1, -28, 0, 210)
-    gridHolder.Position = UDim2.new(0, 14, 0, 70)
+    gridHolder.Size = UDim2.new(1, -32, 0, 220)
+    gridHolder.Position = UDim2.new(0, 16, 0, 68)
     gridHolder.BackgroundTransparency = 1
 
     local grid = Instance.new("UIGridLayout", gridHolder)
-    grid.CellSize = UDim2.new(0.25, -6, 0, 95)
-    grid.CellPadding = UDim2.new(0, 8, 0, 8)
+    grid.CellSize = UDim2.new(0, 110, 0, 100)
+    grid.CellPadding = UDim2.new(0, 10, 0, 10)
     grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
     grid.VerticalAlignment = Enum.VerticalAlignment.Top
     grid.SortOrder = Enum.SortOrder.LayoutOrder
