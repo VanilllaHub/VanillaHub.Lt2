@@ -550,10 +550,8 @@ runBtn.MouseButton1Click:Connect(function()
             return
         end
 
-        -- ── FIX 1 (Structures) & FIX 2 (Furniture): cache origin CFrames and
-        -- use ToObjectSpace/ToWorldSpace so items like glass panels, angled walls
-        -- and rotated furniture land in the correct position AND orientation on
-        -- the receiver's plot, even when the two plots are at different heights.
+        -- FIX 1 & 2: Use full CFrame-relative math for structures & furniture
+        -- so items like glass panels land exactly right regardless of plot height.
         local giveOriginCF = GiveBaseOrigin.CFrame
         local recvOriginCF = ReceiverBaseOrigin.CFrame
 
@@ -808,36 +806,64 @@ runBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── SEND ITEM HELPER ──────────────────────────────────────────────────
-        -- FIX 3 (Gift/Items) & FIX 4 (Wood):
-        --   Old seekNetOwn: 50 × task.wait(0.05) = 2.5 s per item
-        --   New seekNetOwn: 15 × task.wait(0.02) = 0.3 s per item  (~8× faster)
-        --   Old CFrame spam: 200 raw sets + task.wait(0.2) settle
-        --   New CFrame spam: tight loop for 0.4 s (fires every frame) + 0.1 s settle
+        -- FIX 3 & 4: Faster ownership claim + faster CFrame spam.
+        -- FIX 5 (double-check): after sendItem/wood places a part, verify it
+        -- actually landed within 8 studs of the target. If it snapped back to
+        -- the giver's plot (server correction), we retry up to MAX_ITEM_TRIES
+        -- times with fresh ownership claiming each attempt.
+
+        local MAX_ITEM_TRIES = 8  -- max retry attempts per individual gift/wood item
+
+        -- Claim network ownership of a part (fast version)
         local function seekNetOwn(part)
             if not butterRunning then return end
             if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
                 Char.HumanoidRootPart.CFrame = part.CFrame
                 task.wait(0.05)
             end
+            -- FIX 3/4: was 50×0.05 s = 2.5 s, now 15×0.02 s = 0.3 s
             for i = 1, 15 do
                 task.wait(0.02)
                 RS.Interaction.ClientIsDragging:FireServer(part.Parent)
             end
         end
 
+        -- Move a single item to Offset and verify it stayed there.
+        -- Returns true if the item is confirmed at the destination, false if it vanished.
         local function sendItem(part, Offset)
-            if not butterRunning then return end
-            if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
-                Char.HumanoidRootPart.CFrame = part.CFrame
-                task.wait(0.05)
+            if not butterRunning then return false end
+
+            for attempt = 1, MAX_ITEM_TRIES do
+                if not (part and part.Parent) then return false end  -- item was destroyed / picked up
+                if not butterRunning then return false end
+
+                -- teleport char next to item before claiming ownership
+                if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
+                    Char.HumanoidRootPart.CFrame = part.CFrame
+                    task.wait(0.05)
+                end
+
+                seekNetOwn(part)
+
+                -- spam CFrame for 0.4 s
+                local deadline = tick() + 0.4
+                repeat
+                    part.CFrame = Offset
+                    task.wait()
+                until tick() >= deadline
+                task.wait(0.1)
+
+                -- FIX 5: double-check — did it actually stay there?
+                if not (part and part.Parent) then return false end
+                local dist = (part.Position - Offset.Position).Magnitude
+                if dist <= 8 then
+                    return true  -- success
+                end
+                -- item snapped back; short pause then retry
+                task.wait(0.3)
             end
-            seekNetOwn(part)
-            local deadline = tick() + 0.4
-            repeat
-                part.CFrame = Offset
-                task.wait()
-            until tick() >= deadline
-            task.wait(0.1)
+
+            return false  -- gave up after MAX_ITEM_TRIES
         end
 
         -- ── GIFT ITEMS ────────────────────────────────────────────────────────
@@ -849,7 +875,8 @@ runBtn.MouseButton1Click:Connect(function()
             if total > 0 then
                 progGifs.Visible = true; setProgGifs(0, total)
                 setStatus("Sending gift/items...", true)
-                local done = 0
+                local done    = 0
+                local retried = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                         if not butterRunning then break end
@@ -858,15 +885,21 @@ runBtn.MouseButton1Click:Connect(function()
                             if p:FindFirstChildOfClass("Script") and p:FindFirstChild("DraggableItem") then
                                 local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
                                 if not part then continue end
-                                local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or p:FindFirstChildOfClass("Part").CFrame
-                                local nPos = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                                sendItem(part, CFrame.new(nPos) * PCF.Rotation)
+                                local PCF    = (p:FindFirstChild("Main") and p.Main.CFrame) or p:FindFirstChildOfClass("Part").CFrame
+                                local nPos   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                                local Offset = CFrame.new(nPos) * PCF.Rotation
+                                local ok     = sendItem(part, Offset)
+                                if not ok then retried += 1 end
                                 done += 1; setProgGifs(done, total)
                             end
                         end
                     end
                 end)
                 setProgGifs(total, total)
+                if retried > 0 then
+                    setStatus(string.format("Gift/Items done (%d needed extra retries)", retried), true)
+                    task.wait(1.5)
+                end
             end
         end
 
@@ -879,7 +912,8 @@ runBtn.MouseButton1Click:Connect(function()
             if total > 0 then
                 progWood.Visible = true; setProgWood(0, total)
                 setStatus("Sending wood...", true)
-                local done = 0
+                local done    = 0
+                local retried = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                         if not butterRunning then break end
@@ -891,28 +925,18 @@ runBtn.MouseButton1Click:Connect(function()
                                 local PCF    = (p:FindFirstChild("Main") and p.Main.CFrame) or p:FindFirstChildOfClass("Part").CFrame
                                 local nPos   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
                                 local Offset = CFrame.new(nPos) * PCF.Rotation
-                                if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
-                                    Char.HumanoidRootPart.CFrame = part.CFrame
-                                    task.wait(0.05)
-                                end
-                                -- FIX 4: 15×0.02 s instead of 50×0.05 s
-                                for i = 1, 15 do
-                                    task.wait(0.02)
-                                    RS.Interaction.ClientIsDragging:FireServer(part.Parent)
-                                end
-                                -- tight CFrame loop for 0.4 s then short settle
-                                local deadline = tick() + 0.4
-                                repeat
-                                    part.CFrame = Offset
-                                    task.wait()
-                                until tick() >= deadline
-                                task.wait(0.1)
+                                local ok     = sendItem(part, Offset)
+                                if not ok then retried += 1 end
                                 done += 1; setProgWood(done, total)
                             end
                         end
                     end
                 end)
                 setProgWood(total, total)
+                if retried > 0 then
+                    setStatus(string.format("Wood done (%d needed extra retries)", retried), true)
+                    task.wait(1.5)
+                end
             end
         end
 
