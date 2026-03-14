@@ -572,11 +572,53 @@ runBtn.MouseButton1Click:Connect(function()
             return n
         end
 
-        -- ── STRUCTURES ────────────────────────────────────────────────────────
+        -- ── SHARED PLACEMENT HELPER ──────────────────────────────────────────
+        -- LT2's ClientPlacedStructure server handler reads the CFrame argument
+        -- as a world-space CFrame and places the item there directly.
+        -- The correct offset is: take the item's world CFrame on the giver's plot,
+        -- express it relative to the giver's OriginSquare, then re-express that
+        -- relative offset from the receiver's OriginSquare back into world space.
+        -- This is exactly what ToObjectSpace→ToWorldSpace does, and it is correct.
+        --
+        -- The previous bug for glass panels was the PCF fallback:
+        --   p:FindFirstChildOfClass("Part").CFrame  ← picks a random child part,
+        --   which for glass panels is an internal mesh part offset from the pivot.
+        -- Fix: always use MainCFrame.Value when present (glass panels always have it),
+        -- then fall back to a named "Main" child, then finally any Part.
+        -- This gives the true pivot CFrame that the server uses for placement.
+
+        local function getItemWorldCF(p)
+            if p:FindFirstChild("MainCFrame") then
+                return p.MainCFrame.Value
+            elseif p:FindFirstChild("Main") then
+                return p.Main.CFrame
+            else
+                local part = p:FindFirstChildOfClass("Part")
+                            or p:FindFirstChildOfClass("WedgePart")
+                return part and part.CFrame or nil
+            end
+        end
+
+        -- Normal structures use Type="Structure".
+        -- Glass panels (GlassPane1-4, GlassDoor1, etc.) use TreeClass="Structure" instead.
+        local function isStructure(p)
+            if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Structure" then
+                return true
+            end
+            if p:FindFirstChild("TreeClass") and tostring(p.TreeClass.Value) == "Structure" then
+                return true
+            end
+            return false
+        end
+
+        -- ── STRUCTURES (includes glass panels via isStructure) ─────────────────
         if getStructures() and butterRunning then
             local total = countItems(function(p)
-                return p:FindFirstChild("Type") and tostring(p.Type.Value) == "Structure"
-                    and (p:FindFirstChildOfClass("Part") or p:FindFirstChildOfClass("WedgePart"))
+                return isStructure(p)
+                    and (p:FindFirstChild("MainCFrame")
+                         or p:FindFirstChild("Main")
+                         or p:FindFirstChildOfClass("Part")
+                         or p:FindFirstChildOfClass("WedgePart"))
             end)
             if total > 0 then
                 progStructures.Visible = true; setProgStructures(0, total)
@@ -587,20 +629,19 @@ runBtn.MouseButton1Click:Connect(function()
                         if not butterRunning then break end
                         if v.Name == "Owner" and tostring(v.Value) == giverName then
                             local p = v.Parent
-                            if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Structure" then
-                                if p:FindFirstChildOfClass("Part") or p:FindFirstChildOfClass("WedgePart") then
-                                    local PCF = (p:FindFirstChild("MainCFrame") and p.MainCFrame.Value)
-                                             or p:FindFirstChildOfClass("Part").CFrame
-                                    local DA  = p:FindFirstChild("BlueprintWoodClass") and p.BlueprintWoodClass.Value or nil
-                                    -- FIX 1: relative CFrame — fixes glass panels and all wall/floor pieces
-                                    local Off = recvOriginCF:ToWorldSpace(giveOriginCF:ToObjectSpace(PCF))
-                                    repeat task.wait()
-                                        pcall(function()
-                                            RS.PlaceStructure.ClientPlacedStructure:FireServer(p.ItemName.Value, Off, LP, DA, p, true)
-                                        end)
-                                    until not p.Parent
-                                    done += 1; setProgStructures(done, total)
-                                end
+                            if isStructure(p) then
+                                local PCF = getItemWorldCF(p)
+                                if not PCF then continue end
+                                local DA  = p:FindFirstChild("BlueprintWoodClass") and p.BlueprintWoodClass.Value or nil
+                                -- Express item's position relative to giver origin,
+                                -- then re-apply that same relative offset from receiver origin.
+                                local Off = recvOriginCF:ToWorldSpace(giveOriginCF:ToObjectSpace(PCF))
+                                repeat task.wait()
+                                    pcall(function()
+                                        RS.PlaceStructure.ClientPlacedStructure:FireServer(p.ItemName.Value, Off, LP, DA, p, true)
+                                    end)
+                                until not p.Parent
+                                done += 1; setProgStructures(done, total)
                             end
                         end
                     end
@@ -613,7 +654,9 @@ runBtn.MouseButton1Click:Connect(function()
         if getFurniture() and butterRunning then
             local total = countItems(function(p)
                 return p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture"
-                    and p:FindFirstChildOfClass("Part")
+                    and (p:FindFirstChild("MainCFrame")
+                         or p:FindFirstChild("Main")
+                         or p:FindFirstChildOfClass("Part"))
             end)
             if total > 0 then
                 progFurniture.Visible = true; setProgFurniture(0, total)
@@ -625,20 +668,16 @@ runBtn.MouseButton1Click:Connect(function()
                         if v.Name == "Owner" and tostring(v.Value) == giverName then
                             local p = v.Parent
                             if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture" then
-                                if p:FindFirstChildOfClass("Part") then
-                                    local PCF = (p:FindFirstChild("MainCFrame") and p.MainCFrame.Value)
-                                             or (p:FindFirstChild("Main") and p.Main.CFrame)
-                                             or p:FindFirstChildOfClass("Part").CFrame
-                                    local DA  = p:FindFirstChild("BlueprintWoodClass") and p.BlueprintWoodClass.Value or nil
-                                    -- FIX 2: relative CFrame — fixes furniture placement on receiver plot
-                                    local Off = recvOriginCF:ToWorldSpace(giveOriginCF:ToObjectSpace(PCF))
-                                    repeat task.wait()
-                                        pcall(function()
-                                            RS.PlaceStructure.ClientPlacedStructure:FireServer(p.ItemName.Value, Off, LP, DA, p, true)
-                                        end)
-                                    until not p.Parent
-                                    done += 1; setProgFurniture(done, total)
-                                end
+                                local PCF = getItemWorldCF(p)
+                                if not PCF then continue end
+                                local DA  = p:FindFirstChild("BlueprintWoodClass") and p.BlueprintWoodClass.Value or nil
+                                local Off = recvOriginCF:ToWorldSpace(giveOriginCF:ToObjectSpace(PCF))
+                                repeat task.wait()
+                                    pcall(function()
+                                        RS.PlaceStructure.ClientPlacedStructure:FireServer(p.ItemName.Value, Off, LP, DA, p, true)
+                                    end)
+                                until not p.Parent
+                                done += 1; setProgFurniture(done, total)
                             end
                         end
                     end
@@ -904,9 +943,12 @@ runBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── WOOD ──────────────────────────────────────────────────────────────
+        -- Exclude glass panels: they also have TreeClass but with value "Structure".
+        -- Real wood has TreeClass values like "Oak", "Fir", "Pine", etc. — never "Structure".
         if getWood() and butterRunning then
             local total = countItems(function(p)
                 return p:FindFirstChild("TreeClass")
+                    and tostring(p.TreeClass.Value) ~= "Structure"
                     and (p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part"))
             end)
             if total > 0 then
@@ -919,7 +961,7 @@ runBtn.MouseButton1Click:Connect(function()
                         if not butterRunning then break end
                         if v.Name == "Owner" and tostring(v.Value) == giverName then
                             local p = v.Parent
-                            if p:FindFirstChild("TreeClass") then
+                            if p:FindFirstChild("TreeClass") and tostring(p.TreeClass.Value) ~= "Structure" then
                                 local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
                                 if not part then continue end
                                 local PCF    = (p:FindFirstChild("Main") and p.Main.CFrame) or p:FindFirstChildOfClass("Part").CFrame
