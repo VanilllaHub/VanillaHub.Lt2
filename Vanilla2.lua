@@ -794,12 +794,10 @@ startBtnB.MouseButton1Click:Connect(function()
         end
 
         -- TRUCKS + CARGO
-        -- Each truck gets its own isolated ignoredParts table so earlier trucks
-        -- don't pollute the cargo scan for later ones.
-        -- localCargo tracks only parts found for THIS truck so the missed-check
-        -- only looks at cargo that belongs to the current seat.
+        -- Moves seat-to-seat every 0.3 s. Cargo is teleported instantly (no task.spawn,
+        -- no waits). After all trucks are done the global missed-cargo retry runs.
         if getTrucks() and butterRunning then
-            local allTeleportedParts = {}   -- grows across all trucks, used in global retry
+            local allTeleportedParts = {}
 
             local truckList = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -821,25 +819,10 @@ startBtnB.MouseButton1Click:Connect(function()
                         truckDone += 1; setProgT(truckDone, truckCount); continue
                     end
 
-                    -- FIX 1: fresh tables every truck — no cross-contamination
-                    local ignoredParts = {}   -- parts to skip during cargo scan
-                    local localCargo   = {}   -- cargo found specifically for this truck
-                    local DidTeleport  = false
+                    -- Fresh ignore table every truck — no cross-contamination
+                    local ignoredParts = {}
 
-                    -- FIX 3: TeleportTruck defined outside loop issue resolved by
-                    -- keeping DidTeleport as a fresh local per iteration (already done above).
-                    local function TeleportTruck()
-                        if DidTeleport then return end
-                        if not Char.Humanoid.SeatPart then return end
-                        local main = Char.Humanoid.SeatPart.Parent:FindFirstChild("Main")
-                        if not main then return end
-                        local TCF  = main.CFrame
-                        local nPos = TCF.Position - giveOrigin.Position + recvOrigin.Position
-                        Char.Humanoid.SeatPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
-                        DidTeleport = true
-                    end
-
-                    -- FIX 4: sitting with timeout so a dead/missing truck doesn't hang forever
+                    -- Sit with timeout
                     local sitTimeout = tick() + 5
                     truckModel.DriveSeat:Sit(Char.Humanoid)
                     repeat
@@ -850,15 +833,12 @@ startBtnB.MouseButton1Click:Connect(function()
                     until Char.Humanoid.SeatPart or tick() > sitTimeout
 
                     if not Char.Humanoid.SeatPart then
-                        -- Couldn't sit — skip this truck
                         setStatusB(string.format("Seat %d: couldn't sit, skipping…", truckDone+1), true)
-                        truckDone += 1; setProgT(truckDone, truckCount)
-                        continue
+                        truckDone += 1; setProgT(truckDone, truckCount); continue
                     end
 
                     local mCF, mSz = truckModel:GetBoundingBox()
 
-                    -- Mark truck parts and character parts as ignored for the cargo scan
                     for _, p in ipairs(truckModel:GetDescendants()) do
                         if p:IsA("BasePart") then ignoredParts[p] = true end
                     end
@@ -866,91 +846,52 @@ startBtnB.MouseButton1Click:Connect(function()
                         if p:IsA("BasePart") then ignoredParts[p] = true end
                     end
 
+                    -- Save truck CFrame and teleport the body instantly
+                    local SitPart   = Char.Humanoid.SeatPart
+                    local truckMain = SitPart.Parent:FindFirstChild("Main")
+                    local savedTCF  = truckMain and truckMain.CFrame or nil
+
+                    if savedTCF then
+                        local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
+                        SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
+                    end
+
+                    -- Scan and teleport cargo instantly (synchronous, no task.spawn)
                     for _, part in ipairs(workspace:GetDescendants()) do
+                        if not butterRunning then break end
                         if part:IsA("BasePart") and not ignoredParts[part] then
                             if part.Name == "Main" or part.Name == "WoodSection" then
                                 if part:FindFirstChild("Weld") and part.Weld.Part1
                                     and part.Weld.Part1.Parent ~= part.Parent then continue end
-                                task.spawn(function()
-                                    if isPointInside(part.Position, mCF, mSz) then
-                                        TeleportTruck()
-                                        local PCF  = part.CFrame
-                                        local nP   = PCF.Position - giveOrigin.Position + recvOrigin.Position
-                                        local tOff = CFrame.new(nP) * PCF.Rotation
-                                        part.CFrame = tOff; task.wait(0.3)
-                                        local entry = { Instance = part, TargetCFrame = tOff }
-                                        -- FIX 2: record in BOTH lists
-                                        table.insert(localCargo,          entry)
-                                        table.insert(allTeleportedParts,  entry)
-                                    end
-                                end)
+                                if isPointInside(part.Position, mCF, mSz) then
+                                    local PCF  = part.CFrame
+                                    local nP   = PCF.Position - giveOrigin.Position + recvOrigin.Position
+                                    local tOff = CFrame.new(nP) * PCF.Rotation
+                                    part.CFrame = tOff
+                                    table.insert(allTeleportedParts, { Instance = part, TargetCFrame = tOff })
+                                end
                             end
                         end
-                    end
-
-                    -- Wait 2 s for task.spawns to finish recording, then check
-                    -- ONLY this truck's cargo (localCargo), not all previous trucks
-                    task.wait(2)
-                    local localMissed = {}
-                    for _, data in ipairs(localCargo) do
-                        if data.Instance and data.Instance.Parent then
-                            if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8
-                                and (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
-                                table.insert(localMissed, data)
-                            end
-                        end
-                    end
-                    if #localMissed > 0 then
-                        setStatusB(string.format("Seat %d: fixing %d missed…", truckDone+1, #localMissed), true)
-                        for _, data in ipairs(localMissed) do
-                            if not butterRunning then break end
-                            local item = data.Instance
-                            if not (item and item.Parent) then continue end
-                            local tries = 0
-                            while (Char.HumanoidRootPart.Position - item.Position).Magnitude > 25 and tries < 15 do
-                                Char.HumanoidRootPart.CFrame = item.CFrame; task.wait(0.1); tries += 1
-                            end
-                            RS.Interaction.ClientIsDragging:FireServer(item.Parent)
-                            task.wait(0.5); item.CFrame = data.TargetCFrame; task.wait(0.25)
-                        end
-                    end
-
-                    local SitPart = Char.Humanoid.SeatPart
-                    if not SitPart then
-                        truckDone += 1; setProgT(truckDone, truckCount); continue
                     end
 
                     local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
                         and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                         and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
 
-                    -- Save truck body CFrame NOW while we are still seated.
-                    -- TeleportTruck() can't run after eject because SeatPart becomes nil.
-                    local truckMain = SitPart.Parent:FindFirstChild("Main")
-                    local savedTCF  = truckMain and truckMain.CFrame or nil
-
-                    -- Eject the character first so humanoid state is clean
+                    -- Eject, then destroy seat
                     Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     task.wait(0.1)
-
-                    -- Teleport the truck body using the saved CFrame
-                    if not DidTeleport and savedTCF and SitPart.Parent and SitPart.Parent.Parent then
-                        local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
-                        SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
-                        DidTeleport = true
-                    end
-
-                    -- Destroy the seat AFTER the truck has moved
                     pcall(function() SitPart:Destroy() end)
-                    task.wait(0.1)
 
                     if DoorHinge then
                         for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end
                     end
+
                     truckDone += 1; setProgT(truckDone, truckCount)
+                    task.wait(0.3) -- 0.3 s between seats
                 end
 
-                local teleportedParts = allTeleportedParts  -- alias for retry loop below
+                local teleportedParts = allTeleportedParts
 
                 -- Global missed-cargo retry pass
                 task.wait(1)
@@ -1132,70 +1073,66 @@ makeBtn(P2, "▶  Start", nil, function()
     resetSProg(); setStatusS("Sending truck…", true)
 
     singleThread = task.spawn(function()
-        local teleportedParts = {}; local ignoredParts = {}; local DidTeleport = false
-
-        local function TeleportTruck()
-            if DidTeleport then return end
-            if not Char.Humanoid.SeatPart then return end
-            local TCF  = Char.Humanoid.SeatPart.Parent:FindFirstChild("Main").CFrame
-            local nPos = TCF.Position - giveOrigin.Position + recvOrigin.Position
-            Char.Humanoid.SeatPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
-            DidTeleport = true
-        end
+        local teleportedParts = {}
+        local ignoredParts    = {}
 
         sProgBar.Visible = true; setSProg(0, 1)
+
+        -- Sit with timeout
+        local sitTimeout = tick() + 5
         truckModel.DriveSeat:Sit(Char.Humanoid)
-        repeat task.wait() truckModel.DriveSeat:Sit(Char.Humanoid) until Char.Humanoid.SeatPart
+        repeat
+            task.wait()
+            if not Char.Humanoid.SeatPart then truckModel.DriveSeat:Sit(Char.Humanoid) end
+        until Char.Humanoid.SeatPart or tick() > sitTimeout
+
+        if not Char.Humanoid.SeatPart then
+            setStatusS("Couldn't sit in truck!", false)
+            singleRunning = false; singleThread = nil; sStopBtn.Visible = false; return
+        end
 
         local mCF, mSz = truckModel:GetBoundingBox()
         for _, p in ipairs(truckModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
         for _, p in ipairs(Char:GetDescendants())       do if p:IsA("BasePart") then ignoredParts[p] = true end end
 
+        -- Teleport truck body instantly while still seated
+        local SitPart   = Char.Humanoid.SeatPart
+        local truckMain = SitPart and SitPart.Parent:FindFirstChild("Main")
+        local savedTCF  = truckMain and truckMain.CFrame or nil
+
+        if savedTCF and SitPart.Parent and SitPart.Parent.Parent then
+            local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
+            SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
+        end
+
+        -- Scan and teleport cargo instantly (synchronous, no task.spawn)
         for _, part in ipairs(workspace:GetDescendants()) do
             if not singleRunning then break end
             if part:IsA("BasePart") and not ignoredParts[part] then
                 if part.Name == "Main" or part.Name == "WoodSection" then
                     if part:FindFirstChild("Weld") and part.Weld.Part1
                         and part.Weld.Part1.Parent ~= part.Parent then continue end
-                    task.spawn(function()
-                        if isPointInside(part.Position, mCF, mSz) then
-                            TeleportTruck()
-                            local PCF  = part.CFrame
-                            local nP   = PCF.Position - giveOrigin.Position + recvOrigin.Position
-                            local tOff = CFrame.new(nP) * PCF.Rotation
-                            part.CFrame = tOff; task.wait(0.3)
-                            table.insert(teleportedParts, { Instance = part, TargetCFrame = tOff })
-                        end
-                    end)
+                    if isPointInside(part.Position, mCF, mSz) then
+                        local PCF  = part.CFrame
+                        local nP   = PCF.Position - giveOrigin.Position + recvOrigin.Position
+                        local tOff = CFrame.new(nP) * PCF.Rotation
+                        part.CFrame = tOff
+                        table.insert(teleportedParts, { Instance = part, TargetCFrame = tOff })
+                    end
                 end
             end
         end
 
-        local SitPart = Char.Humanoid.SeatPart
         local DoorHinge = SitPart and SitPart.Parent:FindFirstChild("PaintParts")
             and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
             and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
 
-        -- Save truck CFrame while still seated
-        local truckMain = SitPart and SitPart.Parent:FindFirstChild("Main")
-        local savedTCF  = truckMain and truckMain.CFrame or nil
-
-        -- Eject first
+        -- Eject then destroy seat
         Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         task.wait(0.1)
-
-        -- Teleport truck using saved CFrame
-        if not DidTeleport and savedTCF and SitPart and SitPart.Parent and SitPart.Parent.Parent then
-            local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
-            SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
-            DidTeleport = true
-        end
-
-        -- Destroy seat AFTER truck moved
         if SitPart then pcall(function() SitPart:Destroy() end) end
-        task.wait(0.1)
         if DoorHinge then for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
-        setSProg(1, 1); task.wait(2)
+        setSProg(1, 1)
 
         local function getMissed()
             local missed = {}
@@ -1376,23 +1313,10 @@ makeBtn(P3, "▶  Start Batch", nil, function()
 
             setStatusBatch(string.format("Truck %d / %d…", trucksDone+1, #availableTrucks), true)
 
-            -- FIX 1: fresh isolated tables every truck — no cross-contamination
-            local ignoredParts = {}   -- parts to skip during cargo scan
-            local localCargo   = {}   -- cargo found specifically for THIS truck
-            local DidTeleport  = false
+            -- Fresh ignore table every truck
+            local ignoredParts = {}
 
-            local function TeleportThisTruck()
-                if DidTeleport then return end
-                if not Char.Humanoid.SeatPart then return end
-                local main = Char.Humanoid.SeatPart.Parent:FindFirstChild("Main")
-                if not main then return end
-                local TCF  = main.CFrame
-                local nPos = TCF.Position - giveOrigin.Position + recvOrigin.Position
-                Char.Humanoid.SeatPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
-                DidTeleport = true
-            end
-
-            -- FIX 4: sitting with timeout so a destroyed truck doesn't hang forever
+            -- Sit with timeout
             local sitTimeout = tick() + 5
             truckModel.DriveSeat:Sit(Char.Humanoid)
             repeat
@@ -1408,6 +1332,7 @@ makeBtn(P3, "▶  Start Batch", nil, function()
             end
 
             local mCF, mSz = truckModel:GetBoundingBox()
+
             for _, p in ipairs(truckModel:GetDescendants()) do
                 if p:IsA("BasePart") then ignoredParts[p] = true end
             end
@@ -1415,86 +1340,47 @@ makeBtn(P3, "▶  Start Batch", nil, function()
                 if p:IsA("BasePart") then ignoredParts[p] = true end
             end
 
+            -- Teleport truck body instantly
+            local SitPart   = Char.Humanoid.SeatPart
+            local truckMain = SitPart.Parent:FindFirstChild("Main")
+            local savedTCF  = truckMain and truckMain.CFrame or nil
+
+            if savedTCF then
+                local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
+                SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
+            end
+
+            -- Scan and teleport cargo instantly (synchronous)
             for _, part in ipairs(workspace:GetDescendants()) do
                 if not batchRunning then break end
                 if part:IsA("BasePart") and not ignoredParts[part] then
                     if part.Name == "Main" or part.Name == "WoodSection" then
                         if part:FindFirstChild("Weld") and part.Weld.Part1
                             and part.Weld.Part1.Parent ~= part.Parent then continue end
-                        task.spawn(function()
-                            if isPointInside(part.Position, mCF, mSz) then
-                                TeleportThisTruck()
-                                local PCF  = part.CFrame
-                                local nP   = PCF.Position - giveOrigin.Position + recvOrigin.Position
-                                local tOff = CFrame.new(nP) * PCF.Rotation
-                                part.CFrame = tOff; task.wait(0.3)
-                                local entry = { Instance = part, TargetCFrame = tOff }
-                                -- FIX 2: record in BOTH lists
-                                table.insert(localCargo,         entry)
-                                table.insert(allTeleportedParts, entry)
-                            end
-                        end)
+                        if isPointInside(part.Position, mCF, mSz) then
+                            local PCF  = part.CFrame
+                            local nP   = PCF.Position - giveOrigin.Position + recvOrigin.Position
+                            local tOff = CFrame.new(nP) * PCF.Rotation
+                            part.CFrame = tOff
+                            table.insert(allTeleportedParts, { Instance = part, TargetCFrame = tOff })
+                        end
                     end
                 end
-            end
-
-            -- 2 s gap then check ONLY this truck's cargo (localCargo)
-            task.wait(2)
-            local localMissed = {}
-            for _, data in ipairs(localCargo) do
-                if data.Instance and data.Instance.Parent then
-                    if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8
-                        and (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
-                        table.insert(localMissed, data)
-                    end
-                end
-            end
-            if #localMissed > 0 then
-                setStatusBatch(string.format("Seat %d: fixing %d missed…", trucksDone+1, #localMissed), true)
-                for _, data in ipairs(localMissed) do
-                    if not batchRunning then break end
-                    local item = data.Instance
-                    if not (item and item.Parent) then continue end
-                    local tries = 0
-                    while (Char.HumanoidRootPart.Position - item.Position).Magnitude > 25 and tries < 15 do
-                        Char.HumanoidRootPart.CFrame = item.CFrame; task.wait(0.1); tries += 1
-                    end
-                    RS.Interaction.ClientIsDragging:FireServer(item.Parent)
-                    task.wait(0.5); item.CFrame = data.TargetCFrame; task.wait(0.25)
-                end
-            end
-
-            local SitPart = Char.Humanoid.SeatPart
-            if not SitPart then
-                trucksDone += 1; setBTruckProg(trucksDone, #availableTrucks); continue
             end
 
             local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
                 and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                 and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
 
-            -- Save truck body CFrame NOW while still seated.
-            local truckMain = SitPart.Parent:FindFirstChild("Main")
-            local savedTCF  = truckMain and truckMain.CFrame or nil
-
-            -- Eject first
+            -- Eject then destroy seat
             Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             task.wait(0.1)
-
-            -- Teleport truck body using the saved CFrame
-            if not DidTeleport and savedTCF and SitPart.Parent and SitPart.Parent.Parent then
-                local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
-                SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
-                DidTeleport = true
-            end
-
-            -- Destroy seat AFTER the truck has moved
             pcall(function() SitPart:Destroy() end)
-            task.wait(0.1)
 
             if DoorHinge then for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
 
             trucksDone += 1; setBTruckProg(trucksDone, #availableTrucks)
+            task.wait(0.3) -- 0.3 s between seats
         end
 
         -- Global missed-cargo pass
