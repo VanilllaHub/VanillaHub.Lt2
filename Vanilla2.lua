@@ -1,230 +1,92 @@
 -- ════════════════════════════════════════════════════════════════════════════════
--- VANILLA DUPE — Standalone v3
--- Fully self-contained. No _G.VH dependency.
--- Sub-tabs: Base Dupe | Single Truck | Batch Truck
+-- VANILLA COMBINED — Vanilla2 (Dupe Tab)
+-- Requires Vanilla1 (_G.VH) to be loaded first.
+-- Internal sub-tabs inside dupePage: Base Dupe | Single Truck | Batch Trucks
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local TweenService = game:GetService("TweenService")
-local Players      = game:GetService("Players")
+if not _G.VH then
+    warn("[VanillaHub] Vanilla2: _G.VH not found. Execute Vanilla1 first.")
+    return
+end
+
+local VH           = _G.VH
+local TweenService = VH.TweenService
+local Players      = VH.Players
 local RS           = game:GetService("ReplicatedStorage")
 local LP           = Players.LocalPlayer
+local BTN_COLOR    = VH.BTN_COLOR
+local BTN_HOVER    = VH.BTN_HOVER
+local THEME_TEXT   = VH.THEME_TEXT
+local dupePage     = VH.pages["DupeTab"]
 
--- ── THEME ─────────────────────────────────────────────────────────────────────
+if not dupePage then
+    warn("[VanillaHub] Vanilla2: DupeTab page not found.")
+    return
+end
+
+-- ════════════════════════════════════════════════════════════════════════════════
+-- THEME (inherits from VH, adds a few extras)
+-- ════════════════════════════════════════════════════════════════════════════════
 local C = {
-    bg0      = Color3.fromRGB(12, 12, 16),   -- deepest bg
-    bg1      = Color3.fromRGB(18, 18, 24),   -- panel bg
-    bg2      = Color3.fromRGB(24, 24, 32),   -- element bg
-    bg3      = Color3.fromRGB(30, 30, 42),   -- hover/input bg
-    border   = Color3.fromRGB(42, 42, 60),   -- subtle border
-    accent   = Color3.fromRGB(48, 48, 68),   -- active tab / selected
-    text     = Color3.fromRGB(220, 218, 230),-- primary text
-    textDim  = Color3.fromRGB(110, 108, 130),-- secondary text
-    textMid  = Color3.fromRGB(160, 158, 180),-- mid text
-    good     = Color3.fromRGB(72, 200, 110), -- success dot
-    idle     = Color3.fromRGB(60, 58, 80),   -- idle dot
-    btn      = Color3.fromRGB(32, 32, 44),   -- button base
-    btnHov   = Color3.fromRGB(44, 44, 60),   -- button hover
-    btnAct   = Color3.fromRGB(38, 38, 54),   -- button active
-    tabLine  = Color3.fromRGB(70, 68, 100),  -- active tab underline
-    progFill = Color3.fromRGB(90, 88, 140),  -- progress fill
-    progBg   = Color3.fromRGB(22, 22, 32),   -- progress track
+    bg0     = Color3.fromRGB(12,  12,  16 ),
+    bg1     = Color3.fromRGB(18,  18,  24 ),
+    bg2     = Color3.fromRGB(24,  24,  32 ),
+    bg3     = Color3.fromRGB(30,  30,  42 ),
+    border  = Color3.fromRGB(42,  42,  60 ),
+    accent  = Color3.fromRGB(48,  48,  68 ),
+    text    = THEME_TEXT,
+    textDim = Color3.fromRGB(110, 108, 130),
+    textMid = Color3.fromRGB(160, 158, 180),
+    good    = Color3.fromRGB(72,  200, 110),
+    idle    = Color3.fromRGB(60,  58,  80 ),
+    btn     = BTN_COLOR,
+    btnHov  = BTN_HOVER,
+    btnAct  = Color3.fromRGB(38,  38,  54 ),
+    prog    = Color3.fromRGB(90,  88,  140),
+    progBg  = Color3.fromRGB(22,  22,  32 ),
 }
 
--- ── TWEEN HELPERS ─────────────────────────────────────────────────────────────
-local function tw(obj, props, t, style, dir)
-    return TweenService:Create(obj,
-        TweenInfo.new(t or 0.18, style or Enum.EasingStyle.Quint, dir or Enum.EasingDirection.Out),
-        props)
+local function twPlay(obj, props, t, style)
+    TweenService:Create(obj,
+        TweenInfo.new(t or 0.18, style or Enum.EasingStyle.Quint),
+        props):Play()
 end
-local function twPlay(obj, props, t, style, dir)
-    tw(obj, props, t, style, dir):Play()
-end
-
--- ════════════════════════════════════════════════════════════════════════════════
--- DESTROY PREVIOUS INSTANCE
--- ════════════════════════════════════════════════════════════════════════════════
-if LP.PlayerGui:FindFirstChild("VanillaDupe") then
-    LP.PlayerGui.VanillaDupe:Destroy()
-end
-
--- ════════════════════════════════════════════════════════════════════════════════
--- SCREEN GUI + MAIN FRAME
--- ════════════════════════════════════════════════════════════════════════════════
-local ScreenGui       = Instance.new("ScreenGui")
-ScreenGui.Name        = "VanillaDupe"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent      = LP.PlayerGui
-
-local Main            = Instance.new("Frame", ScreenGui)
-Main.Name             = "Main"
-Main.Size             = UDim2.new(0, 360, 0, 640)
-Main.Position         = UDim2.new(0.5, -180, 0.5, -320)
-Main.BackgroundColor3 = C.bg0
-Main.BorderSizePixel  = 0
-Main.Active           = true
-Main.Draggable        = true
-Main.ClipsDescendants = false
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-local mainStroke = Instance.new("UIStroke", Main)
-mainStroke.Color       = C.border
-mainStroke.Thickness   = 1
-mainStroke.Transparency = 0.2
-
--- ── TITLE BAR ─────────────────────────────────────────────────────────────────
-local TitleBar        = Instance.new("Frame", Main)
-TitleBar.Size         = UDim2.new(1, 0, 0, 40)
-TitleBar.BackgroundColor3 = C.bg1
-TitleBar.BorderSizePixel  = 0
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
-
--- cover the bottom rounded corners of the title bar
-local TitleCover      = Instance.new("Frame", TitleBar)
-TitleCover.Size       = UDim2.new(1, 0, 0, 10)
-TitleCover.Position   = UDim2.new(0, 0, 1, -10)
-TitleCover.BackgroundColor3 = C.bg1
-TitleCover.BorderSizePixel  = 0
-
-local TitleAccentLine = Instance.new("Frame", TitleBar)
-TitleAccentLine.Size  = UDim2.new(1, 0, 0, 1)
-TitleAccentLine.Position = UDim2.new(0, 0, 1, -1)
-TitleAccentLine.BackgroundColor3 = C.border
-TitleAccentLine.BorderSizePixel  = 0
-
--- Dot + label
-local TitleDot        = Instance.new("Frame", TitleBar)
-TitleDot.Size         = UDim2.new(0, 6, 0, 6)
-TitleDot.Position     = UDim2.new(0, 14, 0.5, -3)
-TitleDot.BackgroundColor3 = C.textDim
-TitleDot.BorderSizePixel  = 0
-Instance.new("UICorner", TitleDot).CornerRadius = UDim.new(1, 0)
-
-local TitleLbl        = Instance.new("TextLabel", TitleBar)
-TitleLbl.Size         = UDim2.new(1, -100, 1, 0)
-TitleLbl.Position     = UDim2.new(0, 26, 0, 0)
-TitleLbl.BackgroundTransparency = 1
-TitleLbl.Font         = Enum.Font.GothamBold
-TitleLbl.TextSize     = 13
-TitleLbl.TextColor3   = C.text
-TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
-TitleLbl.Text         = "Vanilla  ·  Dupe"
-
--- Minimise / Close
-local function makeTitleBtn(xOffset, label, bgColor)
-    local b = Instance.new("TextButton", TitleBar)
-    b.Size   = UDim2.new(0, 24, 0, 24)
-    b.Position = UDim2.new(1, xOffset, 0.5, -12)
-    b.BackgroundColor3 = bgColor
-    b.BorderSizePixel  = 0
-    b.Font   = Enum.Font.GothamBold
-    b.TextSize = 12
-    b.TextColor3 = C.textMid
-    b.Text   = label
-    b.AutoButtonColor = false
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 5)
-    return b
-end
-local MinBtn   = makeTitleBtn(-56, "–", C.bg2)
-local CloseBtn = makeTitleBtn(-28, "✕", C.bg2)
-
-local minimised = false
-MinBtn.MouseButton1Click:Connect(function()
-    minimised = not minimised
-    MinBtn.Text = minimised and "+" or "–"
-    twPlay(Main, { Size = minimised
-        and UDim2.new(0, 360, 0, 40)
-        or  UDim2.new(0, 360, 0, 640) }, 0.25, Enum.EasingStyle.Quint)
-end)
-CloseBtn.MouseButton1Click:Connect(function()
-    twPlay(Main, { Size = UDim2.new(0, 360, 0, 0),
-        Position = UDim2.new(0.5, -180, 0.5, 0) }, 0.2, Enum.EasingStyle.Quint)
-    task.delay(0.22, function() ScreenGui:Destroy() end)
-end)
-
--- ── SUB-TAB BAR ───────────────────────────────────────────────────────────────
-local TabRow = Instance.new("Frame", Main)
-TabRow.Size  = UDim2.new(1, -20, 0, 32)
-TabRow.Position = UDim2.new(0, 10, 0, 46)
-TabRow.BackgroundColor3 = C.bg1
-TabRow.BorderSizePixel  = 0
-Instance.new("UICorner", TabRow).CornerRadius = UDim.new(0, 7)
-local tabRowStroke = Instance.new("UIStroke", TabRow)
-tabRowStroke.Color = C.border
-tabRowStroke.Thickness = 1
-tabRowStroke.Transparency = 0.4
-
--- ── SCROLL CONTENT AREA ───────────────────────────────────────────────────────
-local ContentScroll = Instance.new("ScrollingFrame", Main)
-ContentScroll.Name  = "Content"
-ContentScroll.Size  = UDim2.new(1, 0, 1, -86)
-ContentScroll.Position = UDim2.new(0, 0, 0, 84)
-ContentScroll.BackgroundTransparency = 1
-ContentScroll.BorderSizePixel = 0
-ContentScroll.ScrollBarThickness = 3
-ContentScroll.ScrollBarImageColor3 = C.accent
-ContentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-ContentScroll.ClipsDescendants = true
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- SHARED UI HELPERS
 -- ════════════════════════════════════════════════════════════════════════════════
 
--- Creates a scrollable page frame (children placed under ContentScroll)
-local function makePage()
-    local page = Instance.new("Frame", ContentScroll)
-    page.Size  = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.BorderSizePixel = 0
-    page.Visible = false
-    local layout = Instance.new("UIListLayout", page)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding   = UDim.new(0, 5)
-    local pad = Instance.new("UIPadding", page)
-    pad.PaddingTop    = UDim.new(0, 8)
-    pad.PaddingBottom = UDim.new(0, 12)
-    pad.PaddingLeft   = UDim.new(0, 10)
-    pad.PaddingRight  = UDim.new(0, 10)
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        -- Update ContentScroll canvas when the active page height changes
-        if page.Visible then
-            ContentScroll.CanvasSize = UDim2.new(0, 0, 0,
-                layout.AbsoluteContentSize.Y + 20)
-        end
-    end)
-    return page
-end
-
 local function makeLabel(parent, text)
     local lbl = Instance.new("TextLabel", parent)
-    lbl.Size  = UDim2.new(1, 0, 0, 20)
+    lbl.Size               = UDim2.new(1, -12, 0, 20)
     lbl.BackgroundTransparency = 1
-    lbl.Font  = Enum.Font.GothamBold
-    lbl.TextSize = 10
-    lbl.TextColor3 = C.textDim
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text  = "  " .. string.upper(text)
+    lbl.Font               = Enum.Font.GothamBold
+    lbl.TextSize           = 10
+    lbl.TextColor3         = C.textDim
+    lbl.TextXAlignment     = Enum.TextXAlignment.Left
+    lbl.Text               = "  " .. string.upper(text)
     return lbl
 end
 
 local function makeSep(parent)
     local f = Instance.new("Frame", parent)
-    f.Size   = UDim2.new(1, 0, 0, 1)
+    f.Size             = UDim2.new(1, -12, 0, 1)
     f.BackgroundColor3 = C.border
     f.BorderSizePixel  = 0
     return f
 end
 
--- Standard grey button — matches the rest of the UI
+-- Standard grey button — consistent across all sections
 local function makeBtn(parent, text, callback)
     local btn = Instance.new("TextButton", parent)
-    btn.Size  = UDim2.new(1, 0, 0, 34)
+    btn.Size             = UDim2.new(1, -12, 0, 34)
     btn.BackgroundColor3 = C.btn
     btn.BorderSizePixel  = 0
-    btn.Font  = Enum.Font.GothamSemibold
-    btn.TextSize = 13
-    btn.TextColor3 = C.text
-    btn.Text  = text
-    btn.AutoButtonColor = false
+    btn.Font             = Enum.Font.GothamSemibold
+    btn.TextSize         = 13
+    btn.TextColor3       = C.text
+    btn.Text             = text
+    btn.AutoButtonColor  = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     local bs = Instance.new("UIStroke", btn)
     bs.Color = C.border; bs.Thickness = 1; bs.Transparency = 0.3
@@ -247,7 +109,7 @@ end
 
 local function makeToggle(parent, text, default, callback)
     local frame = Instance.new("Frame", parent)
-    frame.Size  = UDim2.new(1, 0, 0, 34)
+    frame.Size             = UDim2.new(1, -12, 0, 34)
     frame.BackgroundColor3 = C.bg2
     frame.BorderSizePixel  = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
@@ -255,28 +117,28 @@ local function makeToggle(parent, text, default, callback)
     fs.Color = C.border; fs.Thickness = 1; fs.Transparency = 0.3
 
     local lbl = Instance.new("TextLabel", frame)
-    lbl.Size  = UDim2.new(1, -54, 1, 0)
-    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.Size               = UDim2.new(1, -54, 1, 0)
+    lbl.Position           = UDim2.new(0, 12, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Font  = Enum.Font.GothamSemibold
-    lbl.TextSize = 13
-    lbl.TextColor3 = C.text
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text  = text
+    lbl.Font               = Enum.Font.GothamSemibold
+    lbl.TextSize           = 13
+    lbl.TextColor3         = C.text
+    lbl.TextXAlignment     = Enum.TextXAlignment.Left
+    lbl.Text               = text
 
     local trackOff = Color3.fromRGB(36, 36, 50)
     local trackOn  = Color3.fromRGB(70, 130, 80)
 
     local tb = Instance.new("TextButton", frame)
-    tb.Size  = UDim2.new(0, 36, 0, 20)
-    tb.Position = UDim2.new(1, -46, 0.5, -10)
+    tb.Size             = UDim2.new(0, 36, 0, 20)
+    tb.Position         = UDim2.new(1, -46, 0.5, -10)
     tb.BackgroundColor3 = default and trackOn or trackOff
-    tb.Text  = ""; tb.BorderSizePixel = 0; tb.AutoButtonColor = false
+    tb.Text             = ""; tb.BorderSizePixel = 0; tb.AutoButtonColor = false
     Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
 
     local knob = Instance.new("Frame", tb)
-    knob.Size = UDim2.new(0, 16, 0, 16)
-    knob.Position = UDim2.new(0, default and 18 or 2, 0.5, -8)
+    knob.Size             = UDim2.new(0, 16, 0, 16)
+    knob.Position         = UDim2.new(0, default and 18 or 2, 0.5, -8)
     knob.BackgroundColor3 = Color3.fromRGB(235, 235, 245)
     knob.BorderSizePixel  = 0
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
@@ -294,7 +156,7 @@ end
 
 local function makeStatusBar(parent, defaultText)
     local bar = Instance.new("Frame", parent)
-    bar.Size  = UDim2.new(1, 0, 0, 28)
+    bar.Size             = UDim2.new(1, -12, 0, 28)
     bar.BackgroundColor3 = C.bg1
     bar.BorderSizePixel  = 0
     Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 7)
@@ -302,22 +164,22 @@ local function makeStatusBar(parent, defaultText)
     bs.Color = C.border; bs.Thickness = 1; bs.Transparency = 0.3
 
     local dot = Instance.new("Frame", bar)
-    dot.Size  = UDim2.new(0, 7, 0, 7)
-    dot.Position = UDim2.new(0, 11, 0.5, -3.5)
+    dot.Size             = UDim2.new(0, 7, 0, 7)
+    dot.Position         = UDim2.new(0, 11, 0.5, -3.5)
     dot.BackgroundColor3 = C.idle
     dot.BorderSizePixel  = 0
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
     local lbl = Instance.new("TextLabel", bar)
-    lbl.Size  = UDim2.new(1, -28, 1, 0)
-    lbl.Position = UDim2.new(0, 26, 0, 0)
+    lbl.Size                 = UDim2.new(1, -28, 1, 0)
+    lbl.Position             = UDim2.new(0, 26, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Font  = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextColor3 = C.textMid
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text  = defaultText or "Ready"
-    lbl.TextTruncate = Enum.TextTruncate.AtEnd
+    lbl.Font                 = Enum.Font.Gotham
+    lbl.TextSize             = 12
+    lbl.TextColor3           = C.textMid
+    lbl.TextXAlignment       = Enum.TextXAlignment.Left
+    lbl.Text                 = defaultText or "Ready"
+    lbl.TextTruncate         = Enum.TextTruncate.AtEnd
 
     local function setStatus(msg, active)
         lbl.Text = msg
@@ -328,48 +190,48 @@ end
 
 local function makeProgressBar(parent, labelText)
     local wrap = Instance.new("Frame", parent)
-    wrap.Size  = UDim2.new(1, 0, 0, 46)
+    wrap.Size             = UDim2.new(1, -12, 0, 46)
     wrap.BackgroundColor3 = C.bg1
     wrap.BorderSizePixel  = 0
-    wrap.Visible = false
+    wrap.Visible          = false
     Instance.new("UICorner", wrap).CornerRadius = UDim.new(0, 7)
     local ws = Instance.new("UIStroke", wrap)
     ws.Color = C.border; ws.Thickness = 1; ws.Transparency = 0.3
 
     local topRow = Instance.new("Frame", wrap)
-    topRow.Size  = UDim2.new(1, -14, 0, 18)
-    topRow.Position = UDim2.new(0, 7, 0, 6)
+    topRow.Size                 = UDim2.new(1, -14, 0, 18)
+    topRow.Position             = UDim2.new(0, 7, 0, 6)
     topRow.BackgroundTransparency = 1
 
     local nameLbl = Instance.new("TextLabel", topRow)
-    nameLbl.Size  = UDim2.new(0.6, 0, 1, 0)
+    nameLbl.Size               = UDim2.new(0.6, 0, 1, 0)
     nameLbl.BackgroundTransparency = 1
-    nameLbl.Font  = Enum.Font.GothamSemibold
-    nameLbl.TextSize = 11
-    nameLbl.TextColor3 = C.textMid
-    nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-    nameLbl.Text  = labelText
+    nameLbl.Font               = Enum.Font.GothamSemibold
+    nameLbl.TextSize           = 11
+    nameLbl.TextColor3         = C.textMid
+    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    nameLbl.Text               = labelText
 
     local cntLbl = Instance.new("TextLabel", topRow)
-    cntLbl.Size  = UDim2.new(0.4, 0, 1, 0)
-    cntLbl.Position = UDim2.new(0.6, 0, 0, 0)
+    cntLbl.Size               = UDim2.new(0.4, 0, 1, 0)
+    cntLbl.Position           = UDim2.new(0.6, 0, 0, 0)
     cntLbl.BackgroundTransparency = 1
-    cntLbl.Font  = Enum.Font.GothamBold
-    cntLbl.TextSize = 11
-    cntLbl.TextColor3 = C.text
-    cntLbl.TextXAlignment = Enum.TextXAlignment.Right
-    cntLbl.Text  = "0 / 0"
+    cntLbl.Font               = Enum.Font.GothamBold
+    cntLbl.TextSize           = 11
+    cntLbl.TextColor3         = C.text
+    cntLbl.TextXAlignment     = Enum.TextXAlignment.Right
+    cntLbl.Text               = "0 / 0"
 
     local track = Instance.new("Frame", wrap)
-    track.Size  = UDim2.new(1, -14, 0, 8)
-    track.Position = UDim2.new(0, 7, 0, 30)
+    track.Size             = UDim2.new(1, -14, 0, 8)
+    track.Position         = UDim2.new(0, 7, 0, 30)
     track.BackgroundColor3 = C.progBg
     track.BorderSizePixel  = 0
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 
     local fill = Instance.new("Frame", track)
-    fill.Size  = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = C.progFill
+    fill.Size             = UDim2.new(0, 0, 1, 0)
+    fill.BackgroundColor3 = C.prog
     fill.BorderSizePixel  = 0
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
@@ -379,8 +241,8 @@ local function makeProgressBar(parent, labelText)
         twPlay(fill, { Size = UDim2.new(pct, 0, 1, 0) }, 0.22, Enum.EasingStyle.Quad)
     end
     local function reset()
-        fill.Size = UDim2.new(0, 0, 1, 0)
-        cntLbl.Text = "0 / 0"
+        fill.Size    = UDim2.new(0, 0, 1, 0)
+        cntLbl.Text  = "0 / 0"
         wrap.Visible = false
     end
     return wrap, setProgress, reset
@@ -395,7 +257,7 @@ local function makePlayerDropdown(labelText, parent)
     local HDR_H    = 40
 
     local outer = Instance.new("Frame", parent)
-    outer.Size  = UDim2.new(1, 0, 0, HDR_H)
+    outer.Size             = UDim2.new(1, -12, 0, HDR_H)
     outer.BackgroundColor3 = C.bg2
     outer.BorderSizePixel  = 0
     outer.ClipsDescendants = true
@@ -404,22 +266,22 @@ local function makePlayerDropdown(labelText, parent)
     outerStroke.Color = C.border; outerStroke.Thickness = 1; outerStroke.Transparency = 0.3
 
     local header = Instance.new("Frame", outer)
-    header.Size = UDim2.new(1, 0, 0, HDR_H)
+    header.Size                   = UDim2.new(1, 0, 0, HDR_H)
     header.BackgroundTransparency = 1
 
     local tagLbl = Instance.new("TextLabel", header)
-    tagLbl.Size  = UDim2.new(0, 68, 1, 0)
-    tagLbl.Position = UDim2.new(0, 10, 0, 0)
+    tagLbl.Size               = UDim2.new(0, 68, 1, 0)
+    tagLbl.Position           = UDim2.new(0, 10, 0, 0)
     tagLbl.BackgroundTransparency = 1
-    tagLbl.Font  = Enum.Font.GothamBold
-    tagLbl.TextSize = 11
-    tagLbl.TextColor3 = C.textDim
-    tagLbl.TextXAlignment = Enum.TextXAlignment.Left
-    tagLbl.Text  = labelText
+    tagLbl.Font               = Enum.Font.GothamBold
+    tagLbl.TextSize           = 11
+    tagLbl.TextColor3         = C.textDim
+    tagLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    tagLbl.Text               = labelText
 
     local selFrame = Instance.new("Frame", header)
-    selFrame.Size  = UDim2.new(1, -84, 0, 28)
-    selFrame.Position = UDim2.new(0, 76, 0.5, -14)
+    selFrame.Size             = UDim2.new(1, -84, 0, 28)
+    selFrame.Position         = UDim2.new(0, 76, 0.5, -14)
     selFrame.BackgroundColor3 = C.bg3
     selFrame.BorderSizePixel  = 0
     Instance.new("UICorner", selFrame).CornerRadius = UDim.new(0, 6)
@@ -427,57 +289,57 @@ local function makePlayerDropdown(labelText, parent)
     selStroke.Color = C.border; selStroke.Thickness = 1; selStroke.Transparency = 0.3
 
     local avatar = Instance.new("ImageLabel", selFrame)
-    avatar.Size  = UDim2.new(0, 20, 0, 20)
-    avatar.Position = UDim2.new(0, 5, 0.5, -10)
+    avatar.Size             = UDim2.new(0, 20, 0, 20)
+    avatar.Position         = UDim2.new(0, 5, 0.5, -10)
     avatar.BackgroundColor3 = C.accent
     avatar.BorderSizePixel  = 0
-    avatar.Image  = ""
-    avatar.ScaleType = Enum.ScaleType.Crop
+    avatar.Image            = ""
+    avatar.ScaleType        = Enum.ScaleType.Crop
     Instance.new("UICorner", avatar).CornerRadius = UDim.new(1, 0)
 
     local selLbl = Instance.new("TextLabel", selFrame)
-    selLbl.Size  = UDim2.new(1, -56, 1, 0)
-    selLbl.Position = UDim2.new(0, 30, 0, 0)
+    selLbl.Size               = UDim2.new(1, -56, 1, 0)
+    selLbl.Position           = UDim2.new(0, 30, 0, 0)
     selLbl.BackgroundTransparency = 1
-    selLbl.Font  = Enum.Font.GothamSemibold
-    selLbl.TextSize = 12
-    selLbl.TextColor3 = C.textDim
-    selLbl.TextXAlignment = Enum.TextXAlignment.Left
-    selLbl.TextTruncate = Enum.TextTruncate.AtEnd
-    selLbl.Text  = "Select player…"
+    selLbl.Font               = Enum.Font.GothamSemibold
+    selLbl.TextSize           = 12
+    selLbl.TextColor3         = C.textDim
+    selLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    selLbl.TextTruncate       = Enum.TextTruncate.AtEnd
+    selLbl.Text               = "Select player…"
 
     local arrow = Instance.new("TextLabel", selFrame)
-    arrow.Size   = UDim2.new(0, 20, 1, 0)
-    arrow.Position = UDim2.new(1, -22, 0, 0)
+    arrow.Size               = UDim2.new(0, 20, 1, 0)
+    arrow.Position           = UDim2.new(1, -22, 0, 0)
     arrow.BackgroundTransparency = 1
-    arrow.Font   = Enum.Font.GothamBold
-    arrow.TextSize = 12
-    arrow.TextColor3 = C.textDim
-    arrow.TextXAlignment = Enum.TextXAlignment.Center
-    arrow.Text   = "▾"
+    arrow.Font               = Enum.Font.GothamBold
+    arrow.TextSize           = 12
+    arrow.TextColor3         = C.textDim
+    arrow.TextXAlignment     = Enum.TextXAlignment.Center
+    arrow.Text               = "▾"
 
     local hitBtn = Instance.new("TextButton", selFrame)
-    hitBtn.Size  = UDim2.new(1, 0, 1, 0)
+    hitBtn.Size               = UDim2.new(1, 0, 1, 0)
     hitBtn.BackgroundTransparency = 1
-    hitBtn.Text  = ""
-    hitBtn.ZIndex = 5
+    hitBtn.Text               = ""
+    hitBtn.ZIndex             = 5
 
     local divider = Instance.new("Frame", outer)
-    divider.Size  = UDim2.new(1, -12, 0, 1)
-    divider.Position = UDim2.new(0, 6, 0, HDR_H)
+    divider.Size             = UDim2.new(1, -12, 0, 1)
+    divider.Position         = UDim2.new(0, 6, 0, HDR_H)
     divider.BackgroundColor3 = C.border
     divider.BorderSizePixel  = 0
-    divider.Visible = false
+    divider.Visible          = false
 
     local listScroll = Instance.new("ScrollingFrame", outer)
-    listScroll.Position = UDim2.new(0, 0, 0, HDR_H + 2)
-    listScroll.Size  = UDim2.new(1, 0, 0, 0)
+    listScroll.Position               = UDim2.new(0, 0, 0, HDR_H + 2)
+    listScroll.Size                   = UDim2.new(1, 0, 0, 0)
     listScroll.BackgroundTransparency = 1
-    listScroll.BorderSizePixel = 0
-    listScroll.ScrollBarThickness = 3
-    listScroll.ScrollBarImageColor3 = C.accent
-    listScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    listScroll.ClipsDescendants = true
+    listScroll.BorderSizePixel        = 0
+    listScroll.ScrollBarThickness     = 3
+    listScroll.ScrollBarImageColor3   = C.accent
+    listScroll.CanvasSize             = UDim2.new(0, 0, 0, 0)
+    listScroll.ClipsDescendants       = true
 
     local listLayout = Instance.new("UIListLayout", listScroll)
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -490,10 +352,10 @@ local function makePlayerDropdown(labelText, parent)
     lp.PaddingLeft = UDim.new(0, 5); lp.PaddingRight = UDim.new(0, 5)
 
     local function setSelected(name, userId)
-        selected = name
-        selLbl.Text = name
-        selLbl.TextColor3 = C.text
-        outerStroke.Color = C.textDim
+        selected              = name
+        selLbl.Text           = name
+        selLbl.TextColor3     = C.text
+        outerStroke.Color     = C.textDim
         if userId then
             pcall(function()
                 avatar.Image = Players:GetUserThumbnailAsync(userId,
@@ -502,18 +364,18 @@ local function makePlayerDropdown(labelText, parent)
         end
     end
     local function clearSelected()
-        selected = ""
-        selLbl.Text = "Select player…"
+        selected          = ""
+        selLbl.Text       = "Select player…"
         selLbl.TextColor3 = C.textDim
-        avatar.Image = ""
+        avatar.Image      = ""
         outerStroke.Color = C.border
     end
 
     local function closeList()
         isOpen = false
-        twPlay(arrow,      { Rotation = 0   }, 0.2, Enum.EasingStyle.Quint)
-        twPlay(outer,      { Size = UDim2.new(1, 0, 0, HDR_H) }, 0.2, Enum.EasingStyle.Quint)
-        twPlay(listScroll, { Size = UDim2.new(1, 0, 0, 0) },     0.2, Enum.EasingStyle.Quint)
+        twPlay(arrow,      { Rotation = 0 },                          0.2, Enum.EasingStyle.Quint)
+        twPlay(outer,      { Size = UDim2.new(1, -12, 0, HDR_H) },   0.2, Enum.EasingStyle.Quint)
+        twPlay(listScroll, { Size = UDim2.new(1, 0, 0, 0) },         0.2, Enum.EasingStyle.Quint)
         divider.Visible = false
     end
 
@@ -526,18 +388,18 @@ local function makePlayerDropdown(labelText, parent)
         for i, plr in ipairs(plist) do
             local isSel = (plr.Name == selected)
             local row = Instance.new("Frame", listScroll)
-            row.Size = UDim2.new(1, 0, 0, ITEM_H)
+            row.Size             = UDim2.new(1, 0, 0, ITEM_H)
             row.BackgroundColor3 = isSel and C.accent or C.bg2
             row.BorderSizePixel  = 0
             row.LayoutOrder      = i
             Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
 
             local av2 = Instance.new("ImageLabel", row)
-            av2.Size = UDim2.new(0, 22, 0, 22)
-            av2.Position = UDim2.new(0, 7, 0.5, -11)
+            av2.Size             = UDim2.new(0, 22, 0, 22)
+            av2.Position         = UDim2.new(0, 7, 0.5, -11)
             av2.BackgroundColor3 = C.bg3
             av2.BorderSizePixel  = 0
-            av2.ScaleType = Enum.ScaleType.Crop
+            av2.ScaleType        = Enum.ScaleType.Crop
             Instance.new("UICorner", av2).CornerRadius = UDim.new(1, 0)
             task.spawn(function()
                 pcall(function()
@@ -547,74 +409,62 @@ local function makePlayerDropdown(labelText, parent)
             end)
 
             local nLbl = Instance.new("TextLabel", row)
-            nLbl.Size = UDim2.new(1, -60, 1, 0)
-            nLbl.Position = UDim2.new(0, 34, 0, 0)
+            nLbl.Size               = UDim2.new(1, -60, 1, 0)
+            nLbl.Position           = UDim2.new(0, 34, 0, 0)
             nLbl.BackgroundTransparency = 1
-            nLbl.Font = Enum.Font.GothamSemibold
-            nLbl.TextSize = 12
-            nLbl.TextColor3 = isSel and C.text or C.textMid
-            nLbl.TextXAlignment = Enum.TextXAlignment.Left
-            nLbl.TextTruncate = Enum.TextTruncate.AtEnd
-            nLbl.Text = plr.Name
+            nLbl.Font               = Enum.Font.GothamSemibold
+            nLbl.TextSize           = 12
+            nLbl.TextColor3         = isSel and C.text or C.textMid
+            nLbl.TextXAlignment     = Enum.TextXAlignment.Left
+            nLbl.TextTruncate       = Enum.TextTruncate.AtEnd
+            nLbl.Text               = plr.Name
 
             if isSel then
                 local chk = Instance.new("TextLabel", row)
-                chk.Size = UDim2.new(0, 22, 1, 0)
-                chk.Position = UDim2.new(1, -26, 0, 0)
+                chk.Size               = UDim2.new(0, 22, 1, 0)
+                chk.Position           = UDim2.new(1, -26, 0, 0)
                 chk.BackgroundTransparency = 1
-                chk.Font = Enum.Font.GothamBold
-                chk.TextSize = 13
-                chk.TextColor3 = C.text
-                chk.TextXAlignment = Enum.TextXAlignment.Center
-                chk.Text = "✓"
+                chk.Font               = Enum.Font.GothamBold
+                chk.TextSize           = 13
+                chk.TextColor3         = C.text
+                chk.TextXAlignment     = Enum.TextXAlignment.Center
+                chk.Text               = "✓"
             end
 
             local rowBtn = Instance.new("TextButton", row)
-            rowBtn.Size  = UDim2.new(1, 0, 1, 0)
+            rowBtn.Size               = UDim2.new(1, 0, 1, 0)
             rowBtn.BackgroundTransparency = 1
-            rowBtn.Text  = ""; rowBtn.ZIndex = 5
+            rowBtn.Text               = ""; rowBtn.ZIndex = 5
             rowBtn.MouseEnter:Connect(function()
-                if plr.Name ~= selected then
-                    twPlay(row, { BackgroundColor3 = C.bg3 }, 0.1)
-                end
+                if plr.Name ~= selected then twPlay(row, { BackgroundColor3 = C.bg3 }, 0.1) end
             end)
             rowBtn.MouseLeave:Connect(function()
-                if plr.Name ~= selected then
-                    twPlay(row, { BackgroundColor3 = C.bg2 }, 0.1)
-                end
+                if plr.Name ~= selected then twPlay(row, { BackgroundColor3 = C.bg2 }, 0.1) end
             end)
             rowBtn.MouseButton1Click:Connect(function()
                 if plr.Name == selected then clearSelected() else setSelected(plr.Name, plr.UserId) end
-                buildList()
-                task.delay(0.05, closeList)
+                buildList(); task.delay(0.05, closeList)
             end)
         end
     end
 
     local function openList()
-        isOpen = true
-        buildList()
-        local cnt  = #Players:GetPlayers()
+        isOpen = true; buildList()
+        local cnt   = #Players:GetPlayers()
         local listH = math.min(cnt, MAX_SHOW) * (ITEM_H + 3) + 8
         divider.Visible = true
-        twPlay(arrow,      { Rotation = 180 }, 0.2, Enum.EasingStyle.Quint)
-        twPlay(outer,      { Size = UDim2.new(1, 0, 0, HDR_H + 2 + listH) }, 0.22, Enum.EasingStyle.Quint)
-        twPlay(listScroll, { Size = UDim2.new(1, 0, 0, listH) }, 0.22, Enum.EasingStyle.Quint)
+        twPlay(arrow,      { Rotation = 180 },                                    0.2, Enum.EasingStyle.Quint)
+        twPlay(outer,      { Size = UDim2.new(1, -12, 0, HDR_H + 2 + listH) },   0.22, Enum.EasingStyle.Quint)
+        twPlay(listScroll, { Size = UDim2.new(1, 0, 0, listH) },                  0.22, Enum.EasingStyle.Quint)
     end
 
     hitBtn.MouseButton1Click:Connect(function()
         if isOpen then closeList() else openList() end
     end)
-    hitBtn.MouseEnter:Connect(function()
-        twPlay(selFrame, { BackgroundColor3 = C.bg3 }, 0.1)
-    end)
-    hitBtn.MouseLeave:Connect(function()
-        twPlay(selFrame, { BackgroundColor3 = C.bg3 }, 0.1)
-    end)
+    hitBtn.MouseEnter:Connect(function() twPlay(selFrame, { BackgroundColor3 = C.bg3 }, 0.1) end)
+    hitBtn.MouseLeave:Connect(function() twPlay(selFrame, { BackgroundColor3 = C.bg3 }, 0.1) end)
 
-    Players.PlayerAdded:Connect(function()
-        if isOpen then buildList() end
-    end)
+    Players.PlayerAdded:Connect(function() if isOpen then buildList() end end)
     Players.PlayerRemoving:Connect(function(leaving)
         if leaving.Name == selected then clearSelected() end
         if isOpen then buildList() end
@@ -624,91 +474,21 @@ local function makePlayerDropdown(labelText, parent)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- TAB SYSTEM
--- ════════════════════════════════════════════════════════════════════════════════
-local TABS      = { "Base Dupe", "Single Truck", "Batch Trucks" }
-local tabBtns   = {}
-local tabPages  = {}
-local activeTab = 1
-
-local tabLayout = Instance.new("UIListLayout", TabRow)
-tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.SortOrder     = Enum.SortOrder.LayoutOrder
-tabLayout.Padding       = UDim.new(0, 2)
-Instance.new("UIPadding", TabRow).PaddingLeft  = UDim.new(0, 3)
-Instance.new("UIPadding", TabRow).PaddingRight = UDim.new(0, 3)
-
--- Pages
-for i = 1, #TABS do
-    tabPages[i] = makePage()
-end
-
-local function switchTab(idx)
-    if idx == activeTab then return end
-    activeTab = idx
-    for i, pg in ipairs(tabPages) do
-        pg.Visible = (i == idx)
-        if i == idx then
-            local layout = pg:FindFirstChildOfClass("UIListLayout")
-            if layout then
-                ContentScroll.CanvasSize = UDim2.new(0, 0, 0,
-                    layout.AbsoluteContentSize.Y + 20)
-            end
-        end
-    end
-    ContentScroll.CanvasPosition = Vector2.new(0, 0)
-    for i, btn in ipairs(tabBtns) do
-        local active = (i == idx)
-        twPlay(btn, { BackgroundColor3 = active and C.accent or Color3.new(0,0,0) }, 0.15)
-        btn.TextColor3 = active and C.text or C.textDim
-        btn.BackgroundTransparency = active and 0 or 1
-    end
-end
-
-for i, name in ipairs(TABS) do
-    local btn = Instance.new("TextButton", TabRow)
-    btn.Size  = UDim2.new(1/#TABS, -3, 1, -6)
-    btn.Position = UDim2.new(0, 0, 0, 3)
-    btn.BackgroundColor3 = i == 1 and C.accent or Color3.new(0,0,0)
-    btn.BackgroundTransparency = i == 1 and 0 or 1
-    btn.BorderSizePixel = 0
-    btn.Font  = Enum.Font.GothamSemibold
-    btn.TextSize = 11
-    btn.TextColor3 = i == 1 and C.text or C.textDim
-    btn.Text  = name
-    btn.AutoButtonColor = false
-    btn.LayoutOrder = i
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    btn.MouseButton1Click:Connect(function() switchTab(i) end)
-    tabBtns[i] = btn
-end
-
--- Show first page
-tabPages[1].Visible = true
-
--- ════════════════════════════════════════════════════════════════════════════════
--- UTILITY FUNCTIONS (shared across all tabs)
+-- UTILITY FUNCTIONS
 -- ════════════════════════════════════════════════════════════════════════════════
 
--- Get a character, waiting for it if needed
-local function getChar()
-    return LP.Character or LP.CharacterAdded:Wait()
-end
-
--- Find bases by player name
 local function findBases(giverName, receiverName)
     local gBase, rBase
     for _, v in pairs(workspace.Properties:GetDescendants()) do
         if v.Name == "Owner" then
             local val = tostring(v.Value)
             if val == giverName    then gBase = v.Parent:FindFirstChild("OriginSquare") end
-            if val == receiverName then rBase = v.Parent:FindFirstChild("OriginSquare") end
+            if val == receiverName then rBase  = v.Parent:FindFirstChild("OriginSquare") end
         end
     end
     return gBase, rBase
 end
 
--- Is a 3D point inside an OBB?
 local function isPointInside(point, boxCFrame, boxSize)
     local r = boxCFrame:PointToObjectSpace(point)
     return math.abs(r.X) <= boxSize.X / 2
@@ -716,7 +496,6 @@ local function isPointInside(point, boxCFrame, boxSize)
        and math.abs(r.Z) <= boxSize.Z / 2
 end
 
--- Get the canonical world CFrame of an item (pivot → Main → any Part)
 local function getItemWorldCF(p)
     if p:FindFirstChild("MainCFrame") then return p.MainCFrame.Value end
     if p:FindFirstChild("Main")       then return p.Main.CFrame end
@@ -724,7 +503,12 @@ local function getItemWorldCF(p)
     return part and part.CFrame or nil
 end
 
--- Count items matching a filter in workspace.PlayerModels owned by giverName
+local function isStructure(p)
+    if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Structure" then return true end
+    if p:FindFirstChild("TreeClass") and tostring(p.TreeClass.Value) == "Structure" then return true end
+    return false
+end
+
 local function countItems(giverName, typeCheck)
     local n = 0
     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -735,19 +519,11 @@ local function countItems(giverName, typeCheck)
     return n
 end
 
--- Is an item a structure (includes glass panels that use TreeClass = "Structure")?
-local function isStructure(p)
-    if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Structure" then return true end
-    if p:FindFirstChild("TreeClass") and tostring(p.TreeClass.Value) == "Structure" then return true end
-    return false
-end
-
--- Claim network ownership of a part (fast: 15 × 0.02 s = 0.3 s)
+-- Claim network ownership of a part (fast: 15 × 0.02 s = 0.3 s total)
 local function claimNetOwn(Char, part)
-    if not part or not part.Parent then return end
+    if not (part and part.Parent) then return end
     if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
-        Char.HumanoidRootPart.CFrame = part.CFrame
-        task.wait(0.04)
+        Char.HumanoidRootPart.CFrame = part.CFrame; task.wait(0.04)
     end
     for _ = 1, 15 do
         task.wait(0.02)
@@ -755,13 +531,13 @@ local function claimNetOwn(Char, part)
     end
 end
 
--- Move a single draggable item to Offset, retrying up to MAX_TRIES if it snaps back.
+-- Move a draggable item to Offset, retrying up to 8 times if it snaps back.
 local MAX_ITEM_TRIES = 8
-local function sendItem(Char, running, part, Offset)
-    if not running() then return false end
+local function sendItem(Char, runningFn, part, Offset)
+    if not runningFn() then return false end
     for _ = 1, MAX_ITEM_TRIES do
         if not (part and part.Parent) then return false end
-        if not running() then return false end
+        if not runningFn() then return false end
         claimNetOwn(Char, part)
         local deadline = tick() + 0.35
         repeat part.CFrame = Offset; task.wait() until tick() >= deadline
@@ -774,9 +550,111 @@ local function sendItem(Char, running, part, Offset)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- PAGE 1 — BASE DUPE (Butter Leak)
+-- INTERNAL TAB STRIP  (lives at the top of dupePage)
 -- ════════════════════════════════════════════════════════════════════════════════
-local P1 = tabPages[1]
+local TAB_NAMES = { "Base Dupe", "Single Truck", "Batch Trucks" }
+
+-- Tab bar frame
+local tabStrip = Instance.new("Frame", dupePage)
+tabStrip.Size             = UDim2.new(1, -12, 0, 30)
+tabStrip.BackgroundColor3 = C.bg1
+tabStrip.BorderSizePixel  = 0
+Instance.new("UICorner", tabStrip).CornerRadius = UDim.new(0, 7)
+local tabStripStroke = Instance.new("UIStroke", tabStrip)
+tabStripStroke.Color = C.border; tabStripStroke.Thickness = 1; tabStripStroke.Transparency = 0.3
+
+local tabBtnLayout = Instance.new("UIListLayout", tabStrip)
+tabBtnLayout.FillDirection = Enum.FillDirection.Horizontal
+tabBtnLayout.SortOrder     = Enum.SortOrder.LayoutOrder
+tabBtnLayout.Padding       = UDim.new(0, 2)
+local tabStripPad = Instance.new("UIPadding", tabStrip)
+tabStripPad.PaddingLeft  = UDim.new(0, 3)
+tabStripPad.PaddingRight = UDim.new(0, 3)
+
+-- Sub-pages: plain frames that the dupe page's UIListLayout ignores sizing-wise
+-- We use a single container so only one set of children is visible at a time.
+local subContainer = Instance.new("Frame", dupePage)
+subContainer.Size             = UDim2.new(1, -12, 0, 10)  -- height set dynamically
+subContainer.BackgroundTransparency = 1
+subContainer.BorderSizePixel  = 0
+subContainer.ClipsDescendants = false
+
+-- Each sub-page is a Frame inside the container with its own UIListLayout
+local subPages = {}
+for i = 1, #TAB_NAMES do
+    local pg = Instance.new("Frame", subContainer)
+    pg.Size             = UDim2.new(1, 0, 0, 0)
+    pg.BackgroundTransparency = 1
+    pg.BorderSizePixel  = 0
+    pg.Visible          = (i == 1)
+    local ly = Instance.new("UIListLayout", pg)
+    ly.SortOrder = Enum.SortOrder.LayoutOrder
+    ly.Padding   = UDim.new(0, 5)
+    local pad = Instance.new("UIPadding", pg)
+    pad.PaddingTop = UDim.new(0, 4); pad.PaddingBottom = UDim.new(0, 6)
+    subPages[i] = pg
+end
+
+-- Resize container whenever any sub-page layout changes
+local function refreshContainerHeight()
+    local activePg = nil
+    for _, pg in ipairs(subPages) do if pg.Visible then activePg = pg; break end end
+    if not activePg then return end
+    local ly = activePg:FindFirstChildOfClass("UIListLayout")
+    if not ly then return end
+    local h = ly.AbsoluteContentSize.Y + 10
+    subContainer.Size = UDim2.new(1, -12, 0, h)
+    activePg.Size     = UDim2.new(1, 0, 0, h)
+end
+
+for _, pg in ipairs(subPages) do
+    local ly = pg:FindFirstChildOfClass("UIListLayout")
+    if ly then
+        ly:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshContainerHeight)
+    end
+end
+
+-- Tab buttons + switching
+local tabBtns  = {}
+local activeTab = 1
+
+local function switchTab(idx)
+    if idx == activeTab then return end
+    activeTab = idx
+    for i, pg in ipairs(subPages) do
+        pg.Visible = (i == idx)
+    end
+    refreshContainerHeight()
+    for i, btn in ipairs(tabBtns) do
+        local active = (i == idx)
+        twPlay(btn, { BackgroundColor3 = active and C.accent or Color3.new(0,0,0) }, 0.15)
+        btn.BackgroundTransparency = active and 0 or 1
+        btn.TextColor3 = active and C.text or C.textDim
+    end
+end
+
+for i, name in ipairs(TAB_NAMES) do
+    local btn = Instance.new("TextButton", tabStrip)
+    btn.Size             = UDim2.new(1 / #TAB_NAMES, -3, 1, -6)
+    btn.Position         = UDim2.new(0, 0, 0, 3)
+    btn.BackgroundColor3 = i == 1 and C.accent or Color3.new(0, 0, 0)
+    btn.BackgroundTransparency = i == 1 and 0 or 1
+    btn.BorderSizePixel  = 0
+    btn.Font             = Enum.Font.GothamSemibold
+    btn.TextSize         = 11
+    btn.TextColor3       = i == 1 and C.text or C.textDim
+    btn.Text             = name
+    btn.AutoButtonColor  = false
+    btn.LayoutOrder      = i
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    btn.MouseButton1Click:Connect(function() switchTab(i) end)
+    tabBtns[i] = btn
+end
+
+-- ════════════════════════════════════════════════════════════════════════════════
+-- SUB-PAGE 1 — BASE DUPE
+-- ════════════════════════════════════════════════════════════════════════════════
+local P1 = subPages[1]
 
 makeLabel(P1, "Players")
 local _, getGiverName    = makePlayerDropdown("Giver",    P1)
@@ -792,19 +670,17 @@ local _, getWood       = makeToggle(P1, "Wood",           false)
 
 makeSep(P1)
 makeLabel(P1, "Progress")
-local progS,  setProgS,  resetProgS  = makeProgressBar(P1, "Structures")
-local progF,  setProgF,  resetProgF  = makeProgressBar(P1, "Furniture")
-local progT,  setProgT,  resetProgT  = makeProgressBar(P1, "Trucks + Cargo")
-local progG,  setProgG,  resetProgG  = makeProgressBar(P1, "Gifts / Items")
-local progW,  setProgW,  resetProgW  = makeProgressBar(P1, "Wood")
+local progS, setProgS, resetProgS = makeProgressBar(P1, "Structures")
+local progF, setProgF, resetProgF = makeProgressBar(P1, "Furniture")
+local progT, setProgT, resetProgT = makeProgressBar(P1, "Trucks + Cargo")
+local progG, setProgG, resetProgG = makeProgressBar(P1, "Gifts / Items")
+local progW, setProgW, resetProgW = makeProgressBar(P1, "Wood")
 
 makeSep(P1)
 local _, setStatusB = makeStatusBar(P1, "Ready")
-
 local startBtnB = makeBtn(P1, "▶  Start", nil)
 local stopBtnB  = makeBtn(P1, "■  Stop",  nil)
 
--- ── Logic ─────────────────────────────────────────────────────────────────────
 local butterRunning = false
 local butterThread  = nil
 
@@ -813,10 +689,10 @@ local function resetButter()
 end
 
 stopBtnB.MouseButton1Click:Connect(function()
-    butterRunning = false
+    butterRunning = false; VH.butter.running = false
     if butterThread then pcall(task.cancel, butterThread); butterThread = nil end
-    setStatusB("Stopped", false)
-    resetButter()
+    VH.butter.thread = nil
+    setStatusB("Stopped", false); resetButter()
 end)
 
 startBtnB.MouseButton1Click:Connect(function()
@@ -827,25 +703,25 @@ startBtnB.MouseButton1Click:Connect(function()
         setStatusB("⚠  Select both players!", false) return
     end
 
-    butterRunning = true
-    setStatusB("Finding bases…", true)
-    resetButter()
+    butterRunning = true; VH.butter.running = true
+    setStatusB("Finding bases…", true); resetButter()
 
     butterThread = task.spawn(function()
-        local Char = getChar()
+        VH.butter.thread = butterThread
+        local Char = LP.Character or LP.CharacterAdded:Wait()
         local giveOrigin, recvOrigin = findBases(giverName, receiverName)
 
         if not (giveOrigin and recvOrigin) then
             setStatusB("⚠  Couldn't find bases!", false)
-            butterRunning = false; butterThread = nil; return
+            butterRunning = false; VH.butter.running = false
+            butterThread = nil; VH.butter.thread = nil; return
         end
 
         local giveOriginCF = giveOrigin.CFrame
         local recvOriginCF = recvOrigin.CFrame
-
         local function running() return butterRunning end
 
-        -- ── STRUCTURES (incl. glass panels) ───────────────────────────────
+        -- STRUCTURES (includes glass panels via TreeClass = "Structure")
         if getStructures() and butterRunning then
             local total = countItems(giverName, function(p)
                 return isStructure(p) and (p:FindFirstChild("MainCFrame")
@@ -881,7 +757,7 @@ startBtnB.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── FURNITURE ─────────────────────────────────────────────────────
+        -- FURNITURE
         if getFurniture() and butterRunning then
             local total = countItems(giverName, function(p)
                 return p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture"
@@ -917,9 +793,8 @@ startBtnB.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── TRUCKS + CARGO ────────────────────────────────────────────────
-        -- Seats are visited one at a time, every 2 s.
-        -- Before moving on, missed cargo around the current seat is checked.
+        -- TRUCKS + CARGO
+        -- Visits each seat, waits 2 s, checks local missed cargo before moving on.
         if getTrucks() and butterRunning then
             local teleportedParts = {}
             local ignoredParts    = {}
@@ -944,7 +819,7 @@ startBtnB.MouseButton1Click:Connect(function()
                         truckDone += 1; setProgT(truckDone, truckCount); continue
                     end
 
-                    local DidTeleport = false
+                    local DidTeleport  = false
                     local localIgnored = {}
 
                     local function TeleportTruck()
@@ -967,7 +842,6 @@ startBtnB.MouseButton1Click:Connect(function()
                         if p:IsA("BasePart") then ignoredParts[p] = true end
                     end
 
-                    -- Scan cargo inside this truck's bounding box
                     for _, part in ipairs(workspace:GetDescendants()) do
                         if part:IsA("BasePart") and not ignoredParts[part] then
                             if part.Name == "Main" or part.Name == "WoodSection" then
@@ -979,36 +853,28 @@ startBtnB.MouseButton1Click:Connect(function()
                                         local PCF  = part.CFrame
                                         local nP   = PCF.Position - giveOrigin.Position + recvOrigin.Position
                                         local tOff = CFrame.new(nP) * PCF.Rotation
-                                        part.CFrame = tOff
-                                        task.wait(0.3)
-                                        table.insert(teleportedParts, {
-                                            Instance = part, TargetCFrame = tOff })
+                                        part.CFrame = tOff; task.wait(0.3)
+                                        table.insert(teleportedParts, { Instance = part, TargetCFrame = tOff })
                                     end
                                 end)
                             end
                         end
                     end
 
-                    -- Wait for task.spawns to record, then do a quick local missed-check
-                    task.wait(1)
-
+                    -- Wait 2 s for task.spawns, then check this seat's missed cargo
+                    task.wait(2)
                     local localMissed = {}
                     for _, data in ipairs(teleportedParts) do
                         if localIgnored[data.Instance] then continue end
                         if data.Instance and data.Instance.Parent then
-                            if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8 then
-                                local distFromGiver = (data.Instance.Position - giveOrigin.Position).Magnitude
-                                if distFromGiver < 500 then
-                                    table.insert(localMissed, data)
-                                end
+                            if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8
+                                and (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
+                                table.insert(localMissed, data)
                             end
                         end
                     end
-
-                    -- Retry any missed cargo before switching seats
                     if #localMissed > 0 then
-                        setStatusB(string.format("Checking seat %d cargo (%d missed)…",
-                            truckDone + 1, #localMissed), true)
+                        setStatusB(string.format("Seat %d: fixing %d missed…", truckDone+1, #localMissed), true)
                         for _, data in ipairs(localMissed) do
                             if not butterRunning then break end
                             local item = data.Instance
@@ -1018,14 +884,11 @@ startBtnB.MouseButton1Click:Connect(function()
                                 Char.HumanoidRootPart.CFrame = item.CFrame; task.wait(0.1); tries += 1
                             end
                             RS.Interaction.ClientIsDragging:FireServer(item.Parent)
-                            task.wait(0.5)
-                            item.CFrame = data.TargetCFrame
-                            task.wait(0.25)
+                            task.wait(0.5); item.CFrame = data.TargetCFrame; task.wait(0.25)
                         end
                     end
 
-                    -- Eject and close door
-                    local SitPart = Char.Humanoid.SeatPart
+                    local SitPart   = Char.Humanoid.SeatPart
                     local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
                         and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                         and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
@@ -1035,28 +898,23 @@ startBtnB.MouseButton1Click:Connect(function()
                     if DoorHinge then
                         for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end
                     end
-
                     truckDone += 1; setProgT(truckDone, truckCount)
-                    -- 2-second gap between seats (as requested)
-                    task.wait(2)
                 end
 
-                -- Global missed-cargo retry after all trucks processed
+                -- Global missed-cargo retry pass
                 task.wait(1)
                 local function getMissed()
                     local missed = {}
                     for _, data in ipairs(teleportedParts) do
                         if data.Instance and data.Instance.Parent then
-                            if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8 then
-                                if (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
-                                    table.insert(missed, data)
-                                end
+                            if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8
+                                and (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
+                                table.insert(missed, data)
                             end
                         end
                     end
                     return missed
                 end
-
                 local missedList = getMissed()
                 if #missedList > 0 then
                     progT.Visible = true; setProgT(0, #missedList)
@@ -1090,7 +948,7 @@ startBtnB.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── GIFTS / ITEMS ─────────────────────────────────────────────────
+        -- GIFTS / ITEMS  (fast + auto-retry)
         if getGifts() and butterRunning then
             local total = countItems(giverName, function(p)
                 return p:FindFirstChildOfClass("Script") and p:FindFirstChild("DraggableItem")
@@ -1098,7 +956,7 @@ startBtnB.MouseButton1Click:Connect(function()
             end)
             if total > 0 then
                 progG.Visible = true; setProgG(0, total)
-                setStatusB("Sending gifts / items…", true)
+                setStatusB("Sending gifts…", true)
                 local done = 0; local retried = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1111,8 +969,7 @@ startBtnB.MouseButton1Click:Connect(function()
                                 local PCF    = (p:FindFirstChild("Main") and p.Main.CFrame)
                                              or p:FindFirstChildOfClass("Part").CFrame
                                 local nPos   = PCF.Position - giveOrigin.Position + recvOrigin.Position
-                                local Offset = CFrame.new(nPos) * PCF.Rotation
-                                local ok     = sendItem(Char, function() return butterRunning end, part, Offset)
+                                local ok     = sendItem(Char, running, part, CFrame.new(nPos) * PCF.Rotation)
                                 if not ok then retried += 1 end
                                 done += 1; setProgG(done, total)
                             end
@@ -1121,14 +978,12 @@ startBtnB.MouseButton1Click:Connect(function()
                 end)
                 setProgG(total, total)
                 if retried > 0 then
-                    setStatusB(string.format("Gifts done (%d needed retries)", retried), true)
-                    task.wait(1.5)
+                    setStatusB(string.format("Gifts done (%d retried)", retried), true); task.wait(1.5)
                 end
             end
         end
 
-        -- ── WOOD ──────────────────────────────────────────────────────────
-        -- Exclude glass panels: they use TreeClass = "Structure".
+        -- WOOD  (fast + auto-retry, excludes glass panels)
         if getWood() and butterRunning then
             local total = countItems(giverName, function(p)
                 return p:FindFirstChild("TreeClass")
@@ -1151,8 +1006,7 @@ startBtnB.MouseButton1Click:Connect(function()
                                 local PCF    = (p:FindFirstChild("Main") and p.Main.CFrame)
                                              or p:FindFirstChildOfClass("Part").CFrame
                                 local nPos   = PCF.Position - giveOrigin.Position + recvOrigin.Position
-                                local Offset = CFrame.new(nPos) * PCF.Rotation
-                                local ok     = sendItem(Char, function() return butterRunning end, part, Offset)
+                                local ok     = sendItem(Char, running, part, CFrame.new(nPos) * PCF.Rotation)
                                 if not ok then retried += 1 end
                                 done += 1; setProgW(done, total)
                             end
@@ -1161,21 +1015,27 @@ startBtnB.MouseButton1Click:Connect(function()
                 end)
                 setProgW(total, total)
                 if retried > 0 then
-                    setStatusB(string.format("Wood done (%d needed retries)", retried), true)
-                    task.wait(1.5)
+                    setStatusB(string.format("Wood done (%d retried)", retried), true); task.wait(1.5)
                 end
             end
         end
 
         if butterRunning then setStatusB("✓ Done!", false) end
-        butterRunning = false; butterThread = nil
+        butterRunning = false; VH.butter.running = false
+        butterThread  = nil;   VH.butter.thread  = nil
     end)
 end)
 
+table.insert(VH.cleanupTasks, function()
+    butterRunning = false; VH.butter.running = false
+    if butterThread then pcall(task.cancel, butterThread); butterThread = nil end
+    VH.butter.thread = nil
+end)
+
 -- ════════════════════════════════════════════════════════════════════════════════
--- PAGE 2 — SINGLE TRUCK TELEPORT
+-- SUB-PAGE 2 — SINGLE TRUCK TELEPORT
 -- ════════════════════════════════════════════════════════════════════════════════
-local P2 = tabPages[2]
+local P2 = subPages[2]
 
 makeLabel(P2, "Players")
 local _, getSGiver    = makePlayerDropdown("Giver",    P2)
@@ -1185,6 +1045,7 @@ makeSep(P2)
 makeLabel(P2, "Progress")
 local sProgBar, setSProg, resetSProg = makeProgressBar(P2, "Truck + Cargo")
 
+makeSep(P2)
 local _, setStatusS = makeStatusBar(P2, "Ready — sit in a truck first")
 
 local singleRunning = false
@@ -1196,8 +1057,7 @@ sStopBtn.Visible = false
 sStopBtn.MouseButton1Click:Connect(function()
     singleRunning = false
     if singleThread then pcall(task.cancel, singleThread); singleThread = nil end
-    setStatusS("Stopped", false); resetSProg()
-    sStopBtn.Visible = false
+    setStatusS("Stopped", false); resetSProg(); sStopBtn.Visible = false
 end)
 
 makeBtn(P2, "▶  Start", nil, function()
@@ -1214,8 +1074,8 @@ makeBtn(P2, "▶  Start", nil, function()
     if gName == "" or rName == "" then setStatusS("Select both players!", false) return end
 
     local giveOrigin, recvOrigin = findBases(gName, rName)
-    if not giveOrigin     then setStatusS("Giver base not found!",    false) return end
-    if not recvOrigin     then setStatusS("Receiver base not found!", false) return end
+    if not giveOrigin then setStatusS("Giver base not found!",    false) return end
+    if not recvOrigin then setStatusS("Receiver base not found!", false) return end
 
     singleRunning = true; sStopBtn.Visible = true
     resetSProg(); setStatusS("Sending truck…", true)
@@ -1260,24 +1120,23 @@ makeBtn(P2, "▶  Start", nil, function()
             end
         end
 
-        local SitPart = Char.Humanoid.SeatPart
+        local SitPart   = Char.Humanoid.SeatPart
         local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
             and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
             and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-        task.wait(); Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping); task.wait(0.1)
-        SitPart:Destroy(); TeleportTruck(); DidTeleport = false; task.wait(0.1)
+        task.wait()
+        Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        task.wait(0.1); SitPart:Destroy(); TeleportTruck(); DidTeleport = false; task.wait(0.1)
         if DoorHinge then for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
-        setSProg(1, 1)
-        task.wait(2)
+        setSProg(1, 1); task.wait(2)
 
         local function getMissed()
             local missed = {}
             for _, data in ipairs(teleportedParts) do
                 if data.Instance and data.Instance.Parent then
-                    if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8 then
-                        if (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
-                            table.insert(missed, data)
-                        end
+                    if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8
+                        and (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
+                        table.insert(missed, data)
                     end
                 end
             end
@@ -1319,10 +1178,15 @@ makeBtn(P2, "▶  Start", nil, function()
     end)
 end)
 
+table.insert(VH.cleanupTasks, function()
+    singleRunning = false
+    if singleThread then pcall(task.cancel, singleThread); singleThread = nil end
+end)
+
 -- ════════════════════════════════════════════════════════════════════════════════
--- PAGE 3 — BATCH TRUCK TELEPORT
+-- SUB-PAGE 3 — BATCH TRUCK TELEPORT
 -- ════════════════════════════════════════════════════════════════════════════════
-local P3 = tabPages[3]
+local P3 = subPages[3]
 
 makeLabel(P3, "Players")
 local _, getBGiver    = makePlayerDropdown("Giver",    P3)
@@ -1330,9 +1194,9 @@ local _, getBReceiver = makePlayerDropdown("Receiver", P3)
 
 makeSep(P3)
 
--- Count input row
+-- Count input
 local countRow = Instance.new("Frame", P3)
-countRow.Size  = UDim2.new(1, 0, 0, 36)
+countRow.Size             = UDim2.new(1, -12, 0, 36)
 countRow.BackgroundColor3 = C.bg2
 countRow.BorderSizePixel  = 0
 Instance.new("UICorner", countRow).CornerRadius = UDim.new(0, 7)
@@ -1340,28 +1204,28 @@ local crs = Instance.new("UIStroke", countRow)
 crs.Color = C.border; crs.Thickness = 1; crs.Transparency = 0.3
 
 local countLbl = Instance.new("TextLabel", countRow)
-countLbl.Size  = UDim2.new(1, -80, 1, 0)
-countLbl.Position = UDim2.new(0, 12, 0, 0)
+countLbl.Size               = UDim2.new(1, -80, 1, 0)
+countLbl.Position           = UDim2.new(0, 12, 0, 0)
 countLbl.BackgroundTransparency = 1
-countLbl.Font  = Enum.Font.GothamSemibold
-countLbl.TextSize = 13
-countLbl.TextColor3 = C.text
-countLbl.TextXAlignment = Enum.TextXAlignment.Left
-countLbl.Text  = "Trucks to Teleport"
+countLbl.Font               = Enum.Font.GothamSemibold
+countLbl.TextSize           = 13
+countLbl.TextColor3         = C.text
+countLbl.TextXAlignment     = Enum.TextXAlignment.Left
+countLbl.Text               = "Trucks to Teleport"
 
 local countBox = Instance.new("TextBox", countRow)
-countBox.Size  = UDim2.new(0, 60, 0, 24)
-countBox.Position = UDim2.new(1, -68, 0.5, -12)
-countBox.BackgroundColor3 = C.bg3
-countBox.BorderSizePixel  = 0
-countBox.Font  = Enum.Font.GothamBold
-countBox.TextSize = 13
-countBox.TextColor3 = C.text
-countBox.PlaceholderText = "e.g. 3"
-countBox.PlaceholderColor3 = C.textDim
-countBox.Text  = ""
-countBox.TextXAlignment = Enum.TextXAlignment.Center
-countBox.ClearTextOnFocus = false
+countBox.Size               = UDim2.new(0, 60, 0, 24)
+countBox.Position           = UDim2.new(1, -68, 0.5, -12)
+countBox.BackgroundColor3   = C.bg3
+countBox.BorderSizePixel    = 0
+countBox.Font               = Enum.Font.GothamBold
+countBox.TextSize           = 13
+countBox.TextColor3         = C.text
+countBox.PlaceholderText    = "e.g. 3"
+countBox.PlaceholderColor3  = C.textDim
+countBox.Text               = ""
+countBox.TextXAlignment     = Enum.TextXAlignment.Center
+countBox.ClearTextOnFocus   = false
 Instance.new("UICorner", countBox).CornerRadius = UDim.new(0, 6)
 local cbs = Instance.new("UIStroke", countBox)
 cbs.Color = C.border; cbs.Thickness = 1; cbs.Transparency = 0.3
@@ -1376,6 +1240,7 @@ makeLabel(P3, "Progress")
 local bTruckProg, setBTruckProg, resetBTruckProg = makeProgressBar(P3, "Trucks")
 local bCargoProg, setBCargoProg, resetBCargoProg = makeProgressBar(P3, "Missed Cargo")
 
+makeSep(P3)
 local _, setStatusBatch = makeStatusBar(P3, "Ready — enter a truck count")
 
 local batchRunning = false
@@ -1388,8 +1253,7 @@ bStopBtn.MouseButton1Click:Connect(function()
     batchRunning = false
     if batchThread then pcall(task.cancel, batchThread); batchThread = nil end
     setStatusBatch("Stopped", false)
-    resetBTruckProg(); resetBCargoProg()
-    bStopBtn.Visible = false
+    resetBTruckProg(); resetBCargoProg(); bStopBtn.Visible = false
 end)
 
 makeBtn(P3, "▶  Start Batch", nil, function()
@@ -1431,7 +1295,7 @@ makeBtn(P3, "▶  Start Batch", nil, function()
     setStatusBatch(string.format("Starting — %d truck(s) queued…", #availableTrucks), true)
 
     batchThread = task.spawn(function()
-        local Char = getChar()
+        local Char = LP.Character or LP.CharacterAdded:Wait()
         local allTeleportedParts = {}
 
         bTruckProg.Visible = true; setBTruckProg(0, #availableTrucks)
@@ -1443,9 +1307,9 @@ makeBtn(P3, "▶  Start Batch", nil, function()
                 trucksDone += 1; setBTruckProg(trucksDone, #availableTrucks); continue
             end
 
-            setStatusBatch(string.format("Truck %d / %d…", trucksDone + 1, #availableTrucks), true)
+            setStatusBatch(string.format("Truck %d / %d…", trucksDone+1, #availableTrucks), true)
 
-            local ignoredParts = {}; local DidTeleport = false
+            local ignoredParts = {}; local localIgnored = {}; local DidTeleport = false
 
             local function TeleportThisTruck()
                 if DidTeleport then return end
@@ -1460,8 +1324,12 @@ makeBtn(P3, "▶  Start Batch", nil, function()
             repeat task.wait() truckModel.DriveSeat:Sit(Char.Humanoid) until Char.Humanoid.SeatPart
 
             local mCF, mSz = truckModel:GetBoundingBox()
-            for _, p in ipairs(truckModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
-            for _, p in ipairs(Char:GetDescendants())       do if p:IsA("BasePart") then ignoredParts[p] = true end end
+            for _, p in ipairs(truckModel:GetDescendants()) do
+                if p:IsA("BasePart") then ignoredParts[p] = true; localIgnored[p] = true end
+            end
+            for _, p in ipairs(Char:GetDescendants()) do
+                if p:IsA("BasePart") then ignoredParts[p] = true end
+            end
 
             for _, part in ipairs(workspace:GetDescendants()) do
                 if not batchRunning then break end
@@ -1483,22 +1351,20 @@ makeBtn(P3, "▶  Start Batch", nil, function()
                 end
             end
 
-            -- Wait, then do local missed-cargo check before moving on
-            task.wait(1)
+            -- 2 s gap then local missed-cargo check before moving to next seat
+            task.wait(2)
             local localMissed = {}
             for _, data in ipairs(allTeleportedParts) do
-                if ignoredParts[data.Instance] then continue end
+                if localIgnored[data.Instance] then continue end
                 if data.Instance and data.Instance.Parent then
-                    if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8 then
-                        if (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
-                            table.insert(localMissed, data)
-                        end
+                    if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8
+                        and (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
+                        table.insert(localMissed, data)
                     end
                 end
             end
             if #localMissed > 0 then
-                setStatusBatch(string.format("Seat %d: checking %d missed…",
-                    trucksDone + 1, #localMissed), true)
+                setStatusBatch(string.format("Seat %d: fixing %d missed…", trucksDone+1, #localMissed), true)
                 for _, data in ipairs(localMissed) do
                     if not batchRunning then break end
                     local item = data.Instance
@@ -1512,16 +1378,16 @@ makeBtn(P3, "▶  Start Batch", nil, function()
                 end
             end
 
-            local SitPart = Char.Humanoid.SeatPart
+            local SitPart   = Char.Humanoid.SeatPart
             local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
                 and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                 and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-            task.wait(); Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping); task.wait(0.1)
-            SitPart:Destroy(); TeleportThisTruck(); DidTeleport = false; task.wait(0.1)
+            task.wait()
+            Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            task.wait(0.1); SitPart:Destroy(); TeleportThisTruck(); DidTeleport = false; task.wait(0.1)
             if DoorHinge then for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
 
             trucksDone += 1; setBTruckProg(trucksDone, #availableTrucks)
-            task.wait(2)   -- 2-second gap between trucks
         end
 
         -- Global missed-cargo pass
@@ -1530,10 +1396,9 @@ makeBtn(P3, "▶  Start Batch", nil, function()
             local missed = {}
             for _, data in ipairs(allTeleportedParts) do
                 if data.Instance and data.Instance.Parent then
-                    if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8 then
-                        if (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
-                            table.insert(missed, data)
-                        end
+                    if (data.Instance.Position - data.TargetCFrame.Position).Magnitude > 8
+                        and (data.Instance.Position - giveOrigin.Position).Magnitude < 500 then
+                        table.insert(missed, data)
                     end
                 end
             end
@@ -1575,16 +1440,12 @@ makeBtn(P3, "▶  Start Batch", nil, function()
     end)
 end)
 
--- ════════════════════════════════════════════════════════════════════════════════
--- ENTRY ANIMATION
--- ════════════════════════════════════════════════════════════════════════════════
-Main.Size     = UDim2.new(0, 360, 0, 0)
-Main.Position = UDim2.new(0.5, -180, 0.5, 0)
-Main.BackgroundTransparency = 1
-twPlay(Main, {
-    Size     = UDim2.new(0, 360, 0, 640),
-    Position = UDim2.new(0.5, -180, 0.5, -320),
-    BackgroundTransparency = 0,
-}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+table.insert(VH.cleanupTasks, function()
+    batchRunning = false
+    if batchThread then pcall(task.cancel, batchThread); batchThread = nil end
+end)
 
-print("[VanillaDupe] v3 loaded.")
+-- Initial height sync
+task.defer(refreshContainerHeight)
+
+print("[VanillaHub] Vanilla2 loaded — Dupe tab with internal sub-tabs.")
