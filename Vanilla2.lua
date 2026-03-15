@@ -915,16 +915,35 @@ startBtnB.MouseButton1Click:Connect(function()
                         end
                     end
 
-                    local SitPart   = Char.Humanoid.SeatPart
+                    local SitPart = Char.Humanoid.SeatPart
                     if not SitPart then
                         truckDone += 1; setProgT(truckDone, truckCount); continue
                     end
+
                     local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
                         and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                         and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-                    task.wait()
+
+                    -- Save truck body CFrame NOW while we are still seated.
+                    -- TeleportTruck() can't run after eject because SeatPart becomes nil.
+                    local truckMain = SitPart.Parent:FindFirstChild("Main")
+                    local savedTCF  = truckMain and truckMain.CFrame or nil
+
+                    -- Eject the character first so humanoid state is clean
                     Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    task.wait(0.1); SitPart:Destroy(); TeleportTruck(); task.wait(0.1)
+                    task.wait(0.1)
+
+                    -- Teleport the truck body using the saved CFrame
+                    if not DidTeleport and savedTCF and SitPart.Parent and SitPart.Parent.Parent then
+                        local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
+                        SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
+                        DidTeleport = true
+                    end
+
+                    -- Destroy the seat AFTER the truck has moved
+                    pcall(function() SitPart:Destroy() end)
+                    task.wait(0.1)
+
                     if DoorHinge then
                         for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end
                     end
@@ -1152,13 +1171,29 @@ makeBtn(P2, "▶  Start", nil, function()
             end
         end
 
-        local SitPart   = Char.Humanoid.SeatPart
-        local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
+        local SitPart = Char.Humanoid.SeatPart
+        local DoorHinge = SitPart and SitPart.Parent:FindFirstChild("PaintParts")
             and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
             and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-        task.wait()
+
+        -- Save truck CFrame while still seated
+        local truckMain = SitPart and SitPart.Parent:FindFirstChild("Main")
+        local savedTCF  = truckMain and truckMain.CFrame or nil
+
+        -- Eject first
         Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        task.wait(0.1); SitPart:Destroy(); TeleportTruck(); DidTeleport = false; task.wait(0.1)
+        task.wait(0.1)
+
+        -- Teleport truck using saved CFrame
+        if not DidTeleport and savedTCF and SitPart and SitPart.Parent and SitPart.Parent.Parent then
+            local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
+            SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
+            DidTeleport = true
+        end
+
+        -- Destroy seat AFTER truck moved
+        if SitPart then pcall(function() SitPart:Destroy() end) end
+        task.wait(0.1)
         if DoorHinge then for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
         setSProg(1, 1); task.wait(2)
 
@@ -1433,12 +1468,30 @@ makeBtn(P3, "▶  Start Batch", nil, function()
             if not SitPart then
                 trucksDone += 1; setBTruckProg(trucksDone, #availableTrucks); continue
             end
+
             local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
                 and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                 and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-            task.wait()
+
+            -- Save truck body CFrame NOW while still seated.
+            local truckMain = SitPart.Parent:FindFirstChild("Main")
+            local savedTCF  = truckMain and truckMain.CFrame or nil
+
+            -- Eject first
             Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            task.wait(0.1); SitPart:Destroy(); TeleportThisTruck(); task.wait(0.1)
+            task.wait(0.1)
+
+            -- Teleport truck body using the saved CFrame
+            if not DidTeleport and savedTCF and SitPart.Parent and SitPart.Parent.Parent then
+                local nPos = savedTCF.Position - giveOrigin.Position + recvOrigin.Position
+                SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * savedTCF.Rotation)
+                DidTeleport = true
+            end
+
+            -- Destroy seat AFTER the truck has moved
+            pcall(function() SitPart:Destroy() end)
+            task.wait(0.1)
+
             if DoorHinge then for _ = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
 
             trucksDone += 1; setBTruckProg(trucksDone, #availableTrucks)
