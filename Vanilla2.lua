@@ -501,11 +501,14 @@ for i = 1, #TAB_NAMES do
     page.ScrollBarThickness     = 3
     page.ScrollBarImageColor3   = Color3.fromRGB(80, 80, 120)
     page.CanvasSize             = UDim2.new(0, 0, 0, 0)
-    page.AutomaticCanvasSize    = Enum.AutomaticSize.Y
+    page.AutomaticCanvasSize    = Enum.AutomaticSize.None
     page.Visible                = (i == 1)
     local layout = Instance.new("UIListLayout", page)
     layout.SortOrder  = Enum.SortOrder.LayoutOrder
     layout.Padding    = UDim.new(0, 6)
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 14)
+    end)
     local pad = Instance.new("UIPadding", page)
     pad.PaddingTop    = UDim.new(0, 6)
     pad.PaddingBottom = UDim.new(0, 8)
@@ -568,7 +571,7 @@ local batchPage  = tabPages[3]
 -- TAB 1 — BASE DUPE (Butter Leak)
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local _, baseSetStatus = makeStatusBar(basePage, "Ready")
+local _, baseSetStatus = makeStatusBar(basePage, "")
 
 makeLabel(basePage, "Players")
 local _, getGiverName    = makeDupeDropdown("Giver",    basePage)
@@ -1074,7 +1077,7 @@ makeLabel(singlePage, "Players")
 local _, getTruckGiverName    = makeDupeDropdown("Giver",    singlePage)
 local _, getTruckReceiverName = makeDupeDropdown("Receiver", singlePage)
 
-local _, setTruckStatus = makeStatusBar(singlePage, "Ready — sit in a truck first")
+local _, setTruckStatus = makeStatusBar(singlePage, "")
 
 local truckProgBar, setTruckProg, resetTruckProg = makeProgressBar(singlePage, "Truck + Cargo")
 
@@ -1343,7 +1346,7 @@ batchCountBox:GetPropertyChangedSignal("Text"):Connect(function()
     if clean ~= batchCountBox.Text then batchCountBox.Text = clean end
 end)
 
-local _, setBatchStatus = makeStatusBar(batchPage, "Ready — enter a truck count")
+local _, setBatchStatus = makeStatusBar(batchPage, "")
 
 local batchTruckProgBar, setBatchTruckProg, resetBatchTruckProg = makeProgressBar(batchPage, "Trucks")
 local batchCargoProgBar, setBatchCargoProg, resetBatchCargoProg = makeProgressBar(batchPage, "Missed Cargo")
