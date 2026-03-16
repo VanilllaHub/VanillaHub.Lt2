@@ -176,11 +176,12 @@ local function makeProgressBar(parent, labelText)
     return wrap, setProgress, reset
 end
 
-local function makeStatusBar(parent, defaultText)
+local function makeStatusBar(parent)
     local bar = Instance.new("Frame", parent)
     bar.Size             = UDim2.new(1, -12, 0, 28)
     bar.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
     bar.BorderSizePixel  = 0
+    bar.Visible          = false
     Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 6)
     Instance.new("UIStroke", bar).Color = Color3.fromRGB(50, 50, 70)
     local dot = Instance.new("Frame", bar)
@@ -197,8 +198,9 @@ local function makeStatusBar(parent, defaultText)
     lbl.TextSize             = 12
     lbl.TextColor3           = Color3.fromRGB(160, 155, 175)
     lbl.TextXAlignment       = Enum.TextXAlignment.Left
-    lbl.Text                 = defaultText or "Ready"
+    lbl.Text                 = ""
     local function setStatus(msg, active)
+        bar.Visible = true
         lbl.Text = msg
         TweenService:Create(dot, TweenInfo.new(0.2), {
             BackgroundColor3 = active and Color3.fromRGB(80, 200, 100) or Color3.fromRGB(100, 100, 120)
@@ -491,11 +493,22 @@ local tabBtns    = {}
 local tabPages   = {}
 local activeTab  = 1
 
--- Tab page containers (scrolling, full width inside dupePage)
+-- Single content frame added to dupePage — fills all remaining height.
+-- Sub-pages live INSIDE this frame, not in dupePage, so dupePage's
+-- UIListLayout only sees two children: tabBarFrame + contentFrame.
+-- dupePage canvas = TAB_BAR_H + contentFrame height = just what's visible.
+local CONTENT_H = 9999 -- tall enough; sub-pages clip to their own scroll
+local contentFrame = Instance.new("Frame", dupePage)
+contentFrame.Size             = UDim2.new(1, 0, 0, CONTENT_H)
+contentFrame.BackgroundTransparency = 1
+contentFrame.BorderSizePixel  = 0
+contentFrame.ClipsDescendants = true
+
+-- Tab page containers — children of contentFrame, NOT dupePage
 for i = 1, #TAB_NAMES do
-    local page = Instance.new("ScrollingFrame", dupePage)
-    page.Size                   = UDim2.new(1, 0, 1, -(TAB_BAR_H + 10))
-    page.Position               = UDim2.new(0, 0, 0, TAB_BAR_H + 8)
+    local page = Instance.new("ScrollingFrame", contentFrame)
+    page.Size                   = UDim2.new(1, 0, 1, 0)
+    page.Position               = UDim2.new(0, 0, 0, 0)
     page.BackgroundTransparency = 1
     page.BorderSizePixel        = 0
     page.ScrollBarThickness     = 3
@@ -507,7 +520,12 @@ for i = 1, #TAB_NAMES do
     layout.SortOrder  = Enum.SortOrder.LayoutOrder
     layout.Padding    = UDim.new(0, 6)
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        -- Canvas = exact content height + top/bottom padding; never over-scrolls
         page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 14)
+        -- Also shrink contentFrame so dupePage canvas stays tight
+        if i == activeTab then
+            contentFrame.Size = UDim2.new(1, 0, 0, layout.AbsoluteContentSize.Y + 14)
+        end
     end)
     local pad = Instance.new("UIPadding", page)
     pad.PaddingTop    = UDim.new(0, 6)
@@ -535,19 +553,22 @@ for i, name in ipairs(TAB_NAMES) do
 
     btn.MouseButton1Click:Connect(function()
         if activeTab == i then return end
-        -- Deactivate old
         TweenService:Create(tabBtns[activeTab], TweenInfo.new(0.15), {
             BackgroundColor3 = Color3.fromRGB(22, 22, 30),
             TextColor3       = Color3.fromRGB(110, 110, 140),
         }):Play()
         tabPages[activeTab].Visible = false
-        -- Activate new
         activeTab = i
         TweenService:Create(btn, TweenInfo.new(0.15), {
             BackgroundColor3 = Color3.fromRGB(38, 38, 55),
             TextColor3       = THEME_TEXT,
         }):Play()
         tabPages[i].Visible = true
+        -- Resize contentFrame to match the newly active tab's content
+        local newH = tabPages[i].CanvasSize.Y.Offset
+        if newH > 0 then
+            contentFrame.Size = UDim2.new(1, 0, 0, newH)
+        end
     end)
 
     btn.MouseEnter:Connect(function()
@@ -571,7 +592,7 @@ local batchPage  = tabPages[3]
 -- TAB 1 — BASE DUPE (Butter Leak)
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local _, baseSetStatus = makeStatusBar(basePage, "")
+local _, baseSetStatus = makeStatusBar(basePage)
 
 makeLabel(basePage, "Players")
 local _, getGiverName    = makeDupeDropdown("Giver",    basePage)
@@ -1077,7 +1098,7 @@ makeLabel(singlePage, "Players")
 local _, getTruckGiverName    = makeDupeDropdown("Giver",    singlePage)
 local _, getTruckReceiverName = makeDupeDropdown("Receiver", singlePage)
 
-local _, setTruckStatus = makeStatusBar(singlePage, "")
+local _, setTruckStatus = makeStatusBar(singlePage)
 
 local truckProgBar, setTruckProg, resetTruckProg = makeProgressBar(singlePage, "Truck + Cargo")
 
@@ -1346,7 +1367,7 @@ batchCountBox:GetPropertyChangedSignal("Text"):Connect(function()
     if clean ~= batchCountBox.Text then batchCountBox.Text = clean end
 end)
 
-local _, setBatchStatus = makeStatusBar(batchPage, "")
+local _, setBatchStatus = makeStatusBar(batchPage)
 
 local batchTruckProgBar, setBatchTruckProg, resetBatchTruckProg = makeProgressBar(batchPage, "Trucks")
 local batchCargoProgBar, setBatchCargoProg, resetBatchCargoProg = makeProgressBar(batchPage, "Missed Cargo")
