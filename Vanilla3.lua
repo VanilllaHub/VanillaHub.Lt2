@@ -44,7 +44,7 @@ local function getIsFlyEnabled()       return _G.VH and _G.VH.isFlyEnabled end
 local C = {
     -- backgrounds (black inner panels)
     BG         = Color3.fromRGB(10,  10,  10 ),
-    CARD       = Color3.fromRGB(20,  20,  20 ),
+    CARD       = Color3.fromRGB(10,  10,  10),   -- black panel
     ROW        = Color3.fromRGB(30,  30,  30 ),
 
     -- borders / separators (grey)
@@ -62,8 +62,8 @@ local C = {
     GLOW       = Color3.fromRGB(80,  80,  80 ),
 
     -- buttons (grey)
-    BTN        = Color3.fromRGB(70,  70,  70 ),
-    BTN_HV     = Color3.fromRGB(100, 100, 100),
+    BTN        = Color3.fromRGB(14,  14,  14),   -- black button bg
+    BTN_HV     = Color3.fromRGB(32,  32,  32),   -- dark grey hover
 }
 
 -- ════════════════════════════════════════════════════
@@ -405,6 +405,10 @@ local function updateSearchResults(query)
                 resBtn.AutoButtonColor  = false
                 Instance.new("UIPadding", resBtn).PaddingLeft = UDim.new(0, 16)
                 corner(resBtn, 10)
+    local btnStroke = Instance.new("UIStroke", resBtn)
+    btnStroke.Color        = Color3.fromRGB(55, 55, 55)
+    btnStroke.Thickness    = 1
+    btnStroke.Transparency = 0
                 local rStroke = Instance.new("UIStroke", resBtn)
                 rStroke.Color = C.BORDER; rStroke.Thickness = 1; rStroke.Transparency = 0.5
                 resBtn.MouseEnter:Connect(function()
@@ -434,6 +438,10 @@ local function updateSearchResults(query)
                 resBtn.AutoButtonColor  = false
                 Instance.new("UIPadding", resBtn).PaddingLeft = UDim.new(0, 16)
                 corner(resBtn, 10)
+    local btnStroke = Instance.new("UIStroke", resBtn)
+    btnStroke.Color        = Color3.fromRGB(55, 55, 55)
+    btnStroke.Thickness    = 1
+    btnStroke.Transparency = 0
                 local rStroke2 = Instance.new("UIStroke", resBtn)
                 rStroke2.Color = C.BORDER; rStroke2.Thickness = 1; rStroke2.Transparency = 0.5
                 local subLbl = Instance.new("TextLabel", resBtn)
