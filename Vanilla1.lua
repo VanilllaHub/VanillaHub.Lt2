@@ -95,16 +95,16 @@ local mouse             = player:GetMouse()
 -- THEME  (Black / Grey / White only)
 -- ════════════════════════════════════════════════════
 local THEME_TEXT   = Color3.fromRGB(220, 220, 220)           -- near-white text
-local BTN_COLOR    = Color3.fromRGB(70, 70, 70)              -- grey buttons
-local BTN_HOVER    = Color3.fromRGB(100, 100, 100)           -- lighter grey hover
+local BTN_COLOR    = Color3.fromRGB(14, 14, 14)              -- black buttons
+local BTN_HOVER    = Color3.fromRGB(32,  32,  32)            -- dark grey hover
 local ACCENT       = Color3.fromRGB(160, 160, 160)           -- mid grey accent
-local BG_DARK      = Color3.fromRGB(10, 10, 10)              -- black inner panels
-local BG_SIDE      = Color3.fromRGB(18, 18, 18)              -- near-black sidebar
-local BG_TOP       = Color3.fromRGB(15, 15, 15)              -- near-black topbar
+local BG_DARK      = Color3.fromRGB(6,  6,  6 )              -- black inner panels
+local BG_SIDE      = Color3.fromRGB(10, 10, 10)              -- black sidebar
+local BG_TOP       = Color3.fromRGB(8,  8,  8 )              -- black topbar
 local BORDER_COLOR = Color3.fromRGB(60, 60, 60)              -- grey border
 local SEP_COLOR    = Color3.fromRGB(50, 50, 50)              -- grey separator
 local SECTION_TEXT = Color3.fromRGB(130, 130, 130)           -- mid-grey section labels
-local OUTER_BG     = Color3.fromRGB(55, 55, 55)              -- grey outer background
+local OUTER_BG     = Color3.fromRGB(8,   8,   8 )            -- black outer background
 
 -- Switch colours
 local SW_OFF = Color3.fromRGB(55, 55, 55)                    -- dark grey OFF
@@ -390,15 +390,15 @@ local function switchTab(targetName)
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(28, 28, 28),
-            TextColor3 = Color3.fromRGB(120, 120, 120)
+            BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+            TextColor3 = Color3.fromRGB(110, 110, 110)
         }):Play()
     end
     local btn = side:FindFirstChild(targetName:gsub("Tab",""))
     if btn then
         activeTabButton = btn
         TweenService:Create(btn, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(65, 65, 65),  -- grey active tab
+            BackgroundColor3 = Color3.fromRGB(38, 38, 38),  -- dark active tab
             TextColor3 = THEME_TEXT
         }):Play()
     end
@@ -408,7 +408,7 @@ for _, name in ipairs(tabs) do
     local btn = Instance.new("TextButton", side)
     btn.Name = name
     btn.Size = UDim2.new(1, 0, 0, 34)
-    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 28)       -- dark inactive tab
+    btn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)       -- dark inactive tab
     btn.BorderSizePixel = 0
     btn.Text = name
     btn.Font = Enum.Font.GothamSemibold
@@ -416,6 +416,10 @@ for _, name in ipairs(tabs) do
     btn.TextColor3 = Color3.fromRGB(120, 120, 120)
     btn.TextXAlignment = Enum.TextXAlignment.Left
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     local btnPad = Instance.new("UIPadding", btn)
     btnPad.PaddingLeft = UDim.new(0, 12)
     btn.MouseEnter:Connect(function()
@@ -429,8 +433,8 @@ for _, name in ipairs(tabs) do
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= btn then
             TweenService:Create(btn, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(28, 28, 28),
-                TextColor3 = Color3.fromRGB(120, 120, 120)
+                BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+                TextColor3 = Color3.fromRGB(110, 110, 110)
             }):Play()
         end
     end)
@@ -862,6 +866,10 @@ for i, loc in ipairs(locations) do
     btn.TextColor3 = THEME_TEXT; btn.Text = loc.name
     btn.TextTruncate = Enum.TextTruncate.AtEnd
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER,TextColor3=Color3.fromRGB(255,255,255)}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR,TextColor3=THEME_TEXT}):Play() end)
     btn.MouseButton1Click:Connect(function()
@@ -913,6 +921,10 @@ local function iButton(text, cb)
     btn.Text = text; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
     if cb then btn.MouseButton1Click:Connect(cb) end
@@ -1221,6 +1233,10 @@ tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold 
 tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"
 tpSetBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
+local btnStr_tpSetBtn = Instance.new("UIStroke", tpSetBtn)
+    btnStr_tpSetBtn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_tpSetBtn.Thickness    = 1
+    btnStr_tpSetBtn.Transparency = 0
 
 local tpRemoveBtn = Instance.new("TextButton", tpRow)
 tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
@@ -1228,6 +1244,10 @@ tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSem
 tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Remove Destination"
 tpRemoveBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
+local btnStr_tpRemoveBtn = Instance.new("UIStroke", tpRemoveBtn)
+    btnStr_tpRemoveBtn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_tpRemoveBtn.Thickness    = 1
+    btnStr_tpRemoveBtn.Transparency = 0
 
 for _, b in {tpSetBtn, tpRemoveBtn} do
     b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
@@ -1399,6 +1419,10 @@ local function dButton(text, cb)
     btn.Text = text; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
     if cb then btn.MouseButton1Click:Connect(cb) end
@@ -1635,6 +1659,10 @@ flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70,
 flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold  -- grey
 flyKeyBtn.TextSize = 12; flyKeyBtn.TextColor3 = THEME_TEXT; flyKeyBtn.Text = "Q"
 flyKeyBtn.BorderSizePixel = 0; Instance.new("UICorner", flyKeyBtn).CornerRadius = UDim.new(0, 6)
+local btnStr_flyKeyBtn = Instance.new("UIStroke", flyKeyBtn)
+    btnStr_flyKeyBtn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_flyKeyBtn.Thickness    = 1
+    btnStr_flyKeyBtn.Transparency = 0
 flyKeyBtn.MouseEnter:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
 flyKeyBtn.MouseLeave:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
 
