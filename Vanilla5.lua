@@ -26,16 +26,16 @@ local mouse  = player:GetMouse()
 -- THEME  (Black / Grey / White only)
 -- ════════════════════════════════════════════════════
 local C = {
-    CARD       = Color3.fromRGB(20,  20,  20 ),
-    ROW        = Color3.fromRGB(28,  28,  28 ),
+    CARD       = Color3.fromRGB(10,  10,  10),   -- black panel
+    ROW        = Color3.fromRGB(16,  16,  16),   -- near-black row
     TRACK      = Color3.fromRGB(38,  38,  38 ),
     BORDER     = Color3.fromRGB(55,  55,  55 ),
     TEXT       = Color3.fromRGB(210, 210, 210),
     TEXT_DIM   = Color3.fromRGB(100, 100, 100),
     -- buttons (grey)
-    BTN        = Color3.fromRGB(70,  70,  70 ),
-    BTN_HV     = Color3.fromRGB(100, 100, 100),
-    BTN_DANGER = Color3.fromRGB(65,  50,  50 ), -- muted dark grey-red for Remove
+    BTN        = Color3.fromRGB(14,  14,  14),   -- black button bg
+    BTN_HV     = Color3.fromRGB(32,  32,  32),   -- dark grey hover
+    BTN_DANGER = Color3.fromRGB(18,  10,  10), -- near-black red-tint for Remove
     -- progress / slider fill (white)
     FILL       = Color3.fromRGB(200, 200, 200),
     -- switch
@@ -283,6 +283,10 @@ local function mkBtn(text, color, callback)
     btn.BorderSizePixel  = 0
     btn.AutoButtonColor  = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     local r = math.min(color.R * 255 + 20, 255) / 255
     local g = math.min(color.G * 255 + 20, 255) / 255
     local b = math.min(color.B * 255 + 20, 255) / 255
@@ -315,6 +319,10 @@ local function mkBtnRow(textL, textR, cbL, cbR)
         b.BorderSizePixel  = 0
         b.AutoButtonColor  = false
         Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    local _s = Instance.new("UIStroke", b)
+    _s.Color = Color3.fromRGB(55, 55, 55)
+    _s.Thickness = 1
+    _s.Transparency = 0
         b.MouseEnter:Connect(function()
             TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = C.BTN_HV}):Play()
         end)
