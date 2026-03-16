@@ -15,12 +15,35 @@ local RunService       = _G.VH.RunService
 local player           = _G.VH.player
 local cleanupTasks     = _G.VH.cleanupTasks
 local pages            = _G.VH.pages
-local BTN_COLOR        = _G.VH.BTN_COLOR   -- Color3.fromRGB(45,45,50)
-local BTN_HOVER        = _G.VH.BTN_HOVER   -- Color3.fromRGB(70,70,80)
-local THEME_TEXT       = _G.VH.THEME_TEXT  -- Color3.fromRGB(230,206,226)
+local BTN_COLOR        = _G.VH.BTN_COLOR   -- grey (set in Vanilla1)
+local BTN_HOVER        = _G.VH.BTN_HOVER
+local THEME_TEXT       = _G.VH.THEME_TEXT  -- near-white (set in Vanilla1)
 
 local camera = workspace.CurrentCamera
 local mouse  = player:GetMouse()
+
+-- ════════════════════════════════════════════════════
+-- THEME  (Black / Grey / White only)
+-- ════════════════════════════════════════════════════
+local C = {
+    CARD       = Color3.fromRGB(20,  20,  20 ),
+    ROW        = Color3.fromRGB(28,  28,  28 ),
+    TRACK      = Color3.fromRGB(38,  38,  38 ),
+    BORDER     = Color3.fromRGB(55,  55,  55 ),
+    TEXT       = Color3.fromRGB(210, 210, 210),
+    TEXT_DIM   = Color3.fromRGB(100, 100, 100),
+    -- buttons (grey)
+    BTN        = Color3.fromRGB(70,  70,  70 ),
+    BTN_HV     = Color3.fromRGB(100, 100, 100),
+    BTN_DANGER = Color3.fromRGB(65,  50,  50 ), -- muted dark grey-red for Remove
+    -- progress / slider fill (white)
+    FILL       = Color3.fromRGB(200, 200, 200),
+    -- switch
+    SW_ON      = Color3.fromRGB(220, 220, 220),
+    SW_OFF     = Color3.fromRGB(50,  50,  50 ),
+    KNOB_ON    = Color3.fromRGB(30,  30,  30 ),
+    KNOB_OFF   = Color3.fromRGB(160, 160, 160),
+}
 
 -- ════════════════════════════════════════════════════
 -- CONFIGURATION
@@ -43,9 +66,7 @@ local function getBuilds()
             if not m.PrimaryPart then
                 m.PrimaryPart = m:FindFirstChildWhichIsA("BasePart")
             end
-            if m.PrimaryPart then
-                table.insert(out, m)
-            end
+            if m.PrimaryPart then table.insert(out, m) end
         end
     end
     return out
@@ -53,10 +74,7 @@ end
 
 local function getPivot(models)
     local sum, n = Vector3.zero, 0
-    for _, m in ipairs(models) do
-        sum = sum + m.PrimaryPart.Position
-        n   = n + 1
-    end
+    for _, m in ipairs(models) do sum = sum + m.PrimaryPart.Position; n = n + 1 end
     return n > 0 and CFrame.new(sum / n) or CFrame.new()
 end
 
@@ -103,11 +121,9 @@ local function snapToGrid()
     end
 end
 
--- Camera-relative nudge so direction buttons feel natural at any camera angle
 local function nudge(rawDir)
     local _, yaw, _ = camera.CFrame:ToEulerAnglesYXZ()
     local camRel    = CFrame.Angles(0, yaw, 0) * rawDir * cfg.moveStep
-
     local function toAxis(v)
         if math.abs(v.X) > math.abs(v.Z) then
             return Vector3.new(math.sign(v.X), 0, 0)
@@ -115,7 +131,6 @@ local function nudge(rawDir)
             return Vector3.new(0, 0, math.sign(v.Z))
         end
     end
-
     local effective
     if rawDir.Y ~= 0 then
         effective = Vector3.new(0, math.sign(rawDir.Y), 0) * cfg.moveStep
@@ -145,30 +160,25 @@ local function centerOnPlot()
 
     for _, plot in ipairs(properties:GetChildren()) do
         if result.Instance:IsDescendantOf(plot) then
-            local plotCenterPos, floorY = nil, math.huge
+            local floorY = math.huge
             local cSum, cCnt = Vector3.zero, 0
-
             for _, part in ipairs(plot:GetDescendants()) do
                 if part:IsA("BasePart") then
                     floorY = math.min(floorY, part.Position.Y - part.Size.Y / 2)
-                    cSum   = cSum + part.Position
-                    cCnt   = cCnt + 1
+                    cSum   = cSum + part.Position; cCnt = cCnt + 1
                 end
             end
-
             local pp = plot.PrimaryPart
-            plotCenterPos = (pp and pp.Position) or (cCnt > 0 and cSum / cCnt) or nil
+            local plotCenterPos = (pp and pp.Position) or (cCnt > 0 and cSum / cCnt) or nil
             if not plotCenterPos then return end
 
             local models = getBuilds()
             if #models == 0 then return end
             local pivot  = getPivot(models)
-
-            local minY = math.huge
+            local minY   = math.huge
             for _, m in ipairs(models) do
                 minY = math.min(minY, m.PrimaryPart.Position.Y - m.PrimaryPart.Size.Y / 2)
             end
-
             moveModels(Vector3.new(
                 plotCenterPos.X - pivot.Position.X,
                 (floorY - minY) + 0.05,
@@ -195,10 +205,8 @@ local function startFollow()
         for _, m in ipairs(getBuilds()) do table.insert(excl, m) end
         if player.Character then table.insert(excl, player.Character) end
         params.FilterDescendantsInstances = excl
-
         local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
         if not result then return end
-
         local targetPos = result.Position + result.Normal * (cfg.moveStep * 0.5)
         setPosition(snapV3(targetPos, cfg.moveStep))
     end)
@@ -213,14 +221,13 @@ startFollow()
 table.insert(cleanupTasks, stopFollow)
 
 -- ════════════════════════════════════════════════════
--- KEYBOARD INPUT  (only when Pixel Art tab is active)
+-- KEYBOARD INPUT
 -- ════════════════════════════════════════════════════
 local paInputConn = UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     local paPage = pages["Pixel ArtTab"]
     if not (paPage and paPage.Visible) then return end
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-
     local k = input.KeyCode
     if     k == Enum.KeyCode.Up       then nudge(Vector3.new( 0, 0,-1))
     elseif k == Enum.KeyCode.Down     then nudge(Vector3.new( 0, 0, 1))
@@ -240,78 +247,79 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- UI HELPERS  —  identical style to every other tab
+-- UI HELPERS
 -- ════════════════════════════════════════════════════
 local paPage = pages["Pixel ArtTab"]
 
 local function mkLabel(text)
     local lbl = Instance.new("TextLabel", paPage)
-    lbl.Size               = UDim2.new(1,-12,0,22)
+    lbl.Size               = UDim2.new(1, -12, 0, 22)
     lbl.BackgroundTransparency = 1
     lbl.Font               = Enum.Font.GothamBold
     lbl.TextSize           = 11
-    lbl.TextColor3         = Color3.fromRGB(120,120,150)
+    lbl.TextColor3         = C.TEXT_DIM
     lbl.TextXAlignment     = Enum.TextXAlignment.Left
     lbl.Text               = string.upper(text)
-    Instance.new("UIPadding", lbl).PaddingLeft = UDim.new(0,4)
+    Instance.new("UIPadding", lbl).PaddingLeft = UDim.new(0, 4)
 end
 
 local function mkSep()
     local s = Instance.new("Frame", paPage)
-    s.Size             = UDim2.new(1,-12,0,1)
-    s.BackgroundColor3 = Color3.fromRGB(40,40,55)
+    s.Size             = UDim2.new(1, -12, 0, 1)
+    s.BackgroundColor3 = C.BORDER
     s.BorderSizePixel  = 0
 end
 
--- Full-width button
+-- Full-width grey button
 local function mkBtn(text, color, callback)
-    color = color or BTN_COLOR
+    color = color or C.BTN
     local btn = Instance.new("TextButton", paPage)
-    btn.Size             = UDim2.new(1,-12,0,32)
+    btn.Size             = UDim2.new(1, -12, 0, 32)
     btn.BackgroundColor3 = color
     btn.Text             = text
     btn.Font             = Enum.Font.GothamSemibold
     btn.TextSize         = 13
-    btn.TextColor3       = THEME_TEXT
+    btn.TextColor3       = C.TEXT
     btn.BorderSizePixel  = 0
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-    local hov = Color3.fromRGB(
-        math.min(color.R*255+20,255)/255,
-        math.min(color.G*255+8, 255)/255,
-        math.min(color.B*255+20,255)/255
-    )
+    btn.AutoButtonColor  = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local r = math.min(color.R * 255 + 20, 255) / 255
+    local g = math.min(color.G * 255 + 20, 255) / 255
+    local b = math.min(color.B * 255 + 20, 255) / 255
+    local hov = Color3.new(r, g, b)
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=hov}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = hov}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=color}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = color}):Play()
     end)
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- Half-width paired button row
+-- Half-width paired button row (grey)
 local function mkBtnRow(textL, textR, cbL, cbR)
     local row = Instance.new("Frame", paPage)
-    row.Size               = UDim2.new(1,-12,0,32)
+    row.Size               = UDim2.new(1, -12, 0, 32)
     row.BackgroundTransparency = 1
 
     local function half(text, posX, offsetX, cb)
         local b = Instance.new("TextButton", row)
-        b.Size             = UDim2.new(0.5,-4,1,0)
+        b.Size             = UDim2.new(0.5, -4, 1, 0)
         b.Position         = UDim2.new(posX, offsetX, 0, 0)
-        b.BackgroundColor3 = BTN_COLOR
+        b.BackgroundColor3 = C.BTN
         b.Text             = text
         b.Font             = Enum.Font.GothamSemibold
         b.TextSize         = 12
-        b.TextColor3       = THEME_TEXT
+        b.TextColor3       = C.TEXT
         b.BorderSizePixel  = 0
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+        b.AutoButtonColor  = false
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
         b.MouseEnter:Connect(function()
-            TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play()
+            TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = C.BTN_HV}):Play()
         end)
         b.MouseLeave:Connect(function()
-            TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play()
+            TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = C.BTN}):Play()
         end)
         b.MouseButton1Click:Connect(cb)
         return b
@@ -322,122 +330,119 @@ local function mkBtnRow(textL, textR, cbL, cbR)
     return row
 end
 
--- Toggle — identical to every other tab
+-- Toggle: dark grey OFF / white ON
 local function mkToggle(text, default, callback)
     local frame = Instance.new("Frame", paPage)
-    frame.Size             = UDim2.new(1,-12,0,32)
-    frame.BackgroundColor3 = Color3.fromRGB(24,24,30)
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,6)
+    frame.Size             = UDim2.new(1, -12, 0, 32)
+    frame.BackgroundColor3 = C.CARD
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
 
     local lbl = Instance.new("TextLabel", frame)
-    lbl.Size               = UDim2.new(1,-50,1,0)
-    lbl.Position           = UDim2.new(0,10,0,0)
+    lbl.Size               = UDim2.new(1, -50, 1, 0)
+    lbl.Position           = UDim2.new(0, 10, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text               = text
     lbl.Font               = Enum.Font.GothamSemibold
     lbl.TextSize           = 13
-    lbl.TextColor3         = THEME_TEXT
+    lbl.TextColor3         = C.TEXT
     lbl.TextXAlignment     = Enum.TextXAlignment.Left
 
     local tb = Instance.new("TextButton", frame)
-    tb.Size             = UDim2.new(0,34,0,18)
-    tb.Position         = UDim2.new(1,-44,0.5,-9)
-    tb.BackgroundColor3 = default and Color3.fromRGB(60,180,60) or BTN_COLOR
+    tb.Size             = UDim2.new(0, 34, 0, 18)
+    tb.Position         = UDim2.new(1, -44, 0.5, -9)
+    tb.BackgroundColor3 = default and C.SW_ON or C.SW_OFF   -- white ON / dark grey OFF
     tb.Text             = ""
-    Instance.new("UICorner", tb).CornerRadius = UDim.new(1,0)
+    tb.AutoButtonColor  = false
+    Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
 
     local dot = Instance.new("Frame", tb)
-    dot.Size             = UDim2.new(0,14,0,14)
+    dot.Size             = UDim2.new(0, 14, 0, 14)
     dot.Position         = UDim2.new(0, default and 18 or 2, 0.5, -7)
-    dot.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    Instance.new("UICorner", dot).CornerRadius = UDim.new(1,0)
+    dot.BackgroundColor3 = default and C.KNOB_ON or C.KNOB_OFF
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
     local on = default
     if callback then callback(on) end
 
     local function setOn(v)
         on = v
-        TweenService:Create(tb,  TweenInfo.new(0.2, Enum.EasingStyle.Quint),
-            {BackgroundColor3 = v and Color3.fromRGB(60,180,60) or BTN_COLOR}):Play()
-        TweenService:Create(dot, TweenInfo.new(0.2, Enum.EasingStyle.Quint),
-            {Position = UDim2.new(0, v and 18 or 2, 0.5, -7)}):Play()
+        TweenService:Create(tb,  TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = v and C.SW_ON or C.SW_OFF
+        }):Play()
+        TweenService:Create(dot, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            Position         = UDim2.new(0, v and 18 or 2, 0.5, -7),
+            BackgroundColor3 = v and C.KNOB_ON or C.KNOB_OFF
+        }):Play()
     end
 
     tb.MouseButton1Click:Connect(function()
-        on = not on
-        setOn(on)
+        on = not on; setOn(on)
         if callback then callback(on) end
     end)
 
     return frame, setOn, function() return on end
 end
 
--- Slider — same style and colours as Vanilla1's player sliders
+-- Slider: white fill bar + white value text
 local function mkSlider(label, minV, maxV, defaultV, cb)
     local fr = Instance.new("Frame", paPage)
-    fr.Size             = UDim2.new(1,-12,0,52)
-    fr.BackgroundColor3 = Color3.fromRGB(24,24,30)
+    fr.Size             = UDim2.new(1, -12, 0, 52)
+    fr.BackgroundColor3 = C.CARD
     fr.BorderSizePixel  = 0
-    Instance.new("UICorner", fr).CornerRadius = UDim.new(0,6)
+    Instance.new("UICorner", fr).CornerRadius = UDim.new(0, 6)
 
     local topRow = Instance.new("Frame", fr)
-    topRow.Size               = UDim2.new(1,-16,0,22)
-    topRow.Position           = UDim2.new(0,8,0,6)
+    topRow.Size               = UDim2.new(1, -16, 0, 22)
+    topRow.Position           = UDim2.new(0, 8, 0, 6)
     topRow.BackgroundTransparency = 1
 
     local lbl = Instance.new("TextLabel", topRow)
-    lbl.Size               = UDim2.new(0.7,0,1,0)
+    lbl.Size               = UDim2.new(0.7, 0, 1, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Font               = Enum.Font.GothamSemibold
-    lbl.TextSize           = 13
-    lbl.TextColor3         = THEME_TEXT
-    lbl.TextXAlignment     = Enum.TextXAlignment.Left
-    lbl.Text               = label
+    lbl.Font               = Enum.Font.GothamSemibold; lbl.TextSize = 13
+    lbl.TextColor3         = C.TEXT
+    lbl.TextXAlignment     = Enum.TextXAlignment.Left; lbl.Text = label
 
     local valLbl = Instance.new("TextLabel", topRow)
-    valLbl.Size               = UDim2.new(0.3,0,1,0)
-    valLbl.Position           = UDim2.new(0.7,0,0,0)
+    valLbl.Size               = UDim2.new(0.3, 0, 1, 0)
+    valLbl.Position           = UDim2.new(0.7, 0, 0, 0)
     valLbl.BackgroundTransparency = 1
-    valLbl.Font               = Enum.Font.GothamBold
-    valLbl.TextSize           = 13
-    valLbl.TextColor3         = THEME_TEXT
+    valLbl.Font               = Enum.Font.GothamBold; valLbl.TextSize = 13
+    valLbl.TextColor3         = C.FILL                              -- white text
     valLbl.TextXAlignment     = Enum.TextXAlignment.Right
     valLbl.Text               = tostring(defaultV)
 
     local track = Instance.new("Frame", fr)
-    track.Size             = UDim2.new(1,-16,0,6)
-    track.Position         = UDim2.new(0,8,0,36)
-    track.BackgroundColor3 = Color3.fromRGB(40,40,55)
-    track.BorderSizePixel  = 0
-    Instance.new("UICorner", track).CornerRadius = UDim.new(1,0)
+    track.Size             = UDim2.new(1, -16, 0, 6)
+    track.Position         = UDim2.new(0, 8, 0, 36)
+    track.BackgroundColor3 = C.TRACK; track.BorderSizePixel = 0
+    Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 
     local fill = Instance.new("Frame", track)
-    fill.Size             = UDim2.new((defaultV-minV)/(maxV-minV),0,1,0)
-    fill.BackgroundColor3 = Color3.fromRGB(80,80,100)
+    fill.Size             = UDim2.new((defaultV-minV)/(maxV-minV), 0, 1, 0)
+    fill.BackgroundColor3 = C.FILL                                  -- white bar
     fill.BorderSizePixel  = 0
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
     local knob = Instance.new("TextButton", track)
-    knob.Size             = UDim2.new(0,16,0,16)
-    knob.AnchorPoint      = Vector2.new(0.5,0.5)
-    knob.Position         = UDim2.new((defaultV-minV)/(maxV-minV),0,0.5,0)
-    knob.BackgroundColor3 = Color3.fromRGB(210,210,225)
-    knob.Text             = ""
-    knob.BorderSizePixel  = 0
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+    knob.Size             = UDim2.new(0, 16, 0, 16)
+    knob.AnchorPoint      = Vector2.new(0.5, 0.5)
+    knob.Position         = UDim2.new((defaultV-minV)/(maxV-minV), 0, 0.5, 0)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.Text             = ""; knob.BorderSizePixel = 0
+    knob.AutoButtonColor  = false
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-    local dragging = false
-    local cur      = defaultV
+    local dragging = false; local cur = defaultV
 
     local function apply(screenX)
         local ratio = math.clamp(
-            (screenX - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X,1),
-            0, 1)
+            (screenX - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
         local val = math.max(1, math.round(minV + ratio*(maxV-minV)))
         if val == cur then return end
         cur           = val
-        fill.Size     = UDim2.new(ratio,0,1,0)
-        knob.Position = UDim2.new(ratio,0,0.5,0)
+        fill.Size     = UDim2.new(ratio, 0, 1, 0)
+        knob.Position = UDim2.new(ratio, 0, 0.5, 0)
         valLbl.Text   = tostring(val)
         if cb then cb(val) end
     end
@@ -454,31 +459,24 @@ local function mkSlider(label, minV, maxV, defaultV, cb)
         end
     end)
     UserInputService.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
-
     return fr
 end
 
--- Hint row
+-- Hint row (dark card background)
 local function mkHint(text)
     local fr = Instance.new("Frame", paPage)
-    fr.Size             = UDim2.new(1,-12,0,28)
-    fr.BackgroundColor3 = Color3.fromRGB(18,18,24)
-    fr.BorderSizePixel  = 0
-    Instance.new("UICorner", fr).CornerRadius = UDim.new(0,6)
+    fr.Size             = UDim2.new(1, -12, 0, 28)
+    fr.BackgroundColor3 = C.CARD; fr.BorderSizePixel = 0
+    Instance.new("UICorner", fr).CornerRadius = UDim.new(0, 6)
     local lbl = Instance.new("TextLabel", fr)
-    lbl.Size               = UDim2.new(1,-12,1,0)
-    lbl.Position           = UDim2.new(0,6,0,0)
+    lbl.Size               = UDim2.new(1, -12, 1, 0)
+    lbl.Position           = UDim2.new(0, 6, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Font               = Enum.Font.Gotham
-    lbl.TextSize           = 11
-    lbl.TextColor3         = Color3.fromRGB(110,110,140)
-    lbl.TextWrapped        = true
-    lbl.TextXAlignment     = Enum.TextXAlignment.Left
-    lbl.Text               = text
+    lbl.Font               = Enum.Font.Gotham; lbl.TextSize = 11
+    lbl.TextColor3         = C.TEXT_DIM; lbl.TextWrapped = true
+    lbl.TextXAlignment     = Enum.TextXAlignment.Left; lbl.Text = text
 end
 
 -- ════════════════════════════════════════════════════
@@ -509,36 +507,36 @@ mkSep()
 mkLabel("Move  (Arrow Keys / PgUp / PgDn)")
 
 mkBtnRow("Left",    "Right",
-    function() nudge(Vector3.new(-1,0,0)) end,
-    function() nudge(Vector3.new( 1,0,0)) end)
+    function() nudge(Vector3.new(-1, 0, 0)) end,
+    function() nudge(Vector3.new( 1, 0, 0)) end)
 
 mkBtnRow("Forward", "Back",
-    function() nudge(Vector3.new(0,0,-1)) end,
-    function() nudge(Vector3.new(0,0, 1)) end)
+    function() nudge(Vector3.new(0, 0,-1)) end,
+    function() nudge(Vector3.new(0, 0, 1)) end)
 
 mkBtnRow("Up",      "Down",
-    function() nudge(Vector3.new(0, 1,0)) end,
-    function() nudge(Vector3.new(0,-1,0)) end)
+    function() nudge(Vector3.new(0,  1, 0)) end,
+    function() nudge(Vector3.new(0, -1, 0)) end)
 
 mkSep()
 mkLabel("Rotate  (R / T / F / G)")
 
-mkBtnRow("Yaw Left (T)",   "Yaw Right (R)",
+mkBtnRow("Yaw Left (T)",  "Yaw Right (R)",
     function() rotateModels(Vector3.new(0,1,0), -cfg.rotStep) end,
     function() rotateModels(Vector3.new(0,1,0),  cfg.rotStep) end)
 
-mkBtnRow("Pitch Up (F)",   "Pitch Down (G)",
+mkBtnRow("Pitch Up (F)",  "Pitch Down (G)",
     function() rotateModels(Vector3.new(1,0,0),  cfg.rotStep) end,
     function() rotateModels(Vector3.new(1,0,0), -cfg.rotStep) end)
 
 mkSep()
 mkLabel("Utilities")
 
-mkBtn("Snap to Grid", BTN_COLOR, function()
+mkBtn("Snap to Grid", C.BTN, function()
     snapToGrid()
 end)
 
-mkBtn("Center on Plot  (aim at plot first)", BTN_COLOR, function()
+mkBtn("Center on Plot  (aim at plot first)", C.BTN, function()
     centerOnPlot()
 end)
 
@@ -547,13 +545,12 @@ mkLabel("Remove")
 
 mkHint("Removes all models inside workspace.Builds. Cannot be undone.")
 
-mkBtn("Remove Pixel Art", Color3.fromRGB(180,45,45), function()
+-- Remove button: muted dark grey (not bright red)
+mkBtn("Remove Pixel Art", C.BTN_DANGER, function()
     local folder = workspace:FindFirstChild("Builds")
     if not folder then return end
     for _, m in ipairs(folder:GetChildren()) do
-        if m:IsA("Model") then
-            pcall(function() m:Destroy() end)
-        end
+        if m:IsA("Model") then pcall(function() m:Destroy() end) end
     end
     cfg.followingMouse = false
     setFollowToggle(false)
@@ -577,4 +574,4 @@ table.insert(cleanupTasks, function()
     stopFollow()
 end)
 
-print("[VanillaHub] Vanilla5 (Pixel Art) loaded")
+print("[VanillaHub] Vanilla5 (Pixel Art) loaded — black/grey/white theme")
