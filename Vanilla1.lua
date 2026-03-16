@@ -34,33 +34,34 @@ if game.PlaceId ~= 13822889 then
         local frame = Instance.new("Frame", warnGui)
         frame.Size = UDim2.new(0, 400, 0, 220)
         frame.Position = UDim2.new(0.5, -200, 0.5, -110)
-        frame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-        frame.BackgroundTransparency = 0.25
+        frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)   -- black inner panel
+        frame.BackgroundTransparency = 0.15
         frame.BorderSizePixel = 0
         Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
         local uiStroke = Instance.new("UIStroke", frame)
-        uiStroke.Color = Color3.fromRGB(190, 50, 50)
-        uiStroke.Thickness = 1.5; uiStroke.Transparency = 0.45
+        uiStroke.Color = Color3.fromRGB(80, 80, 80)           -- grey border
+        uiStroke.Thickness = 1.5; uiStroke.Transparency = 0.3
         local icon = Instance.new("TextLabel", frame)
         icon.Size = UDim2.new(0, 48, 0, 48); icon.Position = UDim2.new(0, 24, 0, 24)
         icon.BackgroundTransparency = 1; icon.Font = Enum.Font.GothamBlack
-        icon.TextSize = 42; icon.TextColor3 = Color3.fromRGB(255, 90, 90); icon.Text = "!"
+        icon.TextSize = 42; icon.TextColor3 = Color3.fromRGB(200, 200, 200); icon.Text = "!"
         local msg = Instance.new("TextLabel", frame)
         msg.Size = UDim2.new(1, -100, 0, 120); msg.Position = UDim2.new(0, 90, 0, 30)
         msg.BackgroundTransparency = 1; msg.Font = Enum.Font.GothamSemibold; msg.TextSize = 15
-        msg.TextColor3 = Color3.fromRGB(220, 220, 220); msg.TextXAlignment = Enum.TextXAlignment.Left
+        msg.TextColor3 = Color3.fromRGB(210, 210, 210); msg.TextXAlignment = Enum.TextXAlignment.Left
         msg.TextYAlignment = Enum.TextYAlignment.Top; msg.TextWrapped = true
         msg.Text = "VanillaHub is made exclusively for Lumber Tycoon 2 (Place ID: 13822889).\n\nPlease join Lumber Tycoon 2 and re-execute the script there."
         local okBtn = Instance.new("TextButton", frame)
         okBtn.Size = UDim2.new(0, 160, 0, 50); okBtn.Position = UDim2.new(0.5, -80, 1, -70)
-        okBtn.BackgroundColor3 = Color3.fromRGB(190, 50, 50); okBtn.BorderSizePixel = 0
+        okBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)   -- grey button
+        okBtn.BorderSizePixel = 0
         okBtn.Font = Enum.Font.GothamBold; okBtn.TextSize = 17
         okBtn.TextColor3 = Color3.fromRGB(255, 255, 255); okBtn.Text = "I Understand"
         Instance.new("UICorner", okBtn).CornerRadius = UDim.new(0, 12)
         local TS2 = game:GetService("TweenService")
         frame.BackgroundTransparency = 1; msg.TextTransparency = 1; icon.TextTransparency = 1
         okBtn.BackgroundTransparency = 1; okBtn.TextTransparency = 1
-        TS2:Create(frame, TweenInfo.new(0.75, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.25}):Play()
+        TS2:Create(frame, TweenInfo.new(0.75, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.15}):Play()
         TS2:Create(msg,   TweenInfo.new(0.85, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
         TS2:Create(icon,  TweenInfo.new(0.85, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
         TS2:Create(okBtn, TweenInfo.new(0.95, Enum.EasingStyle.Quint), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
@@ -91,18 +92,29 @@ local player            = Players.LocalPlayer
 local mouse             = player:GetMouse()
 
 -- ════════════════════════════════════════════════════
--- THEME
+-- THEME  (Black / Grey / White only)
 -- ════════════════════════════════════════════════════
-local THEME_TEXT   = Color3.fromRGB(220, 220, 220)
-local BTN_COLOR    = Color3.fromRGB(32, 32, 36)
-local BTN_HOVER    = Color3.fromRGB(52, 52, 58)
-local ACCENT       = Color3.fromRGB(100, 100, 115)
-local BG_DARK      = Color3.fromRGB(10, 10, 11)
-local BG_SIDE      = Color3.fromRGB(8, 8, 9)
-local BG_TOP       = Color3.fromRGB(12, 12, 14)
-local BORDER_COLOR = Color3.fromRGB(40, 40, 45)
-local SEP_COLOR    = Color3.fromRGB(35, 35, 40)
-local SECTION_TEXT = Color3.fromRGB(110, 110, 120)
+local THEME_TEXT   = Color3.fromRGB(220, 220, 220)           -- near-white text
+local BTN_COLOR    = Color3.fromRGB(70, 70, 70)              -- grey buttons
+local BTN_HOVER    = Color3.fromRGB(100, 100, 100)           -- lighter grey hover
+local ACCENT       = Color3.fromRGB(160, 160, 160)           -- mid grey accent
+local BG_DARK      = Color3.fromRGB(10, 10, 10)              -- black inner panels
+local BG_SIDE      = Color3.fromRGB(18, 18, 18)              -- near-black sidebar
+local BG_TOP       = Color3.fromRGB(15, 15, 15)              -- near-black topbar
+local BORDER_COLOR = Color3.fromRGB(60, 60, 60)              -- grey border
+local SEP_COLOR    = Color3.fromRGB(50, 50, 50)              -- grey separator
+local SECTION_TEXT = Color3.fromRGB(130, 130, 130)           -- mid-grey section labels
+local OUTER_BG     = Color3.fromRGB(55, 55, 55)              -- grey outer background
+
+-- Switch colours
+local SW_OFF = Color3.fromRGB(55, 55, 55)                    -- dark grey OFF
+local SW_ON  = Color3.fromRGB(230, 230, 230)                 -- white ON
+local SW_KNOB_OFF = Color3.fromRGB(160, 160, 160)
+local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
+
+-- Progress bar colours
+local PB_BAR  = Color3.fromRGB(255, 255, 255)                -- white bar
+local PB_TEXT = Color3.fromRGB(255, 255, 255)                -- white text
 
 -- ════════════════════════════════════════════════════
 -- EXECUTOR DETECTION
@@ -189,17 +201,20 @@ table.insert(cleanupTasks, function() if gui and gui.Parent then gui:Destroy() e
 
 _G.VanillaHubCleanup = onExit
 
+-- Outer grey wrapper (visible as the outer background)
 local wrapper = Instance.new("Frame", gui)
 wrapper.Size = UDim2.new(0, 0, 0, 0)
 wrapper.Position = UDim2.new(0.5, -265, 0.5, -175)
-wrapper.BackgroundTransparency = 1
+wrapper.BackgroundColor3 = OUTER_BG               -- grey outer background
+wrapper.BackgroundTransparency = 0
 wrapper.BorderSizePixel = 0
 wrapper.ClipsDescendants = false
+Instance.new("UICorner", wrapper).CornerRadius = UDim.new(0, 16)
 
 local main = Instance.new("Frame", wrapper)
 main.Size = UDim2.new(0, 0, 0, 0)
 main.Position = UDim2.new(0, 0, 0, 0)
-main.BackgroundColor3 = BG_DARK
+main.BackgroundColor3 = BG_DARK                   -- black inner panel
 main.BackgroundTransparency = 1
 main.BorderSizePixel = 0
 main.ClipsDescendants = true
@@ -221,7 +236,7 @@ TweenService:Create(main, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.Easing
 -- TOP BAR
 local topBar = Instance.new("Frame", main)
 topBar.Size = UDim2.new(1, 0, 0, 40)
-topBar.BackgroundColor3 = BG_TOP
+topBar.BackgroundColor3 = BG_TOP                  -- near-black topbar
 topBar.BorderSizePixel = 0
 topBar.ZIndex = 4
 
@@ -249,7 +264,7 @@ local versionLbl = Instance.new("TextLabel", topBar)
 versionLbl.Size = UDim2.new(0, 52, 0, 20); versionLbl.Position = UDim2.new(1, -60, 0.5, -10)
 versionLbl.BackgroundTransparency = 1; versionLbl.Text = "v1.1.0"
 versionLbl.Font = Enum.Font.Gotham; versionLbl.TextSize = 11
-versionLbl.TextColor3 = Color3.fromRGB(100, 100, 115); versionLbl.TextXAlignment = Enum.TextXAlignment.Right
+versionLbl.TextColor3 = Color3.fromRGB(130, 130, 130); versionLbl.TextXAlignment = Enum.TextXAlignment.Right
 versionLbl.ZIndex = 5
 
 -- DRAG
@@ -275,10 +290,10 @@ end)
 local side = Instance.new("ScrollingFrame", main)
 side.Size = UDim2.new(0, 155, 1, -40)
 side.Position = UDim2.new(0, 0, 0, 40)
-side.BackgroundColor3 = BG_SIDE
+side.BackgroundColor3 = BG_SIDE                   -- near-black sidebar
 side.BorderSizePixel = 0
 side.ScrollBarThickness = 3
-side.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 68)
+side.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
 side.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 local sidePad = Instance.new("UIPadding", side)
@@ -306,7 +321,7 @@ sideSep.ZIndex = 3
 local content = Instance.new("Frame", main)
 content.Size = UDim2.new(1, -156, 1, -40)
 content.Position = UDim2.new(0, 156, 0, 40)
-content.BackgroundColor3 = BG_DARK
+content.BackgroundColor3 = BG_DARK               -- black inner panel
 content.BorderSizePixel = 0
 
 -- ════════════════════════════════════════════════════
@@ -317,7 +332,7 @@ task.spawn(function()
     if not (gui and gui.Parent) then return end
     local wf = Instance.new("Frame", gui)
     wf.Size = UDim2.new(0, 380, 0, 90); wf.Position = UDim2.new(0.5, -190, 1, -110)
-    wf.BackgroundColor3 = Color3.fromRGB(14, 14, 16); wf.BackgroundTransparency = 1; wf.BorderSizePixel = 0
+    wf.BackgroundColor3 = Color3.fromRGB(20, 20, 20); wf.BackgroundTransparency = 1; wf.BorderSizePixel = 0
     Instance.new("UICorner", wf).CornerRadius = UDim.new(0, 14)
     local ws = Instance.new("UIStroke", wf)
     ws.Color = BORDER_COLOR; ws.Thickness = 1.2; ws.Transparency = 0.4
@@ -332,7 +347,7 @@ task.spawn(function()
     wt.TextColor3 = THEME_TEXT; wt.TextXAlignment = Enum.TextXAlignment.Left
     wt.TextYAlignment = Enum.TextYAlignment.Center; wt.TextWrapped = true; wt.TextTransparency = 1
     wt.Text = "You're back, " .. player.DisplayName .. ".\nVanillaHub is ready to use."
-    TweenService:Create(wf, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.25}):Play()
+    TweenService:Create(wf, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {BackgroundTransparency = 0.2}):Play()
     TweenService:Create(wt, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {TextTransparency = 0}):Play()
     TweenService:Create(pfp, TweenInfo.new(0.7, Enum.EasingStyle.Quint), {ImageTransparency = 0}):Play()
     task.delay(7, function()
@@ -355,7 +370,7 @@ for _, name in ipairs(tabs) do
     local page = Instance.new("ScrollingFrame", content)
     page.Name = name .. "Tab"; page.Size = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1; page.BorderSizePixel = 0
-    page.ScrollBarThickness = 4; page.ScrollBarImageColor3 = Color3.fromRGB(55, 55, 62)
+    page.ScrollBarThickness = 4; page.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
     page.Visible = false; page.CanvasSize = UDim2.new(0, 0, 0, 0)
     local list = Instance.new("UIListLayout", page)
     list.Padding = UDim.new(0, 10); list.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -375,15 +390,15 @@ local function switchTab(targetName)
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(16, 16, 18),
-            TextColor3 = Color3.fromRGB(110, 110, 120)
+            BackgroundColor3 = Color3.fromRGB(28, 28, 28),
+            TextColor3 = Color3.fromRGB(120, 120, 120)
         }):Play()
     end
     local btn = side:FindFirstChild(targetName:gsub("Tab",""))
     if btn then
         activeTabButton = btn
         TweenService:Create(btn, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(42, 42, 48),
+            BackgroundColor3 = Color3.fromRGB(65, 65, 65),  -- grey active tab
             TextColor3 = THEME_TEXT
         }):Play()
     end
@@ -393,12 +408,12 @@ for _, name in ipairs(tabs) do
     local btn = Instance.new("TextButton", side)
     btn.Name = name
     btn.Size = UDim2.new(1, 0, 0, 34)
-    btn.BackgroundColor3 = Color3.fromRGB(16, 16, 18)
+    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 28)       -- dark inactive tab
     btn.BorderSizePixel = 0
     btn.Text = name
     btn.Font = Enum.Font.GothamSemibold
     btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(110, 110, 120)
+    btn.TextColor3 = Color3.fromRGB(120, 120, 120)
     btn.TextXAlignment = Enum.TextXAlignment.Left
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     local btnPad = Instance.new("UIPadding", btn)
@@ -406,16 +421,16 @@ for _, name in ipairs(tabs) do
     btn.MouseEnter:Connect(function()
         if activeTabButton ~= btn then
             TweenService:Create(btn, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(28, 28, 32),
-                TextColor3 = Color3.fromRGB(175, 175, 185)
+                BackgroundColor3 = Color3.fromRGB(45, 45, 45),
+                TextColor3 = Color3.fromRGB(180, 180, 180)
             }):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= btn then
             TweenService:Create(btn, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(16, 16, 18),
-                TextColor3 = Color3.fromRGB(110, 110, 120)
+                BackgroundColor3 = Color3.fromRGB(28, 28, 28),
+                TextColor3 = Color3.fromRGB(120, 120, 120)
             }):Play()
         end
     end)
@@ -475,7 +490,7 @@ bubbleRow.Size = UDim2.new(1, 0, 0, 100); bubbleRow.BackgroundTransparency = 1; 
 
 local bubbleIcon = Instance.new("ImageLabel", bubbleRow)
 bubbleIcon.Size=UDim2.new(0,52,0,52); bubbleIcon.Position=UDim2.new(0,6,0.5,-26)
-bubbleIcon.BackgroundColor3=Color3.fromRGB(16,16,18); bubbleIcon.BorderSizePixel=0
+bubbleIcon.BackgroundColor3=Color3.fromRGB(30,30,30); bubbleIcon.BorderSizePixel=0
 bubbleIcon.ScaleType=Enum.ScaleType.Fit; bubbleIcon.Image="rbxassetid://97128823316544"
 Instance.new("UICorner", bubbleIcon).CornerRadius = UDim.new(1,0)
 local iconStroke = Instance.new("UIStroke", bubbleIcon)
@@ -488,11 +503,11 @@ iconName.TextColor3=THEME_TEXT; iconName.TextXAlignment=Enum.TextXAlignment.Cent
 
 local tailShape = Instance.new("Frame", bubbleRow)
 tailShape.Size=UDim2.new(0,14,0,14); tailShape.Position=UDim2.new(0,64,0.5,-7)
-tailShape.Rotation=45; tailShape.BackgroundColor3=Color3.fromRGB(22,22,26); tailShape.BorderSizePixel=0; tailShape.ZIndex=1
+tailShape.Rotation=45; tailShape.BackgroundColor3=Color3.fromRGB(25,25,25); tailShape.BorderSizePixel=0; tailShape.ZIndex=1
 
 local bubbleBody = Instance.new("Frame", bubbleRow)
 bubbleBody.Size=UDim2.new(1,-82,0,84); bubbleBody.Position=UDim2.new(0,72,0.5,-42)
-bubbleBody.BackgroundColor3=Color3.fromRGB(22,22,26); bubbleBody.BorderSizePixel=0; bubbleBody.ZIndex=2
+bubbleBody.BackgroundColor3=Color3.fromRGB(25,25,25); bubbleBody.BorderSizePixel=0; bubbleBody.ZIndex=2
 Instance.new("UICorner", bubbleBody).CornerRadius=UDim.new(0,14)
 local bubbleStroke=Instance.new("UIStroke",bubbleBody)
 bubbleStroke.Color=BORDER_COLOR; bubbleStroke.Thickness=1.2; bubbleStroke.Transparency=0.4
@@ -505,7 +520,7 @@ bubbleGreeting.Text="Hey, "..player.DisplayName.." ♡"; bubbleGreeting.ZIndex=3
 local bubbleMsg=Instance.new("TextLabel",bubbleBody)
 bubbleMsg.Size=UDim2.new(1,-20,0,36); bubbleMsg.Position=UDim2.new(0,14,0,38)
 bubbleMsg.BackgroundTransparency=1; bubbleMsg.Font=Enum.Font.Gotham; bubbleMsg.TextSize=13
-bubbleMsg.TextColor3=Color3.fromRGB(170,170,180); bubbleMsg.TextXAlignment=Enum.TextXAlignment.Left
+bubbleMsg.TextColor3=Color3.fromRGB(160,160,160); bubbleMsg.TextXAlignment=Enum.TextXAlignment.Left
 bubbleMsg.TextYAlignment=Enum.TextYAlignment.Top; bubbleMsg.TextWrapped=true
 bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Let's get to it 🌿"; bubbleMsg.ZIndex=3
 
@@ -519,10 +534,10 @@ gridLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; gridLayout.SortO
 
 local function createStatusBox(text, color)
     local box=Instance.new("Frame",statsContainer)
-    box.BackgroundColor3=Color3.fromRGB(16,16,20); box.BorderSizePixel=0
+    box.BackgroundColor3=Color3.fromRGB(20,20,20); box.BorderSizePixel=0
     Instance.new("UICorner",box).CornerRadius=UDim.new(0,7)
     local stroke = Instance.new("UIStroke", box)
-    stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.55
+    stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.4
     local lbl=Instance.new("TextLabel",box)
     lbl.Size=UDim2.new(1,-10,1,-4); lbl.Position=UDim2.new(0,5,0,2)
     lbl.BackgroundTransparency=1; lbl.Font=Enum.Font.Gotham; lbl.TextSize=12
@@ -531,20 +546,20 @@ local function createStatusBox(text, color)
     return lbl
 end
 
-local pingLabel   = createStatusBox("Ping: …")
-local lagLabel    = createStatusBox("Lag: …", Color3.fromRGB(160, 160, 170))
+local pingLabel   = createStatusBox("Ping: …", PB_TEXT)
+local lagLabel    = createStatusBox("Lag: …", Color3.fromRGB(180, 180, 180))
 createStatusBox("Acc Age: "..player.AccountAge.."d")
-local execLabel   = createStatusBox("Exec: detecting…", Color3.fromRGB(175, 175, 185))
-local uptimeLabel = createStatusBox("Uptime: …", Color3.fromRGB(160, 200, 160))
+local execLabel   = createStatusBox("Exec: detecting…", Color3.fromRGB(200, 200, 200))
+local uptimeLabel = createStatusBox("Uptime: …", Color3.fromRGB(210, 210, 210))
 
 local rejoinBtn=Instance.new("TextButton",statsContainer)
-rejoinBtn.Size=UDim2.new(0,148,0,36); rejoinBtn.BackgroundColor3=Color3.fromRGB(16,16,20); rejoinBtn.BorderSizePixel=0
+rejoinBtn.Size=UDim2.new(0,148,0,36); rejoinBtn.BackgroundColor3=BTN_COLOR; rejoinBtn.BorderSizePixel=0
 rejoinBtn.Font=Enum.Font.Gotham; rejoinBtn.TextSize=13; rejoinBtn.TextColor3=THEME_TEXT; rejoinBtn.Text="Rejoin"
 Instance.new("UICorner",rejoinBtn).CornerRadius=UDim.new(0,7)
 local rjStroke = Instance.new("UIStroke", rejoinBtn)
-rjStroke.Color = SEP_COLOR; rjStroke.Thickness = 1; rjStroke.Transparency = 0.55
+rjStroke.Color = SEP_COLOR; rjStroke.Thickness = 1; rjStroke.Transparency = 0.4
 rejoinBtn.MouseEnter:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=BTN_HOVER}):Play() end)
-rejoinBtn.MouseLeave:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=Color3.fromRGB(16,16,20)}):Play() end)
+rejoinBtn.MouseLeave:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=BTN_COLOR}):Play() end)
 rejoinBtn.MouseButton1Click:Connect(function() pcall(function() TeleportService:Teleport(game.PlaceId,player) end) end)
 
 local pingConn = RunService.Heartbeat:Connect(function()
@@ -591,11 +606,11 @@ lagThread = task.spawn(function()
         if lagLabel and lagLabel.Parent then
             if ok then
                 if ping > 250 then
-                    lagLabel.Text = "Bad Ping"; lagLabel.TextColor3 = Color3.fromRGB(240, 100, 100)
+                    lagLabel.Text = "Bad Ping"; lagLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
                 elseif ping > 120 then
-                    lagLabel.Text = "High Ping"; lagLabel.TextColor3 = Color3.fromRGB(240, 200, 80)
+                    lagLabel.Text = "High Ping"; lagLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
                 else
-                    lagLabel.Text = "Good Ping"; lagLabel.TextColor3 = Color3.fromRGB(100, 210, 100)
+                    lagLabel.Text = "Good Ping"; lagLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
                 end
             else
                 lagLabel.Text = "Lag: N/A"
@@ -647,10 +662,13 @@ local function makeWorldSep()
     s.BackgroundColor3 = SEP_COLOR; s.BorderSizePixel = 0
 end
 
+-- ────────────────────────────────────────────────────
+-- TOGGLE FACTORY  (dark-grey OFF / white ON)
+-- ────────────────────────────────────────────────────
 local function makeWorldToggle(labelText, default, callback)
     local frame = Instance.new("Frame", worldPage)
     frame.Size = UDim2.new(1, 0, 0, 36)
-    frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); frame.BorderSizePixel = 0
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local lbl = Instance.new("TextLabel", frame)
     lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
@@ -659,22 +677,24 @@ local function makeWorldToggle(labelText, default, callback)
     lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
     local tb = Instance.new("TextButton", frame)
     tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
-    tb.BackgroundColor3 = default and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(38, 38, 45)
+    tb.BackgroundColor3 = default and SW_ON or SW_OFF   -- white ON / dark-grey OFF
     tb.Text = ""; tb.BorderSizePixel = 0
     Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
     local circle = Instance.new("Frame", tb)
     circle.Size = UDim2.new(0, 14, 0, 14)
     circle.Position = UDim2.new(0, default and 20 or 2, 0.5, -7)
-    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
+    circle.BackgroundColor3 = default and SW_KNOB_ON or SW_KNOB_OFF
+    circle.BorderSizePixel = 0
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
     local toggled = default
     local function setState(val)
         toggled = val
         TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            BackgroundColor3 = val and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(38, 38, 45)
+            BackgroundColor3 = val and SW_ON or SW_OFF
         }):Play()
         TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            Position = UDim2.new(0, val and 20 or 2, 0.5, -7)
+            Position = UDim2.new(0, val and 20 or 2, 0.5, -7),
+            BackgroundColor3 = val and SW_KNOB_ON or SW_KNOB_OFF
         }):Play()
     end
     tb.MouseButton1Click:Connect(function()
@@ -837,7 +857,7 @@ tpUIGrid.SortOrder = Enum.SortOrder.LayoutOrder
 for i, loc in ipairs(locations) do
     local btn = Instance.new("TextButton", tpGrid)
     btn.LayoutOrder = i
-    btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
+    btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0   -- grey button
     btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 12
     btn.TextColor3 = THEME_TEXT; btn.Text = loc.name
     btn.TextTruncate = Enum.TextTruncate.AtEnd
@@ -889,7 +909,7 @@ end
 
 local function iButton(text, cb)
     local btn = Instance.new("TextButton", itemPage)
-    btn.Size = UDim2.new(1, 0, 0, 34); btn.BackgroundColor3 = BTN_COLOR
+    btn.Size = UDim2.new(1, 0, 0, 34); btn.BackgroundColor3 = BTN_COLOR  -- grey
     btn.Text = text; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
@@ -899,9 +919,12 @@ local function iButton(text, cb)
     return btn
 end
 
+-- ────────────────────────────────────────────────────
+-- TOGGLE FACTORY for Item tab  (dark-grey OFF / white ON)
+-- ────────────────────────────────────────────────────
 local function iToggle(text, default, cb)
     local frame = Instance.new("Frame", itemPage)
-    frame.Size = UDim2.new(1, 0, 0, 36); frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    frame.Size = UDim2.new(1, 0, 0, 36); frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local lbl = Instance.new("TextLabel", frame)
@@ -910,23 +933,24 @@ local function iToggle(text, default, cb)
     lbl.TextSize = 13; lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
     local tb = Instance.new("TextButton", frame)
     tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
-    tb.BackgroundColor3 = default and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    tb.BackgroundColor3 = default and SW_ON or SW_OFF
     tb.Text = ""; tb.BorderSizePixel = 0
     Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
     local circle = Instance.new("Frame", tb)
     circle.Size = UDim2.new(0, 14, 0, 14)
     circle.Position = UDim2.new(0, default and 20 or 2, 0.5, -7)
-    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); circle.BorderSizePixel = 0
+    circle.BackgroundColor3 = default and SW_KNOB_ON or SW_KNOB_OFF; circle.BorderSizePixel = 0
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
     local toggled = default
     if cb then cb(toggled) end
     tb.MouseButton1Click:Connect(function()
         toggled = not toggled
         TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            BackgroundColor3 = toggled and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+            BackgroundColor3 = toggled and SW_ON or SW_OFF
         }):Play()
         TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            Position = UDim2.new(0, toggled and 20 or 2, 0.5, -7)
+            Position = UDim2.new(0, toggled and 20 or 2, 0.5, -7),
+            BackgroundColor3 = toggled and SW_KNOB_ON or SW_KNOB_OFF
         }):Play()
         if cb then cb(toggled) end
     end)
@@ -935,7 +959,7 @@ end
 
 local function iSlider(text, minV, maxV, defV, cb)
     local frame = Instance.new("Frame", itemPage)
-    frame.Size = UDim2.new(1, 0, 0, 54); frame.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    frame.Size = UDim2.new(1, 0, 0, 54); frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local topRow = Instance.new("Frame", frame)
@@ -948,20 +972,22 @@ local function iSlider(text, minV, maxV, defV, cb)
     local valLbl = Instance.new("TextLabel", topRow)
     valLbl.Size = UDim2.new(0.28, 0, 1, 0); valLbl.Position = UDim2.new(0.72, 0, 0, 0)
     valLbl.BackgroundTransparency = 1; valLbl.Font = Enum.Font.GothamBold; valLbl.TextSize = 13
-    valLbl.TextColor3 = Color3.fromRGB(160, 160, 175); valLbl.TextXAlignment = Enum.TextXAlignment.Right
+    valLbl.TextColor3 = PB_TEXT                                  -- white text
+    valLbl.TextXAlignment = Enum.TextXAlignment.Right
     valLbl.Text = tostring(defV)
     local track = Instance.new("Frame", frame)
     track.Size = UDim2.new(1, -16, 0, 5); track.Position = UDim2.new(0, 8, 0, 38)
-    track.BackgroundColor3 = Color3.fromRGB(32, 32, 38); track.BorderSizePixel = 0
+    track.BackgroundColor3 = Color3.fromRGB(40, 40, 40); track.BorderSizePixel = 0
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
     local fill = Instance.new("Frame", track)
     fill.Size = UDim2.new((defV-minV)/(maxV-minV), 0, 1, 0)
-    fill.BackgroundColor3 = ACCENT; fill.BorderSizePixel = 0
+    fill.BackgroundColor3 = PB_BAR                               -- white bar
+    fill.BorderSizePixel = 0
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
     local knob = Instance.new("TextButton", track)
     knob.Size = UDim2.new(0, 14, 0, 14); knob.AnchorPoint = Vector2.new(0.5, 0.5)
     knob.Position = UDim2.new((defV-minV)/(maxV-minV), 0, 0.5, 0)
-    knob.BackgroundColor3 = Color3.fromRGB(210, 210, 220); knob.Text = ""; knob.BorderSizePixel = 0
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255); knob.Text = ""; knob.BorderSizePixel = 0
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
     local ds = false
     local function upd(absX)
@@ -990,7 +1016,7 @@ local function selectPart(part)
     sb.Name = "Selection"; sb.Adornee = part
     sb.SurfaceTransparency = 0.5; sb.LineThickness = 0.09
     sb.SurfaceColor3 = Color3.fromRGB(0,0,0)
-    sb.Color3 = Color3.fromRGB(0,172,240)
+    sb.Color3 = Color3.fromRGB(180,180,180)
 end
 
 local function deselectPart(part)
@@ -1066,11 +1092,11 @@ end
 
 local lassoFrame = Instance.new("Frame", gui)
 lassoFrame.Name = "VHLassoRect"
-lassoFrame.BackgroundColor3 = Color3.fromRGB(90, 130, 210)
+lassoFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 lassoFrame.BackgroundTransparency = 0.82; lassoFrame.BorderSizePixel = 0
 lassoFrame.Visible = false; lassoFrame.ZIndex = 20
 local lassoStroke = Instance.new("UIStroke", lassoFrame)
-lassoStroke.Color = Color3.fromRGB(130,160,240); lassoStroke.Thickness = 1.5; lassoStroke.Transparency = 0
+lassoStroke.Color = Color3.fromRGB(200,200,200); lassoStroke.Thickness = 1.5; lassoStroke.Transparency = 0
 
 local function is_in_frame(screenpos, frame)
     local xPos = frame.AbsolutePosition.X; local yPos = frame.AbsolutePosition.Y
@@ -1151,7 +1177,7 @@ local function updateItemModeButtons(active)
     for _, mb in ipairs(itemModeButtons) do
         local isActive = mb.Text == active
         TweenService:Create(mb, TweenInfo.new(0.18), {
-            BackgroundColor3 = isActive and ACCENT or BTN_COLOR,
+            BackgroundColor3 = isActive and Color3.fromRGB(110,110,110) or BTN_COLOR,
             TextColor3 = isActive and Color3.fromRGB(255,255,255) or THEME_TEXT
         }):Play()
     end
@@ -1173,9 +1199,9 @@ end
 updateItemModeButtons("Group")
 
 local itemModeHint = Instance.new("TextLabel", itemPage)
-itemModeHint.Size = UDim2.new(1, 0, 0, 24); itemModeHint.BackgroundColor3 = Color3.fromRGB(13,13,16)
+itemModeHint.Size = UDim2.new(1, 0, 0, 24); itemModeHint.BackgroundColor3 = Color3.fromRGB(20,20,20)
 itemModeHint.BorderSizePixel = 0; itemModeHint.Font = Enum.Font.Gotham; itemModeHint.TextSize = 11
-itemModeHint.TextColor3 = Color3.fromRGB(95,95,110); itemModeHint.TextWrapped = true
+itemModeHint.TextColor3 = Color3.fromRGB(110,110,110); itemModeHint.TextWrapped = true
 itemModeHint.TextXAlignment = Enum.TextXAlignment.Left
 itemModeHint.Text = "  Group: sorted by item type  •  Random: shuffled order"
 Instance.new("UICorner", itemModeHint).CornerRadius = UDim.new(0, 7)
@@ -1191,14 +1217,14 @@ tpRow.Size = UDim2.new(1, 0, 0, 30); tpRow.BackgroundTransparency = 1
 
 local tpSetBtn = Instance.new("TextButton", tpRow)
 tpSetBtn.Size = UDim2.new(0.5, -4, 1, 0); tpSetBtn.Position = UDim2.new(0, 0, 0, 0)
-tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold
+tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold  -- grey
 tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"
 tpSetBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
 
 local tpRemoveBtn = Instance.new("TextButton", tpRow)
 tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
-tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSemibold
+tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSemibold  -- grey
 tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Remove Destination"
 tpRemoveBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
@@ -1214,7 +1240,7 @@ tpSetBtn.MouseButton1Click:Connect(function()
     tpCircle.Name = "VanillaHubTpCircle"
     tpCircle.Shape = Enum.PartType.Ball; tpCircle.Size = Vector3.new(3,3,3)
     tpCircle.Material = Enum.Material.SmoothPlastic
-    tpCircle.Color = Color3.fromRGB(110,110,120)
+    tpCircle.Color = Color3.fromRGB(130,130,130)
     tpCircle.Anchored = true; tpCircle.CanCollide = false
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -1242,7 +1268,7 @@ tpSelectBtn.MouseButton1Click:Connect(function()
     if not tpCircle then return end
     isTeleportingItems = true; stopTeleportItems = false
     tpSelectBtn.Text = "Stop Teleporting"
-    TweenService:Create(tpSelectBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(150,40,40)}):Play()
+    TweenService:Create(tpSelectBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50,50,50)}):Play()
     local destCF = tpCircle.CFrame
     local OldPos = player.Character
         and player.Character:FindFirstChild("HumanoidRootPart")
@@ -1369,7 +1395,7 @@ end
 
 local function dButton(text, cb)
     local btn = Instance.new("TextButton", dupePage)
-    btn.Size = UDim2.new(1, 0, 0, 32); btn.BackgroundColor3 = BTN_COLOR
+    btn.Size = UDim2.new(1, 0, 0, 32); btn.BackgroundColor3 = BTN_COLOR  -- grey
     btn.Text = text; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
@@ -1422,7 +1448,7 @@ end)
 
 local function createPSlider(labelText, minVal, maxVal, defaultVal, onChanged)
     local frame=Instance.new("Frame",playerPage)
-    frame.Size=UDim2.new(1,0,0,54); frame.BackgroundColor3=Color3.fromRGB(16,16,20)
+    frame.Size=UDim2.new(1,0,0,54); frame.BackgroundColor3=Color3.fromRGB(20,20,20)
     frame.BorderSizePixel=0; Instance.new("UICorner",frame).CornerRadius=UDim.new(0,8)
     local topRow=Instance.new("Frame",frame)
     topRow.Size=UDim2.new(1,-16,0,22); topRow.Position=UDim2.new(0,8,0,7); topRow.BackgroundTransparency=1
@@ -1432,20 +1458,21 @@ local function createPSlider(labelText, minVal, maxVal, defaultVal, onChanged)
     local valLbl=Instance.new("TextLabel",topRow)
     valLbl.Size=UDim2.new(0.28,0,1,0); valLbl.Position=UDim2.new(0.72,0,0,0); valLbl.BackgroundTransparency=1
     valLbl.Font=Enum.Font.GothamBold; valLbl.TextSize=13
-    valLbl.TextColor3=Color3.fromRGB(160,160,175)
+    valLbl.TextColor3=PB_TEXT                                    -- white text
     valLbl.TextXAlignment=Enum.TextXAlignment.Right; valLbl.Text=tostring(defaultVal)
     local track=Instance.new("Frame",frame)
     track.Size=UDim2.new(1,-16,0,5); track.Position=UDim2.new(0,8,0,38)
-    track.BackgroundColor3=Color3.fromRGB(32,32,38); track.BorderSizePixel=0
+    track.BackgroundColor3=Color3.fromRGB(40,40,40); track.BorderSizePixel=0
     Instance.new("UICorner",track).CornerRadius=UDim.new(1,0)
     local fill=Instance.new("Frame",track)
     fill.Size=UDim2.new((defaultVal-minVal)/(maxVal-minVal),0,1,0)
-    fill.BackgroundColor3=ACCENT; fill.BorderSizePixel=0
+    fill.BackgroundColor3=PB_BAR                                 -- white bar
+    fill.BorderSizePixel=0
     Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
     local knob=Instance.new("TextButton",track)
     knob.Size=UDim2.new(0,14,0,14); knob.AnchorPoint=Vector2.new(0.5,0.5)
     knob.Position=UDim2.new((defaultVal-minVal)/(maxVal-minVal),0,0.5,0)
-    knob.BackgroundColor3=Color3.fromRGB(210,210,220); knob.Text=""; knob.BorderSizePixel=0
+    knob.BackgroundColor3=Color3.fromRGB(255,255,255); knob.Text=""; knob.BorderSizePixel=0
     Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
     local ds=false
     local function upd(absX)
@@ -1467,9 +1494,12 @@ local function createPSlider(labelText, minVal, maxVal, defaultVal, onChanged)
     return frame
 end
 
+-- ────────────────────────────────────────────────────
+-- TOGGLE FACTORY for Player tab  (dark-grey OFF / white ON)
+-- ────────────────────────────────────────────────────
 local function createPToggle(text, defaultState, callback)
     local frame=Instance.new("Frame",playerPage)
-    frame.Size=UDim2.new(1,0,0,36); frame.BackgroundColor3=Color3.fromRGB(16,16,20)
+    frame.Size=UDim2.new(1,0,0,36); frame.BackgroundColor3=Color3.fromRGB(20,20,20)
     frame.BorderSizePixel=0; Instance.new("UICorner",frame).CornerRadius=UDim.new(0,8)
     local lbl=Instance.new("TextLabel",frame)
     lbl.Size=UDim2.new(1,-54,1,0); lbl.Position=UDim2.new(0,12,0,0); lbl.BackgroundTransparency=1
@@ -1477,18 +1507,21 @@ local function createPToggle(text, defaultState, callback)
     lbl.TextColor3=THEME_TEXT; lbl.TextXAlignment=Enum.TextXAlignment.Left
     local tb=Instance.new("TextButton",frame)
     tb.Size=UDim2.new(0,36,0,20); tb.Position=UDim2.new(1,-46,0.5,-10)
-    tb.BackgroundColor3=defaultState and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)
+    tb.BackgroundColor3=defaultState and SW_ON or SW_OFF
     tb.Text=""; tb.BorderSizePixel=0; Instance.new("UICorner",tb).CornerRadius=UDim.new(1,0)
     local circle=Instance.new("Frame",tb)
     circle.Size=UDim2.new(0,14,0,14); circle.Position=UDim2.new(0,defaultState and 20 or 2,0.5,-7)
-    circle.BackgroundColor3=Color3.fromRGB(255,255,255); circle.BorderSizePixel=0
+    circle.BackgroundColor3=defaultState and SW_KNOB_ON or SW_KNOB_OFF; circle.BorderSizePixel=0
     Instance.new("UICorner",circle).CornerRadius=UDim.new(1,0)
     local toggled=defaultState
     if callback then callback(toggled) end
     local function setToggled(val)
         toggled=val
-        TweenService:Create(tb,TweenInfo.new(0.2,Enum.EasingStyle.Quint),{BackgroundColor3=toggled and Color3.fromRGB(80,160,80) or Color3.fromRGB(38,38,45)}):Play()
-        TweenService:Create(circle,TweenInfo.new(0.2,Enum.EasingStyle.Quint),{Position=UDim2.new(0,toggled and 20 or 2,0.5,-7)}):Play()
+        TweenService:Create(tb,TweenInfo.new(0.2,Enum.EasingStyle.Quint),{BackgroundColor3=toggled and SW_ON or SW_OFF}):Play()
+        TweenService:Create(circle,TweenInfo.new(0.2,Enum.EasingStyle.Quint),{
+            Position=UDim2.new(0,toggled and 20 or 2,0.5,-7),
+            BackgroundColor3=toggled and SW_KNOB_ON or SW_KNOB_OFF
+        }):Play()
     end
     tb.MouseButton1Click:Connect(function()
         toggled=not toggled; setToggled(toggled)
@@ -1590,7 +1623,7 @@ createPSlider("Fly Speed", 100, 500, 100, function(val) flySpeed = val end)
 
 local flyKeyFrame = Instance.new("Frame", playerPage)
 flyKeyFrame.Size = UDim2.new(1, 0, 0, 36)
-flyKeyFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); flyKeyFrame.BorderSizePixel = 0
+flyKeyFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); flyKeyFrame.BorderSizePixel = 0
 Instance.new("UICorner", flyKeyFrame).CornerRadius = UDim.new(0, 8)
 local flyKeyLabel = Instance.new("TextLabel", flyKeyFrame)
 flyKeyLabel.Size = UDim2.new(0.55, 0, 1, 0); flyKeyLabel.Position = UDim2.new(0, 12, 0, 0)
@@ -1599,7 +1632,7 @@ flyKeyLabel.TextColor3 = THEME_TEXT; flyKeyLabel.TextXAlignment = Enum.TextXAlig
 flyKeyLabel.Text = "Fly Hotkey"
 local flyKeyBtn = Instance.new("TextButton", flyKeyFrame)
 flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70, 0.5, -12)
-flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
+flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold  -- grey
 flyKeyBtn.TextSize = 12; flyKeyBtn.TextColor3 = THEME_TEXT; flyKeyBtn.Text = "Q"
 flyKeyBtn.BorderSizePixel = 0; Instance.new("UICorner", flyKeyBtn).CornerRadius = UDim.new(0, 6)
 flyKeyBtn.MouseEnter:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
@@ -1611,12 +1644,12 @@ flyKeyBtn.MouseButton1Click:Connect(function()
     if waitingForFlyKey then return end
     waitingForFlyKey = true
     flyKeyBtn.Text = "..."
-    flyKeyBtn.BackgroundColor3 = Color3.fromRGB(50, 80, 50)
+    flyKeyBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 end)
 
 local flyToggleFrame = Instance.new("Frame", playerPage)
 flyToggleFrame.Size = UDim2.new(1, 0, 0, 36)
-flyToggleFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 20); flyToggleFrame.BorderSizePixel = 0
+flyToggleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); flyToggleFrame.BorderSizePixel = 0
 Instance.new("UICorner", flyToggleFrame).CornerRadius = UDim.new(0, 8)
 local flyToggleLbl = Instance.new("TextLabel", flyToggleFrame)
 flyToggleLbl.Size = UDim2.new(1, -54, 1, 0); flyToggleLbl.Position = UDim2.new(0, 12, 0, 0)
@@ -1625,21 +1658,22 @@ flyToggleLbl.TextColor3 = THEME_TEXT; flyToggleLbl.TextXAlignment = Enum.TextXAl
 flyToggleLbl.Text = "Fly"
 local flyToggleTb = Instance.new("TextButton", flyToggleFrame)
 flyToggleTb.Size = UDim2.new(0, 36, 0, 20); flyToggleTb.Position = UDim2.new(1, -46, 0.5, -10)
-flyToggleTb.BackgroundColor3 = Color3.fromRGB(80, 160, 80)
+flyToggleTb.BackgroundColor3 = SW_ON                             -- white = ON by default
 flyToggleTb.Text = ""; flyToggleTb.BorderSizePixel = 0
 Instance.new("UICorner", flyToggleTb).CornerRadius = UDim.new(1, 0)
 local flyToggleCircle = Instance.new("Frame", flyToggleTb)
 flyToggleCircle.Size = UDim2.new(0, 14, 0, 14)
 flyToggleCircle.Position = UDim2.new(0, 20, 0.5, -7)
-flyToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255); flyToggleCircle.BorderSizePixel = 0
+flyToggleCircle.BackgroundColor3 = SW_KNOB_ON; flyToggleCircle.BorderSizePixel = 0
 Instance.new("UICorner", flyToggleCircle).CornerRadius = UDim.new(1, 0)
 flyToggleTb.MouseButton1Click:Connect(function()
     flyEnabled = not flyEnabled
     TweenService:Create(flyToggleTb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-        BackgroundColor3 = flyEnabled and Color3.fromRGB(80, 160, 80) or Color3.fromRGB(38, 38, 45)
+        BackgroundColor3 = flyEnabled and SW_ON or SW_OFF
     }):Play()
     TweenService:Create(flyToggleCircle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-        Position = UDim2.new(0, flyEnabled and 20 or 2, 0.5, -7)
+        Position = UDim2.new(0, flyEnabled and 20 or 2, 0.5, -7),
+        BackgroundColor3 = flyEnabled and SW_KNOB_ON or SW_KNOB_OFF
     }):Play()
     flyToggleLbl.Text = "Fly"
     if not flyEnabled and isFlyActive then stopFly() end
