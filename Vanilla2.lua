@@ -55,12 +55,12 @@ local C = {
     TOGGLE_OFF   = Color3.fromRGB(50,  50,  50 ),   -- dark grey OFF
 
     -- buttons (all grey — no green / red)
-    BTN_START    = Color3.fromRGB(70,  70,  70 ),
-    BTN_START_HV = Color3.fromRGB(100, 100, 100),
-    BTN_STOP     = Color3.fromRGB(55,  55,  55 ),
-    BTN_STOP_HV  = Color3.fromRGB(85,  85,  85 ),
-    BTN_IDLE     = Color3.fromRGB(70,  70,  70 ),
-    BTN_IDLE_HV  = Color3.fromRGB(100, 100, 100),
+    BTN_START    = Color3.fromRGB(14,  14,  14),
+    BTN_START_HV = Color3.fromRGB(32,  32,  32),
+    BTN_STOP     = Color3.fromRGB(14,  14,  14),
+    BTN_STOP_HV  = Color3.fromRGB(32,  32,  32),
+    BTN_IDLE     = Color3.fromRGB(14,  14,  14),
+    BTN_IDLE_HV  = Color3.fromRGB(32,  32,  32),
 
     -- status dot
     DOT_IDLE     = Color3.fromRGB(70,  70,  70 ),
@@ -72,9 +72,9 @@ local C = {
     PROG_DONE    = Color3.fromRGB(255, 255, 255),   -- white when done
 
     -- tab bar
-    TAB_ACTIVE   = Color3.fromRGB(75,  75,  75 ),
-    TAB_IDLE     = Color3.fromRGB(25,  25,  25 ),
-    TAB_HOVER    = Color3.fromRGB(45,  45,  45 ),
+    TAB_ACTIVE   = Color3.fromRGB(38,  38,  38),
+    TAB_IDLE     = Color3.fromRGB(12,  12,  12),
+    TAB_HOVER    = Color3.fromRGB(28,  28,  28),
 }
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -125,6 +125,10 @@ local function makeBtn(parent, text, color, hoverColor, callback)
     btn.Text             = text
     btn.AutoButtonColor  = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     applyHover(btn, color, hoverColor)
     if callback then btn.MouseButton1Click:Connect(callback) end
     return btn
@@ -154,6 +158,10 @@ local function makeStartStop(parent, startCb, stopCb)
         btn.AutoButtonColor  = false
         btn.LayoutOrder      = order
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
         applyHover(btn, base, hover)
         if cb then btn.MouseButton1Click:Connect(cb) end
         return btn
