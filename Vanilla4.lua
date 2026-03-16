@@ -27,8 +27,8 @@ local mouse      = player:GetMouse()
 -- ════════════════════════════════════════════════════
 local C = {
     BG         = Color3.fromRGB(10,  10,  10 ),
-    CARD       = Color3.fromRGB(20,  20,  20 ),
-    ROW        = Color3.fromRGB(28,  28,  28 ),
+    CARD       = Color3.fromRGB(10,  10,  10),   -- black panel
+    ROW        = Color3.fromRGB(16,  16,  16),   -- near-black row
     TRACK      = Color3.fromRGB(38,  38,  38 ),
 
     BORDER     = Color3.fromRGB(55,  55,  55 ),
@@ -39,10 +39,10 @@ local C = {
     TEXT_DIM   = Color3.fromRGB(90,  90,  90 ),
 
     -- buttons (grey)
-    BTN        = Color3.fromRGB(70,  70,  70 ),
-    BTN_HV     = Color3.fromRGB(100, 100, 100),
-    BTN_ACT    = Color3.fromRGB(90,  90,  90 ),   -- "active" button state (lighter grey)
-    BTN_DIS    = Color3.fromRGB(32,  32,  32 ),   -- disabled
+    BTN        = Color3.fromRGB(14,  14,  14),   -- black button bg
+    BTN_HV     = Color3.fromRGB(32,  32,  32),   -- dark grey hover
+    BTN_ACT    = Color3.fromRGB(38,  38,  38),   -- dark grey active
+    BTN_DIS    = Color3.fromRGB(10,  10,  10),   -- near-black disabled
 
     -- progress bar
     PB_FILL    = Color3.fromRGB(255, 255, 255),   -- white bar
@@ -51,7 +51,7 @@ local C = {
 
     -- status
     STATUS_TXT = Color3.fromRGB(200, 200, 200),
-    STATUS_BG  = Color3.fromRGB(22,  22,  22 ),
+    STATUS_BG  = Color3.fromRGB(10,  10,  10),
 
     -- selection / preview colours (kept as-is, these are world highlights)
     HL         = Color3.fromRGB(255, 180,   0),
@@ -554,6 +554,10 @@ local function mkBtn(text, color, cb)
     btn.TextColor3 = C.TEXT; btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     -- simple brightness bump for hover
     local r = math.min(color.R * 255 + 22, 255) / 255
     local g = math.min(color.G * 255 + 22, 255) / 255
@@ -976,6 +980,10 @@ startBtn.Font             = Enum.Font.GothamBold
 startBtn.TextSize         = 14; startBtn.TextColor3 = C.TEXT_DIM
 startBtn.BorderSizePixel  = 0; startBtn.AutoButtonColor = false
 Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 6)
+local _ss_startBtn = Instance.new("UIStroke", startBtn)
+_ss_startBtn.Color = Color3.fromRGB(55, 55, 55)
+_ss_startBtn.Thickness = 1
+_ss_startBtn.Transparency = 0
 
 local function runSortLoop(slots, startI, total, doneStart)
     local done = doneStart
@@ -1102,6 +1110,10 @@ stopBtn.Font             = Enum.Font.GothamBold
 stopBtn.TextSize         = 13; stopBtn.TextColor3 = C.TEXT_DIM
 stopBtn.BorderSizePixel  = 0; stopBtn.AutoButtonColor = false
 Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 6)
+local _ss_stopBtn = Instance.new("UIStroke", stopBtn)
+_ss_stopBtn.Color = Color3.fromRGB(55, 55, 55)
+_ss_stopBtn.Thickness = 1
+_ss_stopBtn.Transparency = 0
 stopBtn.MouseButton1Click:Connect(function()
     if not isSorting then return end
     isSorting    = false
