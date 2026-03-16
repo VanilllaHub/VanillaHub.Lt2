@@ -28,52 +28,53 @@ if not worldPage then
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- THEME  (grey / black / white — no red or green anywhere in the UI)
+-- THEME  (Black / Grey / White only)
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local C = {
-    -- backgrounds
-    BG_DEEP      = Color3.fromRGB(10,  10,  14 ),
-    BG_PANEL     = Color3.fromRGB(18,  18,  24 ),
-    BG_ROW       = Color3.fromRGB(26,  26,  34 ),
-    BG_INPUT     = Color3.fromRGB(32,  32,  44 ),
+    -- backgrounds (black inner panels)
+    BG_DEEP      = Color3.fromRGB(8,   8,   8  ),
+    BG_PANEL     = Color3.fromRGB(15,  15,  15 ),
+    BG_ROW       = Color3.fromRGB(22,  22,  22 ),
+    BG_INPUT     = Color3.fromRGB(32,  32,  32 ),
 
-    -- borders
-    BORDER       = Color3.fromRGB(52,  52,  72 ),
-    BORDER_FOCUS = Color3.fromRGB(85,  85, 120 ),
+    -- borders (grey)
+    BORDER       = Color3.fromRGB(55,  55,  55 ),
+    BORDER_FOCUS = Color3.fromRGB(100, 100, 100),
 
     -- text
-    TEXT_DIM     = Color3.fromRGB(100, 100, 128 ),
-    TEXT_MID     = Color3.fromRGB(155, 152, 172 ),
-    TEXT_BRIGHT  = Color3.fromRGB(220, 220, 232 ),
-    TEXT_WHITE   = Color3.fromRGB(240, 240, 245 ),
+    TEXT_DIM     = Color3.fromRGB(100, 100, 100),
+    TEXT_MID     = Color3.fromRGB(155, 155, 155),
+    TEXT_BRIGHT  = Color3.fromRGB(210, 210, 210),
+    TEXT_WHITE   = Color3.fromRGB(240, 240, 240),
 
-    -- toggle knob
-    KNOB         = Color3.fromRGB(235, 235, 240 ),
-    TOGGLE_ON    = Color3.fromRGB( 75,  75, 105 ),
-    TOGGLE_OFF   = Color3.fromRGB( 42,  42,  58 ),
+    -- switches: dark grey OFF / white ON
+    KNOB         = Color3.fromRGB(30,  30,  30 ),   -- dark knob on white track
+    KNOB_OFF     = Color3.fromRGB(160, 160, 160),   -- light knob on dark track
+    TOGGLE_ON    = Color3.fromRGB(220, 220, 220),   -- white ON
+    TOGGLE_OFF   = Color3.fromRGB(50,  50,  50 ),   -- dark grey OFF
 
-    -- buttons  (all grey shades — no green / red)
-    BTN_START    = Color3.fromRGB( 44,  44,  62 ),
-    BTN_START_HV = Color3.fromRGB( 62,  62,  86 ),
-    BTN_STOP     = Color3.fromRGB( 36,  36,  50 ),
-    BTN_STOP_HV  = Color3.fromRGB( 54,  54,  74 ),
-    BTN_IDLE     = Color3.fromRGB( 32,  32,  44 ),
-    BTN_IDLE_HV  = Color3.fromRGB( 50,  50,  68 ),
+    -- buttons (all grey — no green / red)
+    BTN_START    = Color3.fromRGB(70,  70,  70 ),
+    BTN_START_HV = Color3.fromRGB(100, 100, 100),
+    BTN_STOP     = Color3.fromRGB(55,  55,  55 ),
+    BTN_STOP_HV  = Color3.fromRGB(85,  85,  85 ),
+    BTN_IDLE     = Color3.fromRGB(70,  70,  70 ),
+    BTN_IDLE_HV  = Color3.fromRGB(100, 100, 100),
 
     -- status dot
-    DOT_IDLE     = Color3.fromRGB( 72,  72,  90 ),
-    DOT_ACTIVE   = Color3.fromRGB(190, 190, 210 ),
+    DOT_IDLE     = Color3.fromRGB(70,  70,  70 ),
+    DOT_ACTIVE   = Color3.fromRGB(200, 200, 200),
 
-    -- progress bar
-    PROG_TRACK   = Color3.fromRGB( 26,  26,  36 ),
-    PROG_FILL    = Color3.fromRGB(200, 200, 215 ),
-    PROG_DONE    = Color3.fromRGB(180, 180, 195 ),
+    -- progress bar (white bar + white text)
+    PROG_TRACK   = Color3.fromRGB(30,  30,  30 ),
+    PROG_FILL    = Color3.fromRGB(255, 255, 255),   -- white bar
+    PROG_DONE    = Color3.fromRGB(255, 255, 255),   -- white when done
 
     -- tab bar
-    TAB_ACTIVE   = Color3.fromRGB( 48,  48,  72 ),
-    TAB_IDLE     = Color3.fromRGB( 18,  18,  26 ),
-    TAB_HOVER    = Color3.fromRGB( 34,  34,  52 ),
+    TAB_ACTIVE   = Color3.fromRGB(75,  75,  75 ),
+    TAB_IDLE     = Color3.fromRGB(25,  25,  25 ),
+    TAB_HOVER    = Color3.fromRGB(45,  45,  45 ),
 }
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -110,7 +111,7 @@ local function applyHover(btn, base, hover)
     end)
 end
 
--- Generic button
+-- Generic grey button
 local function makeBtn(parent, text, color, hoverColor, callback)
     color      = color      or C.BTN_IDLE
     hoverColor = hoverColor or C.BTN_IDLE_HV
@@ -122,14 +123,14 @@ local function makeBtn(parent, text, color, hoverColor, callback)
     btn.TextSize         = 13
     btn.TextColor3       = C.TEXT_BRIGHT
     btn.Text             = text
-    btn.AutoButtonColor  = false  -- CRITICAL: prevents Roblox red/green default colours
+    btn.AutoButtonColor  = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     applyHover(btn, color, hoverColor)
     if callback then btn.MouseButton1Click:Connect(callback) end
     return btn
 end
 
--- Side-by-side Start / Stop pair  (both grey — no red / green)
+-- Start / Stop pair (both grey)
 local function makeStartStop(parent, startCb, stopCb)
     local row = Instance.new("Frame", parent)
     row.Size             = UDim2.new(1, -12, 0, 34)
@@ -150,7 +151,7 @@ local function makeStartStop(parent, startCb, stopCb)
         btn.TextSize         = 13
         btn.TextColor3       = C.TEXT_BRIGHT
         btn.Text             = text
-        btn.AutoButtonColor  = false  -- CRITICAL: prevents Roblox red/green default colours
+        btn.AutoButtonColor  = false
         btn.LayoutOrder      = order
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
         applyHover(btn, base, hover)
@@ -201,7 +202,7 @@ local function makeStatusBar(parent, defaultText)
     return bar, setStatus
 end
 
--- Toggle switch
+-- Toggle switch: dark grey OFF / white ON
 local function makeToggle(parent, text, default, callback)
     local frame = Instance.new("Frame", parent)
     frame.Size             = UDim2.new(1, -12, 0, 30)
@@ -222,16 +223,16 @@ local function makeToggle(parent, text, default, callback)
     local tb = Instance.new("TextButton", frame)
     tb.Size             = UDim2.new(0, 32, 0, 17)
     tb.Position         = UDim2.new(1, -42, 0.5, -8.5)
-    tb.BackgroundColor3 = default and C.TOGGLE_ON or C.TOGGLE_OFF
+    tb.BackgroundColor3 = default and C.TOGGLE_ON or C.TOGGLE_OFF   -- white ON / dark grey OFF
     tb.Text             = ""
     tb.BorderSizePixel  = 0
-    tb.AutoButtonColor  = false  -- CRITICAL: prevents Roblox red/green default colours
+    tb.AutoButtonColor  = false
     Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
 
     local knob = Instance.new("Frame", tb)
     knob.Size             = UDim2.new(0, 13, 0, 13)
     knob.Position         = UDim2.new(0, default and 17 or 2, 0.5, -6.5)
-    knob.BackgroundColor3 = C.KNOB
+    knob.BackgroundColor3 = default and C.KNOB or C.KNOB_OFF        -- dark knob on white / light on dark
     knob.BorderSizePixel  = 0
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
@@ -240,18 +241,20 @@ local function makeToggle(parent, text, default, callback)
 
     tb.MouseButton1Click:Connect(function()
         toggled = not toggled
-        TweenService:Create(tb,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {BackgroundColor3 = toggled and C.TOGGLE_ON or C.TOGGLE_OFF}):Play()
-        TweenService:Create(knob, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Position = UDim2.new(0, toggled and 17 or 2, 0.5, -6.5)}):Play()
+        TweenService:Create(tb,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = toggled and C.TOGGLE_ON or C.TOGGLE_OFF
+        }):Play()
+        TweenService:Create(knob, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {
+            Position         = UDim2.new(0, toggled and 17 or 2, 0.5, -6.5),
+            BackgroundColor3 = toggled and C.KNOB or C.KNOB_OFF
+        }):Play()
         if callback then callback(toggled) end
     end)
 
     return frame, function() return toggled end, tb, knob
 end
 
--- ── PROGRESS BAR ─────────────────────────────────────────────────────────────
--- Fill is always white/light-grey.
--- When done==total: fill stays white, counter shows "Done" in white, then auto-resets after 2s.
--- reset() hides the bar entirely and clears the fill.
+-- Progress bar: white bar + white text
 local function makeProgressBar(parent, labelText)
     local wrap = Instance.new("Frame", parent)
     wrap.Size             = UDim2.new(1, -12, 0, 42)
@@ -284,7 +287,7 @@ local function makeProgressBar(parent, labelText)
     cntLbl.BackgroundTransparency = 1
     cntLbl.Font               = Enum.Font.GothamBold
     cntLbl.TextSize           = 11
-    cntLbl.TextColor3         = C.TEXT_WHITE
+    cntLbl.TextColor3         = C.TEXT_WHITE                     -- white text
     cntLbl.TextXAlignment     = Enum.TextXAlignment.Right
     cntLbl.Text               = "0 / 0"
 
@@ -297,7 +300,7 @@ local function makeProgressBar(parent, labelText)
 
     local fill = Instance.new("Frame", track)
     fill.Size             = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = C.PROG_FILL   -- white/light-grey, never changes to any other colour
+    fill.BackgroundColor3 = C.PROG_FILL                          -- white bar
     fill.BorderSizePixel  = 0
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
@@ -305,32 +308,30 @@ local function makeProgressBar(parent, labelText)
 
     local function reset()
         if resetTimer then task.cancel(resetTimer) resetTimer = nil end
-        fill.Size         = UDim2.new(0, 0, 1, 0)
+        fill.Size             = UDim2.new(0, 0, 1, 0)
         fill.BackgroundColor3 = C.PROG_FILL
-        cntLbl.Text       = "0 / 0"
-        cntLbl.TextColor3 = C.TEXT_WHITE
-        wrap.Visible      = false
+        cntLbl.Text           = "0 / 0"
+        cntLbl.TextColor3     = C.TEXT_WHITE
+        wrap.Visible          = false
     end
 
     local function setProgress(done, total)
         local pct = math.clamp(done / math.max(total, 1), 0, 1)
-
         if done >= total and total > 0 then
-            -- Category complete: show "Done" in white, full white bar, auto-reset after 2s
-            cntLbl.Text           = "Done"
-            cntLbl.TextColor3     = C.TEXT_WHITE
+            cntLbl.Text       = "Done"
+            cntLbl.TextColor3 = C.TEXT_WHITE                     -- white "Done"
             TweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 Size             = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = C.PROG_FILL,   -- stays white when done
+                BackgroundColor3 = C.PROG_FILL,                  -- stays white
             }):Play()
             if resetTimer then task.cancel(resetTimer) end
             resetTimer = task.delay(2, reset)
         else
-            cntLbl.Text           = done .. " / " .. total
-            cntLbl.TextColor3     = C.TEXT_WHITE
+            cntLbl.Text       = done .. " / " .. total
+            cntLbl.TextColor3 = C.TEXT_WHITE
             TweenService:Create(fill, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
                 Size             = UDim2.new(pct, 0, 1, 0),
-                BackgroundColor3 = C.PROG_FILL,   -- always white/light-grey
+                BackgroundColor3 = C.PROG_FILL,                  -- always white
             }):Play()
         end
     end
@@ -338,7 +339,7 @@ local function makeProgressBar(parent, labelText)
     return wrap, setProgress, reset
 end
 
--- ── PLAYER DROPDOWN ───────────────────────────────────────────────────────────
+-- Player dropdown
 local function makeDupeDropdown(labelText, parentPage)
     local selected = ""
     local isOpen   = false
@@ -412,12 +413,11 @@ local function makeDupeDropdown(labelText, parentPage)
     arrowLbl.TextColor3         = C.TEXT_DIM
     arrowLbl.TextXAlignment     = Enum.TextXAlignment.Center
 
-    -- CRITICAL: AutoButtonColor = false on the invisible overlay button
     local headerBtn = Instance.new("TextButton", selFrame)
     headerBtn.Size               = UDim2.new(1, 0, 1, 0)
     headerBtn.BackgroundTransparency = 1
     headerBtn.Text               = ""
-    headerBtn.AutoButtonColor    = false  -- prevents red/green flash on click
+    headerBtn.AutoButtonColor    = false
     headerBtn.ZIndex             = 5
 
     local divider = Instance.new("Frame", outer)
@@ -492,7 +492,7 @@ local function makeDupeDropdown(labelText, parentPage)
             local isSel = (plr.Name == selected)
             local row = Instance.new("Frame", listScroll)
             row.Size             = UDim2.new(1, 0, 0, ITEM_H)
-            row.BackgroundColor3 = isSel and Color3.fromRGB(40,40,62) or C.BG_ROW
+            row.BackgroundColor3 = isSel and Color3.fromRGB(60,60,60) or C.BG_ROW  -- grey selected
             row.BorderSizePixel  = 0
             row.LayoutOrder      = i
             Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
@@ -534,16 +534,15 @@ local function makeDupeDropdown(labelText, parentPage)
                 check.TextXAlignment     = Enum.TextXAlignment.Center
             end
 
-            -- CRITICAL: AutoButtonColor = false on every row button
             local rowBtn = Instance.new("TextButton", row)
             rowBtn.Size               = UDim2.new(1, 0, 1, 0)
             rowBtn.BackgroundTransparency = 1
             rowBtn.Text               = ""
-            rowBtn.AutoButtonColor    = false  -- prevents red/green flash on click
+            rowBtn.AutoButtonColor    = false
             rowBtn.ZIndex             = 5
             rowBtn.MouseEnter:Connect(function()
                 if plr.Name ~= selected then
-                    TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(34,34,50)}):Play()
+                    TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(40,40,40)}):Play()
                 end
             end)
             rowBtn.MouseLeave:Connect(function()
@@ -575,7 +574,7 @@ local function makeDupeDropdown(labelText, parentPage)
         if isOpen then closeList() else openList() end
     end)
     headerBtn.MouseEnter:Connect(function()
-        TweenService:Create(selFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(38,38,54)}):Play()
+        TweenService:Create(selFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(42,42,42)}):Play()
     end)
     headerBtn.MouseLeave:Connect(function()
         TweenService:Create(selFrame, TweenInfo.new(0.10), {BackgroundColor3 = C.BG_INPUT}):Play()
@@ -605,7 +604,7 @@ local function makeDupeDropdown(labelText, parentPage)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- TELEPORT CORE
+-- TELEPORT CORE  (unchanged logic)
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local MAX_ITEM_TRIES = 8
@@ -626,20 +625,16 @@ local function sendItemPart(char, part, Offset, RS, runningRef)
     for attempt = 1, MAX_ITEM_TRIES do
         if not (part and part.Parent) then return false end
         if not runningRef() then return false end
-
         if (char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
             char.HumanoidRootPart.CFrame = part.CFrame
             task.wait(0.04)
         end
-
         seekNetOwn(char, part, RS)
-
         local deadline = tick() + 0.25
         repeat
             part.CFrame = Offset
             task.wait()
         until tick() >= deadline
-
         if not (part and part.Parent) then return false end
         if (part.Position - Offset.Position).Magnitude <= 8 then return true end
         task.wait(0.15)
@@ -650,13 +645,10 @@ end
 local function retryCargo(char, missedList, GiveBaseOrigin, RS, runningRef, setProgFn, statusFn, MAX_TRIES)
     MAX_TRIES = MAX_TRIES or 25
     if #missedList == 0 then return end
-
     local missedTotal = #missedList
     local attempt     = 0
     local itemsDone   = 0
-
     if setProgFn then setProgFn(0, missedTotal) end
-
     while #missedList > 0 and runningRef() and attempt < MAX_TRIES do
         attempt += 1
         if statusFn then
@@ -690,7 +682,6 @@ local function retryCargo(char, missedList, GiveBaseOrigin, RS, runningRef, setP
         end
         missedList = stillMissed
     end
-
     if setProgFn then setProgFn(missedTotal, missedTotal) end
     if statusFn then
         if #missedList == 0 then
@@ -705,27 +696,21 @@ local function sendLooseItems(char, itemList, RS, runningRef, setProgFn, statusF
     local total   = #itemList
     local done    = 0
     local retried = 0
-
     if setProgFn then setProgFn(0, total) end
-
     for _, entry in ipairs(itemList) do
         if not runningRef() then break end
         local part   = entry.part
         local Offset = entry.offset
-
         if not (part and part.Parent) then
             done += 1
             if setProgFn then setProgFn(done, total) end
             continue
         end
-
         local ok = sendItemPart(char, part, Offset, RS, runningRef)
         if not ok then retried += 1 end
-
         done += 1
         if setProgFn then setProgFn(done, total) end
     end
-
     if setProgFn then setProgFn(total, total) end
     return retried
 end
@@ -781,13 +766,10 @@ for i, name in ipairs(TAB_NAMES) do
     tb.TextColor3       = C.TEXT_DIM
     tb.Text             = name
     tb.LayoutOrder      = i
-    tb.AutoButtonColor  = false  -- CRITICAL: this was the main source of red/green on tab buttons
+    tb.AutoButtonColor  = false
     Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 4)
 
-    -- Hover effect for idle tabs (active tab hover is handled by switchTab tween)
     tb.MouseEnter:Connect(function()
-        -- Only apply hover tint if this tab is not the active one
-        -- We check by comparing BackgroundColor3 to TAB_ACTIVE
         if tb.BackgroundColor3 ~= C.TAB_ACTIVE then
             TweenService:Create(tb, TweenInfo.new(0.10), {BackgroundColor3 = C.TAB_HOVER}):Play()
         end
@@ -935,7 +917,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             return false
         end
 
-        -- ── STRUCTURES ───────────────────────────────────────────────────────
+        -- ── STRUCTURES
         if getStructures() and butterRunning then
             local total = countItems(function(p)
                 return isStructure(p)
@@ -970,7 +952,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── FURNITURE ────────────────────────────────────────────────────────
+        -- ── FURNITURE
         if getFurniture() and butterRunning then
             local total = countItems(function(p)
                 return p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture"
@@ -1004,7 +986,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── TRUCKS + CARGO ───────────────────────────────────────────────────
+        -- ── TRUCKS + CARGO
         if getTrucks() and butterRunning then
             local teleportedParts = {}
             local ignoredParts    = {}
@@ -1104,7 +1086,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── GIFT / ITEMS ─────────────────────────────────────────────────────
+        -- ── GIFT / ITEMS
         if getGifs() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1134,7 +1116,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── WOOD ─────────────────────────────────────────────────────────────
+        -- ── WOOD
         if getWood() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1167,7 +1149,6 @@ startButterBtn.MouseButton1Click:Connect(function()
         if butterRunning then setStatus("✓ All done!", false) end
         butterRunning = false; VH.butter.running = false
         butterThread = nil; VH.butter.thread = nil
-        -- Auto-reset all progress bars 2s after "All done"
         task.delay(2.1, resetAllProgress)
     end)
 end)
@@ -1345,7 +1326,6 @@ startSingleBtn.MouseButton1Click:Connect(function()
         task.wait(1)
         singleTruckRunning = false
         singleTruckThread  = nil
-        -- Auto-reset progress bar after done
         task.delay(2.1, resetTruckProg)
     end)
 end)
@@ -1582,7 +1562,6 @@ startBatchBtn.MouseButton1Click:Connect(function()
         task.wait(1)
         batchTruckRunning = false
         batchTruckThread  = nil
-        -- Auto-reset progress bars after done
         task.delay(2.1, function()
             resetBatchTruckProg()
             resetBatchCargoProg()
@@ -1595,4 +1574,4 @@ table.insert(VH.cleanupTasks, function()
     if batchTruckThread then pcall(task.cancel, batchTruckThread); batchTruckThread = nil end
 end)
 
-print("[VanillaHub] Vanilla2 loaded — grey/white theme, Start/Stop, auto-reset progress bars")
+print("[VanillaHub] Vanilla2 loaded — black/grey/white theme")
