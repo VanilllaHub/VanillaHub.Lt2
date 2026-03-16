@@ -26,8 +26,8 @@ local pages      = VH.pages
 -- ════════════════════════════════════════════════════
 local C = {
     BG         = Color3.fromRGB(10,  10,  10 ),
-    CARD       = Color3.fromRGB(20,  20,  20 ),
-    ROW        = Color3.fromRGB(28,  28,  28 ),
+    CARD       = Color3.fromRGB(10,  10,  10),   -- black panel
+    ROW        = Color3.fromRGB(16,  16,  16),   -- near-black row
     INPUT      = Color3.fromRGB(30,  30,  30 ),
     TRACK      = Color3.fromRGB(38,  38,  38 ),
     BORDER     = Color3.fromRGB(55,  55,  55 ),
@@ -35,8 +35,8 @@ local C = {
     TEXT       = Color3.fromRGB(210, 210, 210),
     TEXT_MID   = Color3.fromRGB(150, 150, 150),
     TEXT_DIM   = Color3.fromRGB(90,  90,  90 ),
-    BTN        = Color3.fromRGB(70,  70,  70 ),
-    BTN_HV     = Color3.fromRGB(100, 100, 100),
+    BTN        = Color3.fromRGB(14,  14,  14),   -- black button bg
+    BTN_HV     = Color3.fromRGB(32,  32,  32),   -- dark grey hover
     FILL       = Color3.fromRGB(255, 255, 255),   -- white bar
     FILL_MID   = Color3.fromRGB(200, 200, 200),   -- mid-white fill
     SW_ON      = Color3.fromRGB(220, 220, 220),
@@ -88,6 +88,10 @@ local function makeButton(page, text, cb)
     btn.Text             = text
     btn.AutoButtonColor  = false
     corner(btn, 6)
+    local btnStroke = Instance.new("UIStroke", btn)
+    btnStroke.Color        = Color3.fromRGB(55, 55, 55)
+    btnStroke.Thickness    = 1
+    btnStroke.Transparency = 0
     btn.MouseEnter:Connect(function()
         TS:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = C.BTN_HV}):Play()
     end)
