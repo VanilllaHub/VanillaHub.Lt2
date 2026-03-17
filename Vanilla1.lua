@@ -361,9 +361,6 @@ end)
 
 -- ════════════════════════════════════════════════════
 -- TABS
--- NOTE: Player, World, and Pixel Art tabs are built by Vanilla5.
--- Their pages are scaffolded here so the side buttons exist,
--- but their content is populated when Vanilla5 is executed.
 -- ════════════════════════════════════════════════════
 local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
 local pages = {}
@@ -845,6 +842,8 @@ local lassoEnabled        = false
 local groupSelectEnabled  = false
 local isTeleportingItems  = false
 local stopTeleportItems   = false
+local useCustomDest       = false
+local tpCircle            = nil
 
 local function iSectionLabel(text)
     local w = Instance.new("Frame", itemPage)
@@ -1097,6 +1096,8 @@ local function isnetworkowner(part)
     return part.ReceiveAge == 0
 end
 
+-- ── UI Layout ────────────────────────────────────────
+
 iSectionLabel("Selection Mode")
 iToggle("Click Selection", false, function(val)
     clickSelectEnabled = val
@@ -1162,6 +1163,66 @@ Instance.new("UIPadding", itemModeHint).PaddingLeft = UDim.new(0, 4)
 iButton("Deselect All", function() deselectAll() end)
 
 iSep()
+iSectionLabel("Teleport Destination")
+
+-- ── Destination row (built BEFORE the toggle so it exists when the callback fires) ──
+local tpDestRow = Instance.new("Frame", itemPage)
+tpDestRow.Size = UDim2.new(1, 0, 0, 30)
+tpDestRow.BackgroundTransparency = 1
+tpDestRow.Visible = false   -- hidden by default
+
+local tpSetBtn = Instance.new("TextButton", tpDestRow)
+tpSetBtn.Size = UDim2.new(0.5, -4, 1, 0); tpSetBtn.Position = UDim2.new(0, 0, 0, 0)
+tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold
+tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"
+tpSetBtn.BorderSizePixel = 0
+Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
+
+local tpRemoveBtn = Instance.new("TextButton", tpDestRow)
+tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
+tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSemibold
+tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Remove Destination"
+tpRemoveBtn.BorderSizePixel = 0
+Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
+
+for _, b in {tpSetBtn, tpRemoveBtn} do
+    b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
+    b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
+end
+
+tpSetBtn.MouseButton1Click:Connect(function()
+    if tpCircle then tpCircle:Destroy() end
+    tpCircle = Instance.new("Part")
+    tpCircle.Name = "VanillaHubTpCircle"
+    tpCircle.Shape = Enum.PartType.Ball; tpCircle.Size = Vector3.new(3,3,3)
+    tpCircle.Material = Enum.Material.SmoothPlastic
+    tpCircle.Color = Color3.fromRGB(110,110,120)
+    tpCircle.Anchored = true; tpCircle.CanCollide = false
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        tpCircle.Position = char.HumanoidRootPart.Position
+    end
+    tpCircle.Parent = workspace
+end)
+
+tpRemoveBtn.MouseButton1Click:Connect(function()
+    if tpCircle then tpCircle:Destroy(); tpCircle = nil end
+end)
+
+table.insert(cleanupTasks, function()
+    if tpCircle and tpCircle.Parent then tpCircle:Destroy(); tpCircle = nil end
+end)
+
+-- ── Toggle (defined AFTER tpDestRow so the callback can safely reference it) ──
+iToggle("Teleport To (Custom Destination)", false, function(val)
+    useCustomDest = val
+    tpDestRow.Visible = val
+    if not val and tpCircle then
+        tpCircle:Destroy(); tpCircle = nil
+    end
+end)
+
+iSep()
 iSectionLabel("Actions")
 
 local tpSelectBtn = iButton("Teleport Selected", function() end)
@@ -1169,12 +1230,24 @@ tpSelectBtn.MouseButton1Click:Connect(function()
     if isTeleportingItems then
         stopTeleportItems = true; return
     end
+    -- Block if custom dest is ON but no circle placed yet
+    if useCustomDest and not tpCircle then return end
+
     isTeleportingItems = true; stopTeleportItems = false
     tpSelectBtn.Text = "Stop Teleporting"
     TweenService:Create(tpSelectBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50,50,50)}):Play()
+
+    -- Snapshot destination once at click time
+    local destCF = useCustomDest
+        and tpCircle.CFrame
+        or (player.Character
+            and player.Character:FindFirstChild("HumanoidRootPart")
+            and player.Character.HumanoidRootPart.CFrame)
+
     local OldPos = player.Character
         and player.Character:FindFirstChild("HumanoidRootPart")
         and player.Character.HumanoidRootPart.CFrame
+
     task.spawn(function()
         if not workspace:FindFirstChild("PlayerModels") then
             isTeleportingItems = false; stopTeleportItems = false
@@ -1218,8 +1291,6 @@ tpSelectBtn.MouseButton1Click:Connect(function()
             if stopTeleportItems then break end
             local char = player.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then task.wait(tpItemSpeed); continue end
-            -- destination is always the player's current position
-            local destCF = hrp.CFrame
             hrp.CFrame = CFrame.new(part.CFrame.p) * CFrame.new(5, 0, 0)
             task.wait(tpItemSpeed)
             if stopTeleportItems then break end
@@ -1280,6 +1351,7 @@ sellBtn.MouseButton1Click:Connect(function()
         end
     end)
 end)
+
 -- ════════════════════════════════════════════════════
 -- DUPE TAB
 -- ════════════════════════════════════════════════════
@@ -1315,13 +1387,11 @@ dSectionLabel("Info")
 
 -- ════════════════════════════════════════════════════
 -- SEARCH TAB
--- Single search bar, live-filters all feature labels.
 -- ════════════════════════════════════════════════════
 local searchTabPage = pages["SearchTab"]
 local searchTabList = searchTabPage:FindFirstChildOfClass("UIListLayout")
 if searchTabList then searchTabList.Padding = UDim.new(0, 6) end
 
--- All searchable features: {label, tabName}
 local allFeatures = {
     {"Walkspeed",        "PlayerTab"}, {"Jumppower",          "PlayerTab"},
     {"Fly Speed",        "PlayerTab"}, {"Fly Hotkey",         "PlayerTab"},
@@ -1354,7 +1424,6 @@ local allFeatures = {
     {"Center on Plot",   "Pixel ArtTab"}, {"Remove Pixel Art","Pixel ArtTab"},
 }
 
--- Search bar
 local stInputFrame = Instance.new("Frame", searchTabPage)
 stInputFrame.Size = UDim2.new(1, 0, 0, 36)
 stInputFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
@@ -1376,7 +1445,6 @@ stInput.Text = ""
 stInput.ClearTextOnFocus = false
 stInput.TextXAlignment = Enum.TextXAlignment.Left
 
--- Pre-build one row per feature, hidden by default
 local featureRows = {}
 
 for _, entry in ipairs(allFeatures) do
@@ -1431,7 +1499,6 @@ for _, entry in ipairs(allFeatures) do
     table.insert(featureRows, {row = row, lower = string.lower(label)})
 end
 
--- Live filter on every keystroke
 stInput:GetPropertyChangedSignal("Text"):Connect(function()
     local q = string.lower(stInput.Text)
     for _, entry in ipairs(featureRows) do
@@ -1442,10 +1509,6 @@ end)
 -- ════════════════════════════════════════════════════
 -- GLOBAL KEY LISTENER
 -- ════════════════════════════════════════════════════
--- NOTE: fly hotkey and toggle GUI key are handled by Vanilla5
--- since the fly system lives there. The GUI toggle key is
--- forwarded via _G.VH so Vanilla5 can hook it.
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == currentToggleKey then
@@ -1483,7 +1546,6 @@ _G.VH = {
     switchTab         = switchTab,
     toggleGUI         = toggleGUI,
     butter            = { running = false, thread = nil },
-    -- fly state populated by Vanilla5
     isFlyActive       = false,
     flyEnabled        = true,
     currentFlyKey     = Enum.KeyCode.Q,
