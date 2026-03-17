@@ -389,7 +389,7 @@ local function switchTab(targetName)
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
         local oldLbl = activeTabButton:FindFirstChild("TabLabel")
-        TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
+        TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
         if oldLbl then TweenService:Create(oldLbl, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
     end
     local frame = side:FindFirstChild(targetName:gsub("Tab",""))
@@ -405,13 +405,9 @@ for _, name in ipairs(tabs) do
     local frame = Instance.new("Frame", side)
     frame.Name             = name
     frame.Size             = UDim2.new(1, 0, 0, 34)
-    frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     frame.BorderSizePixel  = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
-    local fStroke = Instance.new("UIStroke", frame)
-    fStroke.Color        = Color3.fromRGB(55, 55, 55)
-    fStroke.Thickness    = 1
-    fStroke.Transparency = 0
 
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name               = "TabLabel"
@@ -420,7 +416,7 @@ for _, name in ipairs(tabs) do
     nameLbl.BackgroundTransparency = 1
     nameLbl.Font               = Enum.Font.GothamSemibold
     nameLbl.TextSize           = 13
-    nameLbl.TextColor3         = Color3.fromRGB(120, 120, 120)
+    nameLbl.TextColor3         = Color3.fromRGB(110, 110, 110)
     nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
     nameLbl.Text               = name
 
@@ -434,13 +430,13 @@ for _, name in ipairs(tabs) do
 
     btn.MouseEnter:Connect(function()
         if activeTabButton ~= frame then
-            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= frame then
-            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
         end
     end)
@@ -644,6 +640,11 @@ local origFogStart  = Lighting.FogStart
 local origFogColor  = Lighting.FogColor
 local origShadows   = Lighting.GlobalShadows
 
+-- LT2 default fog values
+local LT2_FOG_END   = 6400
+local LT2_FOG_START = 0
+local LT2_FOG_COLOR = Color3.fromRGB(170, 170, 170)  -- 0.666... * 255
+
 local dayConn   = nil
 local nightConn = nil
 local fogConn   = nil
@@ -761,9 +762,10 @@ makeWorldToggle("Remove Fog", false, function(v)
             Lighting.FogStart = 1e9
         end)
     else
-        Lighting.FogEnd   = origFogEnd
-        Lighting.FogStart = origFogStart
-        Lighting.FogColor = origFogColor
+        -- Restore to known LT2 defaults
+        Lighting.FogEnd   = LT2_FOG_END
+        Lighting.FogStart = LT2_FOG_START
+        Lighting.FogColor = LT2_FOG_COLOR
     end
 end)
 
@@ -823,65 +825,192 @@ table.insert(cleanupTasks, function()
     if fogConn then fogConn:Disconnect(); fogConn = nil end
     removeWalkWater()
     Lighting.ClockTime     = origClockTime
-    Lighting.FogEnd        = origFogEnd
-    Lighting.FogStart      = origFogStart
-    Lighting.FogColor      = origFogColor
+    Lighting.FogEnd        = LT2_FOG_END
+    Lighting.FogStart      = LT2_FOG_START
+    Lighting.FogColor      = LT2_FOG_COLOR
     Lighting.GlobalShadows = origShadows
 end)
 
 -- ════════════════════════════════════════════════════
--- TELEPORT TAB
+-- TELEPORT TAB  (pretty card layout)
 -- ════════════════════════════════════════════════════
 local teleportPage = pages["TeleportTab"]
 
 local locations = {
-    {name="Spawn",x=172,y=3,z=74},{name="The Den",x=323,y=41.8,z=1930},
-    {name="LightHouse",x=1464.8,y=355.25,z=3257.2},{name="Safari",x=111.85,y=11,z=-998.8},
-    {name="Bridge",x=112.31,y=11,z=-782.36},{name="Bob's Shack",x=260,y=8.4,z=-2542},
-    {name="EndTimesCave",x=113,y=-213,z=-951},{name="The Swamp",x=-1209,y=132.32,z=-801},
-    {name="The Cabin",x=1244,y=63.6,z=2306},{name="Volcano",x=-1585,y=622.8,z=1140},
-    {name="Boxed Cars",x=509,y=3.2,z=-1463},{name="Tiaga Peak",x=1560,y=410.32,z=3274},
-    {name="Land Store",x=258,y=3.2,z=-99},{name="Link's Logic",x=4605,y=3,z=-727},
-    {name="Palm Island",x=2549,y=-5.9,z=-42},{name="Palm Island 2",x=1960,y=-5.9,z=-1501},
-    {name="Palm Island 3",x=4344,y=-5.9,z=-1813},{name="Fine Art Shop",x=5207,y=-166.2,z=719},
-    {name="SnowGlow Biome",x=-1086.85,y=-5.9,z=-945.32},{name="Cave",x=3581,y=-179.54,z=430},
-    {name="Shrine Of Sight",x=-1600,y=195.4,z=919},{name="Fancy Furnishings",x=491,y=3.2,z=-1720},
-    {name="Docks",x=1114,y=-1.2,z=-197},{name="Strange Man",x=1061,y=16.8,z=1131},
-    {name="Wood Dropoff",x=323.41,y=-2.8,z=134.73},{name="Snow Biome",x=889.96,y=59.8,z=1195.55},
-    {name="Wood RU's",x=265,y=3.2,z=57},{name="Green Box",x=-1668.05,y=349.6,z=1475.39},
-    {name="Cherry Meadow",x=220.9,y=59.8,z=1305.8},{name="Bird Cave",x=4813.1,y=17.7,z=-978.8},
+    {name="Spawn",          icon="🏠", x=172,     y=3,      z=74},
+    {name="The Den",        icon="🌲", x=323,     y=41.8,   z=1930},
+    {name="LightHouse",     icon="💡", x=1464.8,  y=355.25, z=3257.2},
+    {name="Safari",         icon="🦁", x=111.85,  y=11,     z=-998.8},
+    {name="Bridge",         icon="🌉", x=112.31,  y=11,     z=-782.36},
+    {name="Bob's Shack",    icon="🏚", x=260,     y=8.4,    z=-2542},
+    {name="EndTimesCave",   icon="💀", x=113,     y=-213,   z=-951},
+    {name="The Swamp",      icon="🌿", x=-1209,   y=132.32, z=-801},
+    {name="The Cabin",      icon="🏡", x=1244,    y=63.6,   z=2306},
+    {name="Volcano",        icon="🌋", x=-1585,   y=622.8,  z=1140},
+    {name="Boxed Cars",     icon="🚗", x=509,     y=3.2,    z=-1463},
+    {name="Tiaga Peak",     icon="⛰", x=1560,    y=410.32, z=3274},
+    {name="Land Store",     icon="🏪", x=258,     y=3.2,    z=-99},
+    {name="Link's Logic",   icon="⚙", x=4605,    y=3,      z=-727},
+    {name="Palm Island",    icon="🌴", x=2549,    y=-5.9,   z=-42},
+    {name="Palm Island 2",  icon="🌴", x=1960,    y=-5.9,   z=-1501},
+    {name="Palm Island 3",  icon="🌴", x=4344,    y=-5.9,   z=-1813},
+    {name="Fine Art Shop",  icon="🖼", x=5207,    y=-166.2, z=719},
+    {name="SnowGlow Biome", icon="❄", x=-1086.85, y=-5.9,  z=-945.32},
+    {name="Cave",           icon="🕳", x=3581,    y=-179.54,z=430},
+    {name="Shrine Of Sight",icon="👁", x=-1600,   y=195.4,  z=919},
+    {name="Fancy Furnishings",icon="🪑",x=491,    y=3.2,    z=-1720},
+    {name="Docks",          icon="⚓", x=1114,    y=-1.2,   z=-197},
+    {name="Strange Man",    icon="🧍", x=1061,    y=16.8,   z=1131},
+    {name="Wood Dropoff",   icon="💰", x=323.41,  y=-2.8,   z=134.73},
+    {name="Snow Biome",     icon="❄", x=889.96,  y=59.8,   z=1195.55},
+    {name="Wood RU's",      icon="🪵", x=265,     y=3.2,    z=57},
+    {name="Green Box",      icon="📦", x=-1668.05,y=349.6,  z=1475.39},
+    {name="Cherry Meadow",  icon="🌸", x=220.9,   y=59.8,   z=1305.8},
+    {name="Bird Cave",      icon="🐦", x=4813.1,  y=17.7,   z=-978.8},
 }
 
-local tpGrid = Instance.new("Frame", teleportPage)
-tpGrid.Size = UDim2.new(1, 0, 0, math.ceil(#locations / 2) * 34 + math.ceil(#locations / 2) * 6)
-tpGrid.BackgroundTransparency = 1
-local tpUIGrid = Instance.new("UIGridLayout", tpGrid)
-tpUIGrid.CellSize = UDim2.new(0.5, -5, 0, 30)
-tpUIGrid.CellPadding = UDim2.new(0, 6, 0, 6)
-tpUIGrid.HorizontalAlignment = Enum.HorizontalAlignment.Left
-tpUIGrid.SortOrder = Enum.SortOrder.LayoutOrder
+-- Search bar
+local searchBarFrame = Instance.new("Frame", teleportPage)
+searchBarFrame.Size = UDim2.new(1, 0, 0, 36)
+searchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+searchBarFrame.BorderSizePixel = 0
+Instance.new("UICorner", searchBarFrame).CornerRadius = UDim.new(0, 9)
 
-for i, loc in ipairs(locations) do
-    local btn = Instance.new("TextButton", tpGrid)
-    btn.LayoutOrder = i
-    btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 12
-    btn.TextColor3 = THEME_TEXT; btn.Text = loc.name
-    btn.TextTruncate = Enum.TextTruncate.AtEnd
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-    local btnStr = Instance.new("UIStroke", btn)
-    btnStr.Color        = Color3.fromRGB(55, 55, 55)
-    btnStr.Thickness    = 1
-    btnStr.Transparency = 0
-    btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER,TextColor3=Color3.fromRGB(255,255,255)}):Play() end)
-    btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR,TextColor3=THEME_TEXT}):Play() end)
+local searchIcon = Instance.new("TextLabel", searchBarFrame)
+searchIcon.Size = UDim2.new(0, 28, 1, 0)
+searchIcon.Position = UDim2.new(0, 4, 0, 0)
+searchIcon.BackgroundTransparency = 1
+searchIcon.Text = "🔍"; searchIcon.TextSize = 14
+searchIcon.Font = Enum.Font.Gotham
+searchIcon.TextColor3 = Color3.fromRGB(100, 100, 100)
+
+local searchBox = Instance.new("TextBox", searchBarFrame)
+searchBox.Size = UDim2.new(1, -36, 1, 0)
+searchBox.Position = UDim2.new(0, 28, 0, 0)
+searchBox.BackgroundTransparency = 1
+searchBox.Font = Enum.Font.GothamSemibold
+searchBox.TextSize = 13
+searchBox.TextColor3 = THEME_TEXT
+searchBox.PlaceholderText = "Search locations..."
+searchBox.PlaceholderColor3 = Color3.fromRGB(70, 70, 70)
+searchBox.Text = ""
+searchBox.ClearTextOnFocus = false
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Grid container for cards
+local tpCardGrid = Instance.new("Frame", teleportPage)
+tpCardGrid.BackgroundTransparency = 1
+tpCardGrid.Size = UDim2.new(1, 0, 0, 0)  -- height set by layout
+
+local tpGridLayout = Instance.new("UIGridLayout", tpCardGrid)
+tpGridLayout.CellSize = UDim2.new(0.5, -5, 0, 52)
+tpGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+tpGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+tpGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+tpGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    tpCardGrid.Size = UDim2.new(1, 0, 0, tpGridLayout.AbsoluteContentSize.Y)
+end)
+
+local tpCards = {}
+
+local function makeTpCard(loc, idx)
+    local card = Instance.new("Frame", tpCardGrid)
+    card.Name = loc.name
+    card.LayoutOrder = idx
+    card.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+    card.BorderSizePixel = 0
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+
+    -- Left accent bar
+    local accent = Instance.new("Frame", card)
+    accent.Size = UDim2.new(0, 3, 0.7, 0)
+    accent.Position = UDim2.new(0, 0, 0.15, 0)
+    accent.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
+    accent.BorderSizePixel = 0
+    Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+
+    -- Icon
+    local iconLbl = Instance.new("TextLabel", card)
+    iconLbl.Size = UDim2.new(0, 28, 0, 28)
+    iconLbl.Position = UDim2.new(0, 10, 0.5, -14)
+    iconLbl.BackgroundTransparency = 1
+    iconLbl.Font = Enum.Font.Gotham
+    iconLbl.TextSize = 20
+    iconLbl.Text = loc.icon or "📍"
+    iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+    -- Name
+    local nameLbl = Instance.new("TextLabel", card)
+    nameLbl.Size = UDim2.new(1, -50, 0, 18)
+    nameLbl.Position = UDim2.new(0, 44, 0, 8)
+    nameLbl.BackgroundTransparency = 1
+    nameLbl.Font = Enum.Font.GothamBold
+    nameLbl.TextSize = 12
+    nameLbl.TextColor3 = THEME_TEXT
+    nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+    nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+    nameLbl.Text = loc.name
+
+    -- Coords
+    local coordLbl = Instance.new("TextLabel", card)
+    coordLbl.Size = UDim2.new(1, -50, 0, 14)
+    coordLbl.Position = UDim2.new(0, 44, 0, 28)
+    coordLbl.BackgroundTransparency = 1
+    coordLbl.Font = Enum.Font.Gotham
+    coordLbl.TextSize = 10
+    coordLbl.TextColor3 = Color3.fromRGB(90, 90, 90)
+    coordLbl.TextXAlignment = Enum.TextXAlignment.Left
+    coordLbl.Text = string.format("%.0f, %.0f, %.0f", loc.x, loc.y, loc.z)
+
+    -- Invisible click button
+    local btn = Instance.new("TextButton", card)
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundTransparency = 1
+    btn.Text = ""; btn.ZIndex = 10
+    btn.AutoButtonColor = false
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(28, 28, 28)}):Play()
+        TweenService:Create(accent, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(220, 220, 220)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
+        TweenService:Create(accent, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(180, 180, 180)}):Play()
+    end)
     btn.MouseButton1Click:Connect(function()
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y + 3, loc.z)
         end
+        -- Flash feedback
+        TweenService:Create(card, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+        task.delay(0.12, function()
+            TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
+        end)
     end)
+
+    return card
 end
+
+for i, loc in ipairs(locations) do
+    local card = makeTpCard(loc, i)
+    table.insert(tpCards, {card = card, name = string.lower(loc.name)})
+end
+
+-- Search filtering
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local query = string.lower(searchBox.Text)
+    local order = 1
+    for _, entry in ipairs(tpCards) do
+        local visible = query == "" or string.find(entry.name, query, 1, true)
+        entry.card.Visible = visible ~= nil
+        if entry.card.Visible then
+            entry.card.LayoutOrder = order
+            order = order + 1
+        end
+    end
+end)
 
 -- ════════════════════════════════════════════════════
 -- SHARED ITEM/DUPE STATE
@@ -925,9 +1054,7 @@ local function iButton(text, cb)
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     local btnStr = Instance.new("UIStroke", btn)
-    btnStr.Color        = Color3.fromRGB(55, 55, 55)
-    btnStr.Thickness    = 1
-    btnStr.Transparency = 0
+    btnStr.Color = Color3.fromRGB(55, 55, 55); btnStr.Thickness = 1; btnStr.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
     if cb then btn.MouseButton1Click:Connect(cb) end
@@ -984,8 +1111,7 @@ local function iSlider(text, minV, maxV, defV, cb)
     local valLbl = Instance.new("TextLabel", topRow)
     valLbl.Size = UDim2.new(0.28, 0, 1, 0); valLbl.Position = UDim2.new(0.72, 0, 0, 0)
     valLbl.BackgroundTransparency = 1; valLbl.Font = Enum.Font.GothamBold; valLbl.TextSize = 13
-    valLbl.TextColor3 = PB_TEXT
-    valLbl.TextXAlignment = Enum.TextXAlignment.Right
+    valLbl.TextColor3 = PB_TEXT; valLbl.TextXAlignment = Enum.TextXAlignment.Right
     valLbl.Text = tostring(defV)
     local track = Instance.new("Frame", frame)
     track.Size = UDim2.new(1, -16, 0, 5); track.Position = UDim2.new(0, 8, 0, 38)
@@ -993,8 +1119,7 @@ local function iSlider(text, minV, maxV, defV, cb)
     Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
     local fill = Instance.new("Frame", track)
     fill.Size = UDim2.new((defV-minV)/(maxV-minV), 0, 1, 0)
-    fill.BackgroundColor3 = PB_BAR
-    fill.BorderSizePixel = 0
+    fill.BackgroundColor3 = PB_BAR; fill.BorderSizePixel = 0
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
     local knob = Instance.new("TextButton", track)
     knob.Size = UDim2.new(0, 14, 0, 14); knob.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -1234,9 +1359,7 @@ tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set D
 tpSetBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
 local btnStr_tpSetBtn = Instance.new("UIStroke", tpSetBtn)
-btnStr_tpSetBtn.Color        = Color3.fromRGB(55, 55, 55)
-btnStr_tpSetBtn.Thickness    = 1
-btnStr_tpSetBtn.Transparency = 0
+btnStr_tpSetBtn.Color = Color3.fromRGB(55, 55, 55); btnStr_tpSetBtn.Thickness = 1; btnStr_tpSetBtn.Transparency = 0
 
 local tpRemoveBtn = Instance.new("TextButton", tpRow)
 tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
@@ -1245,9 +1368,7 @@ tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text
 tpRemoveBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
 local btnStr_tpRemoveBtn = Instance.new("UIStroke", tpRemoveBtn)
-btnStr_tpRemoveBtn.Color        = Color3.fromRGB(55, 55, 55)
-btnStr_tpRemoveBtn.Thickness    = 1
-btnStr_tpRemoveBtn.Transparency = 0
+btnStr_tpRemoveBtn.Color = Color3.fromRGB(55, 55, 55); btnStr_tpRemoveBtn.Thickness = 1; btnStr_tpRemoveBtn.Transparency = 0
 
 for _, b in {tpSetBtn, tpRemoveBtn} do
     b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
@@ -1420,9 +1541,7 @@ local function dButton(text, cb)
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
     local btnStr = Instance.new("UIStroke", btn)
-    btnStr.Color        = Color3.fromRGB(55, 55, 55)
-    btnStr.Thickness    = 1
-    btnStr.Transparency = 0
+    btnStr.Color = Color3.fromRGB(55, 55, 55); btnStr.Thickness = 1; btnStr.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
     if cb then btn.MouseButton1Click:Connect(cb) end
@@ -1482,16 +1601,14 @@ local function createPSlider(labelText, minVal, maxVal, defaultVal, onChanged)
     local valLbl=Instance.new("TextLabel",topRow)
     valLbl.Size=UDim2.new(0.28,0,1,0); valLbl.Position=UDim2.new(0.72,0,0,0); valLbl.BackgroundTransparency=1
     valLbl.Font=Enum.Font.GothamBold; valLbl.TextSize=13
-    valLbl.TextColor3=PB_TEXT
-    valLbl.TextXAlignment=Enum.TextXAlignment.Right; valLbl.Text=tostring(defaultVal)
+    valLbl.TextColor3=PB_TEXT; valLbl.TextXAlignment=Enum.TextXAlignment.Right; valLbl.Text=tostring(defaultVal)
     local track=Instance.new("Frame",frame)
     track.Size=UDim2.new(1,-16,0,5); track.Position=UDim2.new(0,8,0,38)
     track.BackgroundColor3=Color3.fromRGB(40,40,40); track.BorderSizePixel=0
     Instance.new("UICorner",track).CornerRadius=UDim.new(1,0)
     local fill=Instance.new("Frame",track)
     fill.Size=UDim2.new((defaultVal-minVal)/(maxVal-minVal),0,1,0)
-    fill.BackgroundColor3=PB_BAR
-    fill.BorderSizePixel=0
+    fill.BackgroundColor3=PB_BAR; fill.BorderSizePixel=0
     Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
     local knob=Instance.new("TextButton",track)
     knob.Size=UDim2.new(0,14,0,14); knob.AnchorPoint=Vector2.new(0.5,0.5)
@@ -1657,9 +1774,7 @@ flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibol
 flyKeyBtn.TextSize = 12; flyKeyBtn.TextColor3 = THEME_TEXT; flyKeyBtn.Text = "Q"
 flyKeyBtn.BorderSizePixel = 0; Instance.new("UICorner", flyKeyBtn).CornerRadius = UDim.new(0, 6)
 local btnStr_flyKeyBtn = Instance.new("UIStroke", flyKeyBtn)
-btnStr_flyKeyBtn.Color        = Color3.fromRGB(55, 55, 55)
-btnStr_flyKeyBtn.Thickness    = 1
-btnStr_flyKeyBtn.Transparency = 0
+btnStr_flyKeyBtn.Color = Color3.fromRGB(55, 55, 55); btnStr_flyKeyBtn.Thickness = 1; btnStr_flyKeyBtn.Transparency = 0
 flyKeyBtn.MouseEnter:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
 flyKeyBtn.MouseLeave:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
 
@@ -1798,14 +1913,8 @@ createPToggle("Hard Dragger", false, function(val)
         if d then
             local bp = d:FindFirstChild("BodyPosition")
             local bg = d:FindFirstChild("BodyGyro")
-            if bp then
-                bp.P        = 10000
-                bp.D        = 800
-                bp.maxForce = Vector3.new(17000, 17000, 17000)
-            end
-            if bg then
-                bg.maxTorque = Vector3.new(200, 200, 200)
-            end
+            if bp then bp.P = 10000; bp.D = 800; bp.maxForce = Vector3.new(17000, 17000, 17000) end
+            if bg then bg.maxTorque = Vector3.new(200, 200, 200) end
         end
     end
 end)
