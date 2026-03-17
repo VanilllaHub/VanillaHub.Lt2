@@ -366,7 +366,7 @@ local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","So
 local pages = {}
 
 local TAB_ICONS = {
-    ["Home"]      = "rbxassetid://77194384448338",
+    ["Home"]      = "rbxassetid://136466017087869",
     ["Player"]    = "rbxassetid://107966908673726",
     ["World"]     = "rbxassetid://101214534117376",
     ["Teleport"]  = "rbxassetid://92649354349672",
