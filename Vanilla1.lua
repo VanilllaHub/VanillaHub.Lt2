@@ -442,28 +442,30 @@ for _, name in ipairs(tabs) do
     fStroke.Thickness    = 1
     fStroke.Transparency = 0
 
-    -- Icon — parented to the Frame, not a TextButton, so it always renders
-    local iconImg = Instance.new("ImageLabel", frame)
-    iconImg.Name               = "TabIcon"
-    iconImg.Size               = UDim2.new(0, 16, 0, 16)
-    iconImg.Position           = UDim2.new(0, 10, 0.5, -8)
-    iconImg.BackgroundTransparency = 1
-    iconImg.BorderSizePixel    = 0
-    iconImg.ScaleType          = Enum.ScaleType.Fit
-    iconImg.Image              = TAB_ICONS[name] or ""
-    iconImg.ImageColor3        = Color3.fromRGB(110, 110, 110)
+-- Icon — parented to the Frame, not a TextButton, so it always renders
+local iconImg = Instance.new("ImageLabel", frame)
+iconImg.Name               = "TabIcon"
+iconImg.Size               = UDim2.new(0, 16, 0, 16)
+iconImg.Position           = UDim2.new(0, 10, 0.5, -8)
+iconImg.BackgroundTransparency = 1
+iconImg.BorderSizePixel    = 0
+iconImg.ScaleType          = Enum.ScaleType.Fit
+iconImg.Image              = TAB_ICONS[name] or ""
+iconImg.ImageColor3        = Color3.fromRGB(110, 110, 110)
+iconImg.ZIndex             = 15  -- ← ADD THIS (above btn's ZIndex 10)
 
-    -- Name label — also parented to the Frame
-    local nameLbl = Instance.new("TextLabel", frame)
-    nameLbl.Name               = "TabLabel"
-    nameLbl.Size               = UDim2.new(1, -34, 1, 0)
-    nameLbl.Position           = UDim2.new(0, 32, 0, 0)
-    nameLbl.BackgroundTransparency = 1
-    nameLbl.Font               = Enum.Font.GothamSemibold
-    nameLbl.TextSize           = 13
-    nameLbl.TextColor3         = Color3.fromRGB(120, 120, 120)
-    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
-    nameLbl.Text               = name
+-- Name label — also parented to the Frame
+local nameLbl = Instance.new("TextLabel", frame)
+nameLbl.Name               = "TabLabel"
+nameLbl.Size               = UDim2.new(1, -34, 1, 0)
+nameLbl.Position           = UDim2.new(0, 32, 0, 0)
+nameLbl.BackgroundTransparency = 1
+nameLbl.Font               = Enum.Font.GothamSemibold
+nameLbl.TextSize           = 13
+nameLbl.TextColor3         = Color3.fromRGB(120, 120, 120)
+nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
+nameLbl.Text               = name
+nameLbl.ZIndex             = 15  -- ← ADD THIS (above btn's ZIndex 10)
 
     -- Transparent click overlay on top — captures mouse events without hiding children
     local btn = Instance.new("TextButton", frame)
