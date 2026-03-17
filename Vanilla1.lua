@@ -1096,29 +1096,29 @@ local function isnetworkowner(part)
     return part.ReceiveAge == 0
 end
 
--- ── UI Layout ────────────────────────────────────────
-
-iSectionLabel("Selection Mode")
-iToggle("Click Selection", false, function(val)
+-- ── Selection ────────────────────────────────────────
+iSectionLabel("Selection")
+iToggle("Click Select", false, function(val)
     clickSelectEnabled = val
     if val then lassoEnabled = false; groupSelectEnabled = false end
 end)
-iToggle("Lasso Tool", false, function(val)
+iToggle("Lasso Select", false, function(val)
     lassoEnabled = val
     if val then clickSelectEnabled = false; groupSelectEnabled = false end
 end)
-iToggle("Group Selection", false, function(val)
+iToggle("Group Select", false, function(val)
     groupSelectEnabled = val
     if val then clickSelectEnabled = false; lassoEnabled = false end
 end)
+iButton("Deselect All", function() deselectAll() end)
 
 iSep()
-iSectionLabel("Delay Per Item")
-iSlider("Delay (x0.1s)", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
 
-iSep()
-iSectionLabel("Teleport Mode")
+-- ── Teleport ─────────────────────────────────────────
+iSectionLabel("Teleport")
+iSlider("Delay", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
 
+-- Sort mode row
 local itemModeRow = Instance.new("Frame", itemPage)
 itemModeRow.Size = UDim2.new(1, 0, 0, 30); itemModeRow.BackgroundTransparency = 1
 
@@ -1151,25 +1151,11 @@ for i, mName in ipairs(itemModeNames) do
 end
 updateItemModeButtons("Group")
 
-local itemModeHint = Instance.new("TextLabel", itemPage)
-itemModeHint.Size = UDim2.new(1, 0, 0, 24); itemModeHint.BackgroundColor3 = Color3.fromRGB(20,20,20)
-itemModeHint.BorderSizePixel = 0; itemModeHint.Font = Enum.Font.Gotham; itemModeHint.TextSize = 11
-itemModeHint.TextColor3 = Color3.fromRGB(110,110,110); itemModeHint.TextWrapped = true
-itemModeHint.TextXAlignment = Enum.TextXAlignment.Left
-itemModeHint.Text = "  Group: sorted by item type  |  Random: shuffled order"
-Instance.new("UICorner", itemModeHint).CornerRadius = UDim.new(0, 7)
-Instance.new("UIPadding", itemModeHint).PaddingLeft = UDim.new(0, 4)
-
-iButton("Deselect All", function() deselectAll() end)
-
-iSep()
-iSectionLabel("Teleport Destination")
-
--- ── Destination row (built BEFORE the toggle so it exists when the callback fires) ──
+-- Custom destination row (hidden until toggle is ON)
 local tpDestRow = Instance.new("Frame", itemPage)
 tpDestRow.Size = UDim2.new(1, 0, 0, 30)
 tpDestRow.BackgroundTransparency = 1
-tpDestRow.Visible = false   -- hidden by default
+tpDestRow.Visible = false
 
 local tpSetBtn = Instance.new("TextButton", tpDestRow)
 tpSetBtn.Size = UDim2.new(0.5, -4, 1, 0); tpSetBtn.Position = UDim2.new(0, 0, 0, 0)
@@ -1181,7 +1167,7 @@ Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
 local tpRemoveBtn = Instance.new("TextButton", tpDestRow)
 tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
 tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSemibold
-tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Remove Destination"
+tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Clear Destination"
 tpRemoveBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
 
@@ -1213,8 +1199,7 @@ table.insert(cleanupTasks, function()
     if tpCircle and tpCircle.Parent then tpCircle:Destroy(); tpCircle = nil end
 end)
 
--- ── Toggle (defined AFTER tpDestRow so the callback can safely reference it) ──
-iToggle("Teleport To (Custom Destination)", false, function(val)
+iToggle("Custom Destination", false, function(val)
     useCustomDest = val
     tpDestRow.Visible = val
     if not val and tpCircle then
@@ -1223,6 +1208,8 @@ iToggle("Teleport To (Custom Destination)", false, function(val)
 end)
 
 iSep()
+
+-- ── Actions ───────────────────────────────────────────
 iSectionLabel("Actions")
 
 local tpSelectBtn = iButton("Teleport Selected", function() end)
@@ -1230,14 +1217,12 @@ tpSelectBtn.MouseButton1Click:Connect(function()
     if isTeleportingItems then
         stopTeleportItems = true; return
     end
-    -- Block if custom dest is ON but no circle placed yet
     if useCustomDest and not tpCircle then return end
 
     isTeleportingItems = true; stopTeleportItems = false
-    tpSelectBtn.Text = "Stop Teleporting"
+    tpSelectBtn.Text = "Stop"
     TweenService:Create(tpSelectBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50,50,50)}):Play()
 
-    -- Snapshot destination once at click time
     local destCF = useCustomDest
         and tpCircle.CFrame
         or (player.Character
@@ -1317,8 +1302,7 @@ tpSelectBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
-local sellBtn = iButton("Sell Selected (to Dropoff)", function() end)
-sellBtn.MouseButton1Click:Connect(function()
+iButton("Sell Selected", function()
     local OldPos = player.Character
         and player.Character:FindFirstChild("HumanoidRootPart")
         and player.Character.HumanoidRootPart.CFrame
