@@ -200,14 +200,9 @@ local function stopFly()
             flyBV.Velocity = Vector3.zero
         end
         if flyBG and flyBG.Parent then
-            local char = player.Character
-            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                -- lock to upright (yaw only, no pitch/roll)
-                local _, yaw, _ = hrp.CFrame:ToEulerAnglesYXZ()
-                flyBG.CFrame    = CFrame.Angles(0, yaw, 0)
-                flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-            end
+            local _, camYaw, _ = workspace.CurrentCamera.CFrame:ToEulerAnglesYXZ()
+            flyBG.CFrame    = CFrame.Angles(0, camYaw, 0)
+            flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
         end
     end)
     task.wait()   -- one frame for the gyro to settle upright
@@ -253,29 +248,34 @@ local function startFly()
         local h  = ch:FindFirstChild("Humanoid"); if not h then stopFly(); return end
         local r  = ch:FindFirstChild("HumanoidRootPart"); if not r then stopFly(); return end
         local cf = workspace.CurrentCamera.CFrame
-        -- Use the true camera look/right vectors so movement follows where
-        -- you're looking. However, clamp the Y contribution of LookVector so
-        -- that looking nearly straight up or down (beyond ~65°) stops adding
-        -- vertical movement — you'll just drift to a stop and fall naturally.
-        local pitch = math.asin(math.clamp(cf.LookVector.Y, -1, 1)) -- radians
+
+        -- Extract camera yaw so the body faces where you're looking
+        local _, camYaw, _ = cf:ToEulerAnglesYXZ()
+
+        -- Movement direction follows camera look/right vectors.
+        -- Clamp Y on W/S so looking straight up/down doesn't rocket you —
+        -- instead the vertical component fades to zero and you just float.
+        local pitch  = math.asin(math.clamp(cf.LookVector.Y, -1, 1))
         local yScale = math.clamp(1 - math.abs(pitch) / (math.pi * 0.5), 0, 1)
-        -- yScale → 1 when looking flat, → 0 when looking straight up/down
-        local look  = Vector3.new(cf.LookVector.X,  cf.LookVector.Y  * yScale, cf.LookVector.Z)
-        local right = Vector3.new(cf.RightVector.X, 0, cf.RightVector.Z)
+        local look   = Vector3.new(cf.LookVector.X, cf.LookVector.Y * yScale, cf.LookVector.Z)
+        local right  = Vector3.new(cf.RightVector.X, 0, cf.RightVector.Z)
         if look.Magnitude  > 0 then look  = look.Unit  end
         if right.Magnitude > 0 then right = right.Unit end
+
         local dir = Vector3.zero
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + look  end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - look  end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - right end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + right end
+
         h.PlatformStand = true
         flyBV.MaxForce  = Vector3.new(1e6, 1e6, 1e6)
         flyBV.Velocity  = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
-        -- body stays upright (yaw only) so stopping fly drops you feet-first
-        local _, yaw, _ = r.CFrame:ToEulerAnglesYXZ()
+
+        -- Lock body to camera yaw (upright, no pitch/roll) so character
+        -- faces the same horizontal direction as the camera at all times
         flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-        flyBG.CFrame    = CFrame.Angles(0, yaw, 0)
+        flyBG.CFrame    = CFrame.Angles(0, camYaw, 0)
     end)
 end
 
