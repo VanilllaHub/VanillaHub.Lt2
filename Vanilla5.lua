@@ -249,18 +249,13 @@ local function startFly()
         local r  = ch:FindFirstChild("HumanoidRootPart"); if not r then stopFly(); return end
         local cf = workspace.CurrentCamera.CFrame
 
-        -- Extract camera yaw so the body faces where you're looking
+        -- Body faces camera horizontal direction every frame
         local _, camYaw, _ = cf:ToEulerAnglesYXZ()
 
-        -- Movement direction follows camera look/right vectors.
-        -- Clamp Y on W/S so looking straight up/down doesn't rocket you —
-        -- instead the vertical component fades to zero and you just float.
-        local pitch  = math.asin(math.clamp(cf.LookVector.Y, -1, 1))
-        local yScale = math.clamp(1 - math.abs(pitch) / (math.pi * 0.5), 0, 1)
-        local look   = Vector3.new(cf.LookVector.X, cf.LookVector.Y * yScale, cf.LookVector.Z)
-        local right  = Vector3.new(cf.RightVector.X, 0, cf.RightVector.Z)
-        if look.Magnitude  > 0 then look  = look.Unit  end
-        if right.Magnitude > 0 then right = right.Unit end
+        -- Full camera look/right vectors — no clamping, movement goes exactly
+        -- where the camera is pointing including up and down
+        local look  = cf.LookVector
+        local right = cf.RightVector
 
         local dir = Vector3.zero
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + look  end
@@ -272,8 +267,8 @@ local function startFly()
         flyBV.MaxForce  = Vector3.new(1e6, 1e6, 1e6)
         flyBV.Velocity  = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
 
-        -- Lock body to camera yaw (upright, no pitch/roll) so character
-        -- faces the same horizontal direction as the camera at all times
+        -- Gyro locked to camera yaw only (upright) so turning off fly
+        -- always drops you feet-first with no spin
         flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
         flyBG.CFrame    = CFrame.Angles(0, camYaw, 0)
     end)
