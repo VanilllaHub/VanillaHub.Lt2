@@ -96,18 +96,18 @@ local mouse             = player:GetMouse()
 -- ════════════════════════════════════════════════════
 local THEME_TEXT   = Color3.fromRGB(220, 220, 220)
 local BTN_COLOR    = Color3.fromRGB(14, 14, 14)
-local BTN_HOVER    = Color3.fromRGB(32, 32, 32)
+local BTN_HOVER    = Color3.fromRGB(32,  32,  32)
 local ACCENT       = Color3.fromRGB(160, 160, 160)
-local BG_DARK      = Color3.fromRGB(6, 6, 6)
+local BG_DARK      = Color3.fromRGB(6,  6,  6 )
 local BG_SIDE      = Color3.fromRGB(10, 10, 10)
-local BG_TOP       = Color3.fromRGB(8, 8, 8)
+local BG_TOP       = Color3.fromRGB(8,  8,  8 )
 local BORDER_COLOR = Color3.fromRGB(60, 60, 60)
 local SEP_COLOR    = Color3.fromRGB(50, 50, 50)
 local SECTION_TEXT = Color3.fromRGB(130, 130, 130)
-local OUTER_BG     = Color3.fromRGB(8, 8, 8)
+local OUTER_BG     = Color3.fromRGB(8,   8,   8 )
 
-local SW_OFF      = Color3.fromRGB(55, 55, 55)
-local SW_ON       = Color3.fromRGB(230, 230, 230)
+local SW_OFF = Color3.fromRGB(55, 55, 55)
+local SW_ON  = Color3.fromRGB(230, 230, 230)
 local SW_KNOB_OFF = Color3.fromRGB(160, 160, 160)
 local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
 
@@ -142,7 +142,7 @@ end
 -- ════════════════════════════════════════════════════
 -- CLEANUP REGISTRY
 -- ════════════════════════════════════════════════════
-local cleanupTasks  = {}
+local cleanupTasks = {}
 local butterRunning = false
 local butterThread  = nil
 
@@ -200,16 +200,9 @@ table.insert(cleanupTasks, function() if gui and gui.Parent then gui:Destroy() e
 
 _G.VanillaHubCleanup = onExit
 
--- ════════════════════════════════════════════════════
--- MAIN WINDOW  (wider to fit card sidebar: 155→175)
--- ════════════════════════════════════════════════════
-local SIDE_W   = 86   -- sidebar width (fits one column of 80px cards)
-local WIN_W    = 540
-local WIN_H    = 380
-
 local wrapper = Instance.new("Frame", gui)
 wrapper.Size = UDim2.new(0, 0, 0, 0)
-wrapper.Position = UDim2.new(0.5, -WIN_W/2, 0.5, -WIN_H/2)
+wrapper.Position = UDim2.new(0.5, -265, 0.5, -175)
 wrapper.BackgroundColor3 = OUTER_BG
 wrapper.BackgroundTransparency = 0
 wrapper.BorderSizePixel = 0
@@ -231,10 +224,10 @@ mainStroke.Thickness = 1.2
 mainStroke.Transparency = 0.3
 
 TweenService:Create(wrapper, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, WIN_W, 0, WIN_H)
+    Size = UDim2.new(0, 540, 0, 360)
 }):Play()
 TweenService:Create(main, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, WIN_W, 0, WIN_H),
+    Size = UDim2.new(0, 540, 0, 360),
     BackgroundTransparency = 0
 }):Play()
 
@@ -290,43 +283,43 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ════════════════════════════════════════════════════
--- SIDE PANEL  (card-style, scrollable)
+-- SIDE PANEL
 -- ════════════════════════════════════════════════════
 local side = Instance.new("ScrollingFrame", main)
-side.Size = UDim2.new(0, SIDE_W, 1, -40)
+side.Size = UDim2.new(0, 155, 1, -40)
 side.Position = UDim2.new(0, 0, 0, 40)
 side.BackgroundColor3 = BG_SIDE
 side.BorderSizePixel = 0
-side.ScrollBarThickness = 2
-side.ScrollBarImageColor3 = Color3.fromRGB(70, 70, 70)
+side.ScrollBarThickness = 3
+side.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
 side.CanvasSize = UDim2.new(0, 0, 0, 0)
 side.ZIndex = 2
 
 local sidePad = Instance.new("UIPadding", side)
-sidePad.PaddingTop    = UDim.new(0, 8)
-sidePad.PaddingBottom = UDim.new(0, 8)
-sidePad.PaddingLeft   = UDim.new(0, 5)
-sidePad.PaddingRight  = UDim.new(0, 5)
+sidePad.PaddingTop = UDim.new(0, 10)
+sidePad.PaddingBottom = UDim.new(0, 10)
+sidePad.PaddingLeft = UDim.new(0, 8)
+sidePad.PaddingRight = UDim.new(0, 8)
 
 local sideLayout = Instance.new("UIListLayout", side)
-sideLayout.Padding             = UDim.new(0, 5)
+sideLayout.Padding = UDim.new(0, 5)
 sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-sideLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 sideLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     side.CanvasSize = UDim2.new(0, 0, 0, sideLayout.AbsoluteContentSize.Y + 20)
 end)
 
 local sideSep = Instance.new("Frame", main)
 sideSep.Size = UDim2.new(0, 1, 1, -40)
-sideSep.Position = UDim2.new(0, SIDE_W, 0, 40)
+sideSep.Position = UDim2.new(0, 155, 0, 40)
 sideSep.BackgroundColor3 = SEP_COLOR
 sideSep.BorderSizePixel = 0
 sideSep.ZIndex = 3
 
 -- CONTENT AREA
 local content = Instance.new("Frame", main)
-content.Size = UDim2.new(1, -(SIDE_W + 1), 1, -40)
-content.Position = UDim2.new(0, SIDE_W + 1, 0, 40)
+content.Size = UDim2.new(1, -156, 1, -40)
+content.Position = UDim2.new(0, 156, 0, 40)
 content.BackgroundColor3 = BG_DARK
 content.BorderSizePixel = 0
 
@@ -372,24 +365,6 @@ end)
 local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
 local pages = {}
 
-local TAB_ICONS = {
-    ["Home"]      = "rbxassetid://77194384448338",
-    ["Player"]    = "rbxassetid://107966908673726",
-    ["World"]     = "rbxassetid://101214534117376",
-    ["Teleport"]  = "rbxassetid://92649354349672",
-    ["Wood"]      = "rbxassetid://106031824976362",
-    ["Slot"]      = "rbxassetid://136244861596002",
-    ["Dupe"]      = "rbxassetid://76204407522607",
-    ["Item"]      = "rbxassetid://107729874528981",
-    ["Sorter"]    = "rbxassetid://124649482379122",
-    ["AutoBuy"]   = "rbxassetid://75551187041542",
-    ["Pixel Art"] = "rbxassetid://139483926634191",
-    ["Build"]     = "rbxassetid://140309668216577",
-    ["Vehicle"]   = "rbxassetid://72268059112855",
-    ["Search"]    = "rbxassetid://80981469875695",
-    ["Settings"]  = "rbxassetid://93566900770353",
-}
-
 for _, name in ipairs(tabs) do
     local page = Instance.new("ScrollingFrame", content)
     page.Name = name .. "Tab"; page.Size = UDim2.new(1, 0, 1, 0)
@@ -408,109 +383,68 @@ for _, name in ipairs(tabs) do
     pages[name .. "Tab"] = page
 end
 
--- ════════════════════════════════════════════════════
 -- TAB SWITCHING
--- ════════════════════════════════════════════════════
 local activeTabButton = nil
-
 local function switchTab(targetName)
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
-        local oldBox  = activeTabButton:FindFirstChild("IconBox")
-        local oldIcon = oldBox and oldBox:FindFirstChild("TabIcon")
-        local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
+        local oldLbl = activeTabButton:FindFirstChild("TabLabel")
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
-        if oldBox  then TweenService:Create(oldBox,  TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play() end
-        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {ImageColor3      = Color3.fromRGB(100, 100, 100)}):Play() end
-        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3       = Color3.fromRGB(100, 100, 100)}):Play() end
+        if oldLbl then TweenService:Create(oldLbl, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
     end
-    local frame = side:FindFirstChild(targetName:gsub("Tab", ""))
+    local frame = side:FindFirstChild(targetName:gsub("Tab",""))
     if frame then
         activeTabButton = frame
-        local newBox  = frame:FindFirstChild("IconBox")
-        local newIcon = newBox and newBox:FindFirstChild("TabIcon")
-        local newLbl  = frame:FindFirstChild("TabLabel")
+        local newLbl = frame:FindFirstChild("TabLabel")
         TweenService:Create(frame, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
-        if newBox  then TweenService:Create(newBox,  TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(65, 65, 65)}):Play() end
-        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {ImageColor3      = Color3.fromRGB(220, 220, 220)}):Play() end
-        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3       = THEME_TEXT}):Play() end
+        if newLbl then TweenService:Create(newLbl, TweenInfo.new(0.22), {TextColor3 = THEME_TEXT}):Play() end
     end
 end
 
--- ════════════════════════════════════════════════════
--- SIDEBAR CARD BUTTONS  (KronHub-style: icon box + label below)
--- ════════════════════════════════════════════════════
 for _, name in ipairs(tabs) do
-    -- Outer card frame — this is what gets highlighted on active/hover
     local frame = Instance.new("Frame", side)
     frame.Name             = name
-    frame.Size             = UDim2.new(1, 0, 0, 68)
+    frame.Size             = UDim2.new(1, 0, 0, 34)
     frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
     frame.BorderSizePixel  = 0
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
     local fStroke = Instance.new("UIStroke", frame)
-    fStroke.Color = Color3.fromRGB(48, 48, 48); fStroke.Thickness = 1; fStroke.Transparency = 0
+    fStroke.Color        = Color3.fromRGB(55, 55, 55)
+    fStroke.Thickness    = 1
+    fStroke.Transparency = 0
 
-    -- Coloured icon background box (centre-top of card)
-    local iconBox = Instance.new("Frame", frame)
-    iconBox.Name             = "IconBox"
-    iconBox.Size             = UDim2.new(0, 42, 0, 38)
-    iconBox.Position         = UDim2.new(0.5, -21, 0, 7)
-    iconBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    iconBox.BorderSizePixel  = 0
-    Instance.new("UICorner", iconBox).CornerRadius = UDim.new(0, 7)
-
-    -- Icon ImageLabel INSIDE iconBox — sibling of btn, guaranteed to render
-    local iconImg = Instance.new("ImageLabel", iconBox)
-    iconImg.Name                   = "TabIcon"
-    iconImg.Size                   = UDim2.new(0, 24, 0, 24)
-    iconImg.Position               = UDim2.new(0.5, -12, 0.5, -12)
-    iconImg.BackgroundTransparency = 1
-    iconImg.BorderSizePixel        = 0
-    iconImg.ScaleType              = Enum.ScaleType.Fit
-    iconImg.Image                  = TAB_ICONS[name] or ""
-    iconImg.ImageColor3            = Color3.fromRGB(100, 100, 100)
-
-    -- Tab name label below the icon box
     local nameLbl = Instance.new("TextLabel", frame)
-    nameLbl.Name                   = "TabLabel"
-    nameLbl.Size                   = UDim2.new(1, -4, 0, 15)
-    nameLbl.Position               = UDim2.new(0, 2, 0, 48)
+    nameLbl.Name               = "TabLabel"
+    nameLbl.Size               = UDim2.new(1, -14, 1, 0)
+    nameLbl.Position           = UDim2.new(0, 10, 0, 0)
     nameLbl.BackgroundTransparency = 1
-    nameLbl.Font                   = Enum.Font.GothamSemibold
-    nameLbl.TextSize               = 9
-    nameLbl.TextColor3             = Color3.fromRGB(100, 100, 100)
-    nameLbl.TextXAlignment         = Enum.TextXAlignment.Center
-    nameLbl.TextTruncate           = Enum.TextTruncate.AtEnd
-    nameLbl.Text                   = name
+    nameLbl.Font               = Enum.Font.GothamSemibold
+    nameLbl.TextSize           = 13
+    nameLbl.TextColor3         = Color3.fromRGB(120, 120, 120)
+    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    nameLbl.Text               = name
 
-    -- Transparent click overlay — sits on top but does NOT block rendering of siblings
     local btn = Instance.new("TextButton", frame)
-    btn.Name                   = name .. "_Btn"
-    btn.Size                   = UDim2.new(1, 0, 1, 0)
+    btn.Name                 = name .. "_Btn"
+    btn.Size                 = UDim2.new(1, 0, 1, 0)
     btn.BackgroundTransparency = 1
-    btn.Text                   = ""
-    btn.BorderSizePixel        = 0
-    btn.AutoButtonColor        = false
-    btn.ZIndex                 = 10
+    btn.Text                 = ""
+    btn.ZIndex               = 10
+    btn.AutoButtonColor      = false
 
     btn.MouseEnter:Connect(function()
         if activeTabButton ~= frame then
-            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(28, 28, 28)}):Play()
-            TweenService:Create(iconBox, TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(48, 48, 48)}):Play()
-            TweenService:Create(iconImg, TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(175, 175, 175)}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(175, 175, 175)}):Play()
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= frame then
             TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
-            TweenService:Create(iconBox, TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
-            TweenService:Create(iconImg, TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(100, 100, 100)}):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(100, 100, 100)}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
         end
     end)
-    btn.MouseButton1Click:Connect(function() switchTab(name .. "Tab") end)
+    btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
 end
 
 switchTab("HomeTab")
@@ -519,8 +453,8 @@ switchTab("HomeTab")
 -- GUI TOGGLE
 -- ════════════════════════════════════════════════════
 local currentToggleKey = Enum.KeyCode.LeftAlt
-local guiOpen          = true
-local isAnimatingGUI   = false
+local guiOpen = true
+local isAnimatingGUI = false
 local keybindButtonGUI
 
 local function toggleGUI()
@@ -532,11 +466,11 @@ local function toggleGUI()
         main.BackgroundTransparency = 1
         wrapper.Size = UDim2.new(0, 0, 0, 0)
         local t = TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, WIN_W, 0, WIN_H),
+            Size = UDim2.new(0, 540, 0, 360),
             BackgroundTransparency = 0
         })
         TweenService:Create(wrapper, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, WIN_W, 0, WIN_H)
+            Size = UDim2.new(0, 540, 0, 360)
         }):Play()
         t:Play()
         t.Completed:Connect(function() isAnimatingGUI = false end)
@@ -935,8 +869,10 @@ for i, loc in ipairs(locations) do
     btn.TextColor3 = THEME_TEXT; btn.Text = loc.name
     btn.TextTruncate = Enum.TextTruncate.AtEnd
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-    local s = Instance.new("UIStroke", btn)
-    s.Color = Color3.fromRGB(55,55,55); s.Thickness = 1; s.Transparency = 0
+    local btnStr = Instance.new("UIStroke", btn)
+    btnStr.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr.Thickness    = 1
+    btnStr.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER,TextColor3=Color3.fromRGB(255,255,255)}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR,TextColor3=THEME_TEXT}):Play() end)
     btn.MouseButton1Click:Connect(function()
@@ -988,8 +924,10 @@ local function iButton(text, cb)
     btn.Text = text; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-    local s = Instance.new("UIStroke", btn)
-    s.Color = Color3.fromRGB(55,55,55); s.Thickness = 1; s.Transparency = 0
+    local btnStr = Instance.new("UIStroke", btn)
+    btnStr.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr.Thickness    = 1
+    btnStr.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
     if cb then btn.MouseButton1Click:Connect(cb) end
@@ -1295,8 +1233,10 @@ tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold
 tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"
 tpSetBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
-local s1 = Instance.new("UIStroke", tpSetBtn)
-s1.Color = Color3.fromRGB(55,55,55); s1.Thickness = 1; s1.Transparency = 0
+local btnStr_tpSetBtn = Instance.new("UIStroke", tpSetBtn)
+btnStr_tpSetBtn.Color        = Color3.fromRGB(55, 55, 55)
+btnStr_tpSetBtn.Thickness    = 1
+btnStr_tpSetBtn.Transparency = 0
 
 local tpRemoveBtn = Instance.new("TextButton", tpRow)
 tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
@@ -1304,10 +1244,12 @@ tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSem
 tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Remove Destination"
 tpRemoveBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
-local s2 = Instance.new("UIStroke", tpRemoveBtn)
-s2.Color = Color3.fromRGB(55,55,55); s2.Thickness = 1; s2.Transparency = 0
+local btnStr_tpRemoveBtn = Instance.new("UIStroke", tpRemoveBtn)
+btnStr_tpRemoveBtn.Color        = Color3.fromRGB(55, 55, 55)
+btnStr_tpRemoveBtn.Thickness    = 1
+btnStr_tpRemoveBtn.Transparency = 0
 
-for _, b in ipairs({tpSetBtn, tpRemoveBtn}) do
+for _, b in {tpSetBtn, tpRemoveBtn} do
     b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
 end
@@ -1477,8 +1419,10 @@ local function dButton(text, cb)
     btn.Text = text; btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.BorderSizePixel = 0
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-    local s = Instance.new("UIStroke", btn)
-    s.Color = Color3.fromRGB(55,55,55); s.Thickness = 1; s.Transparency = 0
+    local btnStr = Instance.new("UIStroke", btn)
+    btnStr.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr.Thickness    = 1
+    btnStr.Transparency = 0
     btn.MouseEnter:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
     if cb then btn.MouseButton1Click:Connect(cb) end
@@ -1712,8 +1656,10 @@ flyKeyBtn.Size = UDim2.new(0, 60, 0, 24); flyKeyBtn.Position = UDim2.new(1, -70,
 flyKeyBtn.BackgroundColor3 = BTN_COLOR; flyKeyBtn.Font = Enum.Font.GothamSemibold
 flyKeyBtn.TextSize = 12; flyKeyBtn.TextColor3 = THEME_TEXT; flyKeyBtn.Text = "Q"
 flyKeyBtn.BorderSizePixel = 0; Instance.new("UICorner", flyKeyBtn).CornerRadius = UDim.new(0, 6)
-local fkStroke = Instance.new("UIStroke", flyKeyBtn)
-fkStroke.Color = Color3.fromRGB(55,55,55); fkStroke.Thickness = 1; fkStroke.Transparency = 0
+local btnStr_flyKeyBtn = Instance.new("UIStroke", flyKeyBtn)
+btnStr_flyKeyBtn.Color        = Color3.fromRGB(55, 55, 55)
+btnStr_flyKeyBtn.Thickness    = 1
+btnStr_flyKeyBtn.Transparency = 0
 flyKeyBtn.MouseEnter:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
 flyKeyBtn.MouseLeave:Connect(function() TweenService:Create(flyKeyBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
 
@@ -1807,9 +1753,6 @@ table.insert(cleanupTasks, function()
     if infJumpConn then infJumpConn:Disconnect(); infJumpConn = nil end
 end)
 
--- ════════════════════════════════════════════════════
--- MISC (Hard Dragger)
--- ════════════════════════════════════════════════════
 createPSep()
 createPSection("Misc")
 
