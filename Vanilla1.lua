@@ -845,8 +845,6 @@ local lassoEnabled        = false
 local groupSelectEnabled  = false
 local isTeleportingItems  = false
 local stopTeleportItems   = false
-local useCustomDest       = false
-local tpCircle            = nil
 
 local function iSectionLabel(text)
     local w = Instance.new("Frame", itemPage)
@@ -1099,8 +1097,6 @@ local function isnetworkowner(part)
     return part.ReceiveAge == 0
 end
 
--- ── UI Layout ────────────────────────────────────────
-
 iSectionLabel("Selection Mode")
 iToggle("Click Selection", false, function(val)
     clickSelectEnabled = val
@@ -1166,68 +1162,6 @@ Instance.new("UIPadding", itemModeHint).PaddingLeft = UDim.new(0, 4)
 iButton("Deselect All", function() deselectAll() end)
 
 iSep()
-iSectionLabel("Teleport Destination")
-
--- Toggle: use custom destination
-iToggle("Teleport To (Custom Destination)", false, function(val)
-    useCustomDest = val
-    -- show/hide the destination buttons
-    tpDestRow.Visible = val
-    -- clear the circle when toggling off
-    if not val and tpCircle then
-        tpCircle:Destroy(); tpCircle = nil
-    end
-end)
-
--- Destination buttons row (hidden by default)
-local tpDestRow = Instance.new("Frame", itemPage)
-tpDestRow.Size = UDim2.new(1, 0, 0, 30)
-tpDestRow.BackgroundTransparency = 1
-tpDestRow.Visible = false
-
-local tpSetBtn = Instance.new("TextButton", tpDestRow)
-tpSetBtn.Size = UDim2.new(0.5, -4, 1, 0); tpSetBtn.Position = UDim2.new(0, 0, 0, 0)
-tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold
-tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"
-tpSetBtn.BorderSizePixel = 0
-Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
-
-local tpRemoveBtn = Instance.new("TextButton", tpDestRow)
-tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
-tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSemibold
-tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Remove Destination"
-tpRemoveBtn.BorderSizePixel = 0
-Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
-
-for _, b in {tpSetBtn, tpRemoveBtn} do
-    b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
-    b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
-end
-
-tpSetBtn.MouseButton1Click:Connect(function()
-    if tpCircle then tpCircle:Destroy() end
-    tpCircle = Instance.new("Part")
-    tpCircle.Name = "VanillaHubTpCircle"
-    tpCircle.Shape = Enum.PartType.Ball; tpCircle.Size = Vector3.new(3,3,3)
-    tpCircle.Material = Enum.Material.SmoothPlastic
-    tpCircle.Color = Color3.fromRGB(110,110,120)
-    tpCircle.Anchored = true; tpCircle.CanCollide = false
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        tpCircle.Position = char.HumanoidRootPart.Position
-    end
-    tpCircle.Parent = workspace
-end)
-
-tpRemoveBtn.MouseButton1Click:Connect(function()
-    if tpCircle then tpCircle:Destroy(); tpCircle = nil end
-end)
-
-table.insert(cleanupTasks, function()
-    if tpCircle and tpCircle.Parent then tpCircle:Destroy(); tpCircle = nil end
-end)
-
-iSep()
 iSectionLabel("Actions")
 
 local tpSelectBtn = iButton("Teleport Selected", function() end)
@@ -1235,25 +1169,12 @@ tpSelectBtn.MouseButton1Click:Connect(function()
     if isTeleportingItems then
         stopTeleportItems = true; return
     end
-
-    -- If custom dest is ON, require a placed circle
-    if useCustomDest and not tpCircle then return end
-
     isTeleportingItems = true; stopTeleportItems = false
     tpSelectBtn.Text = "Stop Teleporting"
     TweenService:Create(tpSelectBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50,50,50)}):Play()
-
-    -- Capture destination: saved circle OR player's current position right now
-    local destCF = useCustomDest
-        and tpCircle.CFrame
-        or (player.Character
-            and player.Character:FindFirstChild("HumanoidRootPart")
-            and player.Character.HumanoidRootPart.CFrame)
-
     local OldPos = player.Character
         and player.Character:FindFirstChild("HumanoidRootPart")
         and player.Character.HumanoidRootPart.CFrame
-
     task.spawn(function()
         if not workspace:FindFirstChild("PlayerModels") then
             isTeleportingItems = false; stopTeleportItems = false
@@ -1261,7 +1182,6 @@ tpSelectBtn.MouseButton1Click:Connect(function()
             TweenService:Create(tpSelectBtn,TweenInfo.new(0.2),{BackgroundColor3=BTN_COLOR}):Play()
             return
         end
-
         local selectedParts = {}
         for _, v in next, workspace.PlayerModels:GetDescendants() do
             if v.Name == "Selection" then
@@ -1269,13 +1189,11 @@ tpSelectBtn.MouseButton1Click:Connect(function()
                 if part and part.Parent then table.insert(selectedParts, part) end
             end
         end
-
         local function getItemType(part)
             local m = part.Parent; if not m then return "unknown" end
             local iv = m:FindFirstChild("ItemName")
             return iv and iv.Value or m.Name
         end
-
         if itemTpMode == "random" then
             for i = #selectedParts, 2, -1 do
                 local j = math.random(i)
@@ -1296,11 +1214,12 @@ tpSelectBtn.MouseButton1Click:Connect(function()
                 return getItemType(a) < getItemType(b)
             end)
         end
-
         for _, part in ipairs(selectedParts) do
             if stopTeleportItems then break end
             local char = player.Character; local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if not hrp then task.wait(tpItemSpeed); continue end
+            -- destination is always the player's current position
+            local destCF = hrp.CFrame
             hrp.CFrame = CFrame.new(part.CFrame.p) * CFrame.new(5, 0, 0)
             task.wait(tpItemSpeed)
             if stopTeleportItems then break end
@@ -1318,7 +1237,6 @@ tpSelectBtn.MouseButton1Click:Connect(function()
             end)
             task.wait(tpItemSpeed)
         end
-
         if OldPos and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             player.Character.HumanoidRootPart.CFrame = OldPos
         end
@@ -1362,7 +1280,6 @@ sellBtn.MouseButton1Click:Connect(function()
         end
     end)
 end)
-
 -- ════════════════════════════════════════════════════
 -- DUPE TAB
 -- ════════════════════════════════════════════════════
