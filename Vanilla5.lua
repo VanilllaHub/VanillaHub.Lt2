@@ -193,19 +193,19 @@ local function stopFly()
     isFlyActive = false
     if _G.VH then _G.VH.isFlyActive = false end
     if flyConn then flyConn:Disconnect(); flyConn = nil end
-    -- zero out velocity and snap to upright BEFORE destroying so the
-    -- character doesn't inherit spin or pitch when fly turns off
     pcall(function()
         if flyBV and flyBV.Parent then
             flyBV.Velocity = Vector3.zero
+            flyBV.MaxForce = Vector3.new(1e6, 1e6, 1e6)
         end
         if flyBG and flyBG.Parent then
+            -- snap to upright using camera yaw so character falls feet-first
             local _, camYaw, _ = workspace.CurrentCamera.CFrame:ToEulerAnglesYXZ()
             flyBG.CFrame    = CFrame.Angles(0, camYaw, 0)
             flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
         end
     end)
-    task.wait()   -- one frame for the gyro to settle upright
+    task.wait(0.07) -- a few frames for the gyro to settle upright before releasing
     pcall(function()
         if flyBV and flyBV.Parent then flyBV:Destroy() end
         if flyBG and flyBG.Parent then flyBG:Destroy() end
