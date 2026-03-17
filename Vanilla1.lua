@@ -634,16 +634,16 @@ end)
 -- ════════════════════════════════════════════════════
 local worldPage = pages["WorldTab"]
 
+-- FIX: snapshot actual LT2 fog values at load time so toggling off always restores correctly
 local origClockTime = Lighting.ClockTime
 local origFogEnd    = Lighting.FogEnd
 local origFogStart  = Lighting.FogStart
 local origFogColor  = Lighting.FogColor
 local origShadows   = Lighting.GlobalShadows
 
--- LT2 default fog values
-local LT2_FOG_END   = 6400
-local LT2_FOG_START = 0
-local LT2_FOG_COLOR = Color3.fromRGB(170, 170, 170)  -- 0.666... * 255
+local LT2_FOG_END   = Lighting.FogEnd
+local LT2_FOG_START = Lighting.FogStart
+local LT2_FOG_COLOR = Lighting.FogColor
 
 local dayConn   = nil
 local nightConn = nil
@@ -762,7 +762,7 @@ makeWorldToggle("Remove Fog", false, function(v)
             Lighting.FogStart = 1e9
         end)
     else
-        -- Restore to known LT2 defaults
+        -- Restore to the values captured at script load
         Lighting.FogEnd   = LT2_FOG_END
         Lighting.FogStart = LT2_FOG_START
         Lighting.FogColor = LT2_FOG_COLOR
@@ -832,7 +832,7 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- TELEPORT TAB  (pretty card layout)
+-- TELEPORT TAB
 -- ════════════════════════════════════════════════════
 local teleportPage = pages["TeleportTab"]
 
@@ -869,12 +869,17 @@ local locations = {
     {name="Bird Cave",      icon="🐦", x=4813.1,  y=17.7,   z=-978.8},
 }
 
--- Search bar
+-- FIX: Clean search bar with stroke border, no visible square
 local searchBarFrame = Instance.new("Frame", teleportPage)
 searchBarFrame.Size = UDim2.new(1, 0, 0, 36)
 searchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+searchBarFrame.BackgroundTransparency = 0
 searchBarFrame.BorderSizePixel = 0
 Instance.new("UICorner", searchBarFrame).CornerRadius = UDim.new(0, 9)
+local searchStroke = Instance.new("UIStroke", searchBarFrame)
+searchStroke.Color = Color3.fromRGB(55, 55, 55)
+searchStroke.Thickness = 1
+searchStroke.Transparency = 0
 
 local searchIcon = Instance.new("TextLabel", searchBarFrame)
 searchIcon.Size = UDim2.new(0, 28, 1, 0)
@@ -900,7 +905,7 @@ searchBox.TextXAlignment = Enum.TextXAlignment.Left
 -- Grid container for cards
 local tpCardGrid = Instance.new("Frame", teleportPage)
 tpCardGrid.BackgroundTransparency = 1
-tpCardGrid.Size = UDim2.new(1, 0, 0, 0)  -- height set by layout
+tpCardGrid.Size = UDim2.new(1, 0, 0, 0)
 
 local tpGridLayout = Instance.new("UIGridLayout", tpCardGrid)
 tpGridLayout.CellSize = UDim2.new(0.5, -5, 0, 52)
@@ -922,7 +927,6 @@ local function makeTpCard(loc, idx)
     card.BorderSizePixel = 0
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
 
-    -- Left accent bar
     local accent = Instance.new("Frame", card)
     accent.Size = UDim2.new(0, 3, 0.7, 0)
     accent.Position = UDim2.new(0, 0, 0.15, 0)
@@ -930,7 +934,6 @@ local function makeTpCard(loc, idx)
     accent.BorderSizePixel = 0
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
 
-    -- Icon
     local iconLbl = Instance.new("TextLabel", card)
     iconLbl.Size = UDim2.new(0, 28, 0, 28)
     iconLbl.Position = UDim2.new(0, 10, 0.5, -14)
@@ -940,7 +943,6 @@ local function makeTpCard(loc, idx)
     iconLbl.Text = loc.icon or "📍"
     iconLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-    -- Name
     local nameLbl = Instance.new("TextLabel", card)
     nameLbl.Size = UDim2.new(1, -50, 0, 18)
     nameLbl.Position = UDim2.new(0, 44, 0, 8)
@@ -952,7 +954,6 @@ local function makeTpCard(loc, idx)
     nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
     nameLbl.Text = loc.name
 
-    -- Coords
     local coordLbl = Instance.new("TextLabel", card)
     coordLbl.Size = UDim2.new(1, -50, 0, 14)
     coordLbl.Position = UDim2.new(0, 44, 0, 28)
@@ -963,7 +964,6 @@ local function makeTpCard(loc, idx)
     coordLbl.TextXAlignment = Enum.TextXAlignment.Left
     coordLbl.Text = string.format("%.0f, %.0f, %.0f", loc.x, loc.y, loc.z)
 
-    -- Invisible click button
     local btn = Instance.new("TextButton", card)
     btn.Size = UDim2.new(1, 0, 1, 0)
     btn.BackgroundTransparency = 1
@@ -983,7 +983,6 @@ local function makeTpCard(loc, idx)
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y + 3, loc.z)
         end
-        -- Flash feedback
         TweenService:Create(card, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
         task.delay(0.12, function()
             TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
@@ -998,7 +997,6 @@ for i, loc in ipairs(locations) do
     table.insert(tpCards, {card = card, name = string.lower(loc.name)})
 end
 
--- Search filtering
 searchBox:GetPropertyChangedSignal("Text"):Connect(function()
     local query = string.lower(searchBox.Text)
     local order = 1
@@ -1920,6 +1918,121 @@ createPToggle("Hard Dragger", false, function(val)
 end)
 
 table.insert(cleanupTasks, stopHardDrag)
+
+-- ════════════════════════════════════════════════════
+-- SEARCH TAB
+-- ════════════════════════════════════════════════════
+local searchPage = pages["SearchTab"]
+
+local srchBarFrame = Instance.new("Frame", searchPage)
+srchBarFrame.Size = UDim2.new(1, 0, 0, 36)
+srchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+srchBarFrame.BackgroundTransparency = 0
+srchBarFrame.BorderSizePixel = 0
+Instance.new("UICorner", srchBarFrame).CornerRadius = UDim.new(0, 9)
+local srchStroke = Instance.new("UIStroke", srchBarFrame)
+srchStroke.Color = Color3.fromRGB(55, 55, 55); srchStroke.Thickness = 1; srchStroke.Transparency = 0
+
+local srchIcon = Instance.new("TextLabel", srchBarFrame)
+srchIcon.Size = UDim2.new(0, 28, 1, 0); srchIcon.Position = UDim2.new(0, 4, 0, 0)
+srchIcon.BackgroundTransparency = 1; srchIcon.Text = "🔍"; srchIcon.TextSize = 14
+srchIcon.Font = Enum.Font.Gotham; srchIcon.TextColor3 = Color3.fromRGB(100, 100, 100)
+
+local srchBox = Instance.new("TextBox", srchBarFrame)
+srchBox.Size = UDim2.new(1, -36, 1, 0); srchBox.Position = UDim2.new(0, 28, 0, 0)
+srchBox.BackgroundTransparency = 1; srchBox.Font = Enum.Font.GothamSemibold
+srchBox.TextSize = 13; srchBox.TextColor3 = THEME_TEXT
+srchBox.PlaceholderText = "Search items in workspace..."
+srchBox.PlaceholderColor3 = Color3.fromRGB(70, 70, 70)
+srchBox.Text = ""; srchBox.ClearTextOnFocus = false
+srchBox.TextXAlignment = Enum.TextXAlignment.Left
+
+local srchHint = Instance.new("TextLabel", searchPage)
+srchHint.Size = UDim2.new(1, 0, 0, 28)
+srchHint.BackgroundTransparency = 1; srchHint.Font = Enum.Font.Gotham; srchHint.TextSize = 12
+srchHint.TextColor3 = Color3.fromRGB(80, 80, 80); srchHint.TextWrapped = true
+srchHint.TextXAlignment = Enum.TextXAlignment.Center
+srchHint.Text = "Type to search items in workspace"
+
+local srchResultsFrame = Instance.new("Frame", searchPage)
+srchResultsFrame.Size = UDim2.new(1, 0, 0, 0)
+srchResultsFrame.BackgroundTransparency = 1; srchResultsFrame.BorderSizePixel = 0
+local srchResultsLayout = Instance.new("UIListLayout", srchResultsFrame)
+srchResultsLayout.Padding = UDim.new(0, 6)
+srchResultsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+srchResultsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+srchResultsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    srchResultsFrame.Size = UDim2.new(1, 0, 0, srchResultsLayout.AbsoluteContentSize.Y)
+end)
+
+local function clearSrchResults()
+    for _, c in ipairs(srchResultsFrame:GetChildren()) do
+        if not c:IsA("UIListLayout") then c:Destroy() end
+    end
+end
+
+local function makeSrchResult(name, part)
+    local row = Instance.new("Frame", srchResultsFrame)
+    row.Size = UDim2.new(1, 0, 0, 40)
+    row.BackgroundColor3 = Color3.fromRGB(18, 18, 18); row.BorderSizePixel = 0
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+    local rowStroke = Instance.new("UIStroke", row)
+    rowStroke.Color = Color3.fromRGB(50, 50, 50); rowStroke.Thickness = 1; rowStroke.Transparency = 0.4
+
+    local nameLbl = Instance.new("TextLabel", row)
+    nameLbl.Size = UDim2.new(0.65, 0, 1, 0); nameLbl.Position = UDim2.new(0, 12, 0, 0)
+    nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamSemibold; nameLbl.TextSize = 13
+    nameLbl.TextColor3 = THEME_TEXT; nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+    nameLbl.TextTruncate = Enum.TextTruncate.AtEnd; nameLbl.Text = name
+
+    local tpBtn = Instance.new("TextButton", row)
+    tpBtn.Size = UDim2.new(0, 72, 0, 26); tpBtn.Position = UDim2.new(1, -82, 0.5, -13)
+    tpBtn.BackgroundColor3 = BTN_COLOR; tpBtn.Font = Enum.Font.GothamSemibold
+    tpBtn.TextSize = 12; tpBtn.TextColor3 = THEME_TEXT; tpBtn.Text = "Teleport"
+    tpBtn.BorderSizePixel = 0
+    Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0, 6)
+    tpBtn.MouseEnter:Connect(function() TweenService:Create(tpBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_HOVER}):Play() end)
+    tpBtn.MouseLeave:Connect(function() TweenService:Create(tpBtn,TweenInfo.new(0.15),{BackgroundColor3=BTN_COLOR}):Play() end)
+    tpBtn.MouseButton1Click:Connect(function()
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and part and part.Parent then
+            char.HumanoidRootPart.CFrame = CFrame.new(part.Position + Vector3.new(0, 5, 0))
+        end
+    end)
+end
+
+local srchDebounce = nil
+srchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local query = srchBox.Text
+    if srchDebounce then task.cancel(srchDebounce) end
+    srchDebounce = task.delay(0.3, function()
+        clearSrchResults()
+        if query == "" then
+            srchHint.Text = "Type to search items in workspace"
+            srchHint.Visible = true
+            return
+        end
+        srchHint.Visible = false
+        local lq = string.lower(query)
+        local found = 0
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if found >= 30 then break end
+            if obj:IsA("BasePart") or obj:IsA("Model") then
+                if string.find(string.lower(obj.Name), lq, 1, true) then
+                    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                    if part then
+                        makeSrchResult(obj.Name, part)
+                        found = found + 1
+                    end
+                end
+            end
+        end
+        if found == 0 then
+            srchHint.Text = "No results found for \"" .. query .. "\""
+            srchHint.Visible = true
+        end
+    end)
+end)
 
 -- ════════════════════════════════════════════════════
 -- GLOBAL KEY LISTENER
