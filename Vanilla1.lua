@@ -245,22 +245,12 @@ topBarSep.BackgroundColor3 = SEP_COLOR
 topBarSep.BorderSizePixel = 0
 topBarSep.ZIndex = 5
 
--- Hub icon as Unicode in a TextLabel (guaranteed to render)
-local hubIcon = Instance.new("TextLabel", topBar)
-hubIcon.Size = UDim2.new(0, 26, 0, 26)
-hubIcon.Position = UDim2.new(0, 9, 0.5, -13)
-hubIcon.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-hubIcon.BorderSizePixel = 0
-hubIcon.Font = Enum.Font.GothamBold
-hubIcon.TextSize = 14
-hubIcon.TextColor3 = Color3.fromRGB(220, 220, 220)
-hubIcon.Text = "V"
-hubIcon.TextXAlignment = Enum.TextXAlignment.Center
-hubIcon.TextYAlignment = Enum.TextYAlignment.Center
-hubIcon.ZIndex = 6
+local hubIcon = Instance.new("ImageLabel", topBar)
+hubIcon.Size = UDim2.new(0, 26, 0, 26); hubIcon.Position = UDim2.new(0, 9, 0.5, -13)
+hubIcon.BackgroundTransparency = 1; hubIcon.BorderSizePixel = 0
+hubIcon.ScaleType = Enum.ScaleType.Fit; hubIcon.ZIndex = 6
+hubIcon.Image = "rbxassetid://97128823316544"
 Instance.new("UICorner", hubIcon).CornerRadius = UDim.new(0, 5)
-local iconStrokeTop = Instance.new("UIStroke", hubIcon)
-iconStrokeTop.Color = BORDER_COLOR; iconStrokeTop.Thickness = 1.2; iconStrokeTop.Transparency = 0.3
 
 local titleLbl = Instance.new("TextLabel", topBar)
 titleLbl.Size = UDim2.new(1, -110, 1, 0); titleLbl.Position = UDim2.new(0, 44, 0, 0)
@@ -375,23 +365,23 @@ end)
 local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
 local pages = {}
 
--- Unicode icons — guaranteed to always render, no asset IDs needed
+-- Your custom asset ID icons from the Roblox marketplace
 local TAB_ICONS = {
-    ["Home"]      = "⌂",
-    ["Player"]    = "♟",
-    ["World"]     = "◍",
-    ["Teleport"]  = "⟡",
-    ["Wood"]      = "▲",
-    ["Slot"]      = "▣",
-    ["Dupe"]      = "⧉",
-    ["Item"]      = "◈",
-    ["Sorter"]    = "☰",
-    ["AutoBuy"]   = "✦",
-    ["Pixel Art"] = "⊞",
-    ["Build"]     = "⬡",
-    ["Vehicle"]   = "◎",
-    ["Search"]    = "⊙",
-    ["Settings"]  = "⚙",
+    ["Home"]      = "rbxassetid://77194384448338",
+    ["Player"]    = "rbxassetid://107966908673726",
+    ["World"]     = "rbxassetid://101214534117376",
+    ["Teleport"]  = "rbxassetid://92649354349672",
+    ["Wood"]      = "rbxassetid://106031824976362",
+    ["Slot"]      = "rbxassetid://136244861596002",
+    ["Dupe"]      = "rbxassetid://76204407522607",
+    ["Item"]      = "rbxassetid://107729874528981",
+    ["Sorter"]    = "rbxassetid://124649482379122",
+    ["AutoBuy"]   = "rbxassetid://75551187041542",
+    ["Pixel Art"] = "rbxassetid://139483926634191",
+    ["Build"]     = "rbxassetid://140309668216577",
+    ["Vehicle"]   = "rbxassetid://72268059112855",
+    ["Search"]    = "rbxassetid://80981469875695",
+    ["Settings"]  = "rbxassetid://93566900770353",
 }
 
 for _, name in ipairs(tabs) do
@@ -423,8 +413,8 @@ local function switchTab(targetName)
         local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
         local oldIcon = activeTabButton:FindFirstChild("TabIcon")
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
-        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
-        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
+        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3  = Color3.fromRGB(110, 110, 110)}):Play() end
+        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
     end
     local frame = side:FindFirstChild(targetName:gsub("Tab", ""))
     if frame then
@@ -432,8 +422,8 @@ local function switchTab(targetName)
         local newLbl  = frame:FindFirstChild("TabLabel")
         local newIcon = frame:FindFirstChild("TabIcon")
         TweenService:Create(frame, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
-        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3 = THEME_TEXT}):Play() end
-        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play() end
+        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3  = THEME_TEXT}):Play() end
+        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end
     end
 end
 
@@ -448,26 +438,23 @@ for _, name in ipairs(tabs) do
     frame.BorderSizePixel  = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
-    -- Unicode icon TextLabel — always visible, no asset needed
-    local iconLbl = Instance.new("TextLabel", frame)
-    iconLbl.Name               = "TabIcon"
-    iconLbl.Size               = UDim2.new(0, 20, 0, 20)
-    iconLbl.Position           = UDim2.new(0, 8, 0.5, -10)
-    iconLbl.BackgroundTransparency = 1
-    iconLbl.BorderSizePixel    = 0
-    iconLbl.Font               = Enum.Font.GothamBold
-    iconLbl.TextSize           = 15
-    iconLbl.Text               = TAB_ICONS[name] or "•"
-    iconLbl.TextColor3         = Color3.fromRGB(110, 110, 110)
-    iconLbl.TextXAlignment     = Enum.TextXAlignment.Center
-    iconLbl.TextYAlignment     = Enum.TextYAlignment.Center
-    iconLbl.ZIndex             = 3
+    -- ImageLabel using your marketplace asset IDs
+    local iconImg = Instance.new("ImageLabel", frame)
+    iconImg.Name               = "TabIcon"
+    iconImg.Size               = UDim2.new(0, 18, 0, 18)
+    iconImg.Position           = UDim2.new(0, 8, 0.5, -9)
+    iconImg.BackgroundTransparency = 1
+    iconImg.BorderSizePixel    = 0
+    iconImg.ScaleType          = Enum.ScaleType.Fit
+    iconImg.Image              = TAB_ICONS[name] or ""
+    iconImg.ImageColor3        = Color3.fromRGB(110, 110, 110)
+    iconImg.ZIndex             = 3
 
     -- Name label
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name               = "TabLabel"
-    nameLbl.Size               = UDim2.new(1, -36, 1, 0)
-    nameLbl.Position           = UDim2.new(0, 34, 0, 0)
+    nameLbl.Size               = UDim2.new(1, -34, 1, 0)
+    nameLbl.Position           = UDim2.new(0, 32, 0, 0)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Font               = Enum.Font.GothamSemibold
     nameLbl.TextSize           = 13
@@ -490,14 +477,14 @@ for _, name in ipairs(tabs) do
         if activeTabButton ~= frame then
             TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
-            TweenService:Create(iconLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
+            TweenService:Create(iconImg, TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(180, 180, 180)}):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= frame then
             TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
-            TweenService:Create(iconLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
+            TweenService:Create(iconImg, TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(110, 110, 110)}):Play()
         end
     end)
     btn.MouseButton1Click:Connect(function()
@@ -556,12 +543,10 @@ local homePage = pages["HomeTab"]
 local bubbleRow = Instance.new("Frame", homePage)
 bubbleRow.Size = UDim2.new(1, 0, 0, 100); bubbleRow.BackgroundTransparency = 1; bubbleRow.LayoutOrder = 1
 
-local bubbleIcon = Instance.new("TextLabel", bubbleRow)
+local bubbleIcon = Instance.new("ImageLabel", bubbleRow)
 bubbleIcon.Size=UDim2.new(0,52,0,52); bubbleIcon.Position=UDim2.new(0,6,0.5,-26)
 bubbleIcon.BackgroundColor3=Color3.fromRGB(30,30,30); bubbleIcon.BorderSizePixel=0
-bubbleIcon.Font=Enum.Font.GothamBold; bubbleIcon.TextSize=22
-bubbleIcon.TextColor3=Color3.fromRGB(220,220,220); bubbleIcon.Text="V"
-bubbleIcon.TextXAlignment=Enum.TextXAlignment.Center; bubbleIcon.TextYAlignment=Enum.TextYAlignment.Center
+bubbleIcon.ScaleType=Enum.ScaleType.Fit; bubbleIcon.Image="rbxassetid://97128823316544"
 Instance.new("UICorner", bubbleIcon).CornerRadius = UDim.new(1,0)
 local iconStroke = Instance.new("UIStroke", bubbleIcon)
 iconStroke.Color=THEME_TEXT; iconStroke.Thickness=1.5; iconStroke.Transparency=0.55
