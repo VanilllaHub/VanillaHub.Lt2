@@ -522,13 +522,13 @@ bubbleGreeting.Size=UDim2.new(1,-20,0,28); bubbleGreeting.Position=UDim2.new(0,1
 bubbleGreeting.BackgroundTransparency=1; bubbleGreeting.Font=Enum.Font.GothamBold; bubbleGreeting.TextSize=15
 bubbleGreeting.TextColor3=THEME_TEXT; bubbleGreeting.TextXAlignment=Enum.TextXAlignment.Left
 bubbleGreeting.TextTruncate=Enum.TextTruncate.AtEnd; bubbleGreeting.ClipsDescendants=false
-bubbleGreeting.Text="Hey, "..player.DisplayName; bubbleGreeting.ZIndex=3
+bubbleGreeting.Text="Hey, "..player.DisplayName.." ♡"; bubbleGreeting.ZIndex=3
 local bubbleMsg=Instance.new("TextLabel",bubbleBody)
 bubbleMsg.Size=UDim2.new(1,-20,0,36); bubbleMsg.Position=UDim2.new(0,14,0,38)
 bubbleMsg.BackgroundTransparency=1; bubbleMsg.Font=Enum.Font.Gotham; bubbleMsg.TextSize=13
 bubbleMsg.TextColor3=Color3.fromRGB(160,160,160); bubbleMsg.TextXAlignment=Enum.TextXAlignment.Left
 bubbleMsg.TextYAlignment=Enum.TextYAlignment.Top; bubbleMsg.TextWrapped=true
-bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Let's get to it."; bubbleMsg.ZIndex=3
+bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Let's get to it 🌿"; bubbleMsg.ZIndex=3
 
 -- STATS GRID
 local statsContainer = Instance.new("Frame", homePage)
@@ -552,11 +552,11 @@ local function createStatusBox(text, color)
     return lbl
 end
 
-local pingLabel   = createStatusBox("Ping: ...", PB_TEXT)
-local lagLabel    = createStatusBox("Lag: ...", Color3.fromRGB(180, 180, 180))
+local pingLabel   = createStatusBox("Ping: …", PB_TEXT)
+local lagLabel    = createStatusBox("Lag: …", Color3.fromRGB(180, 180, 180))
 createStatusBox("Acc Age: "..player.AccountAge.."d")
-local execLabel   = createStatusBox("Exec: detecting...", Color3.fromRGB(200, 200, 200))
-local uptimeLabel = createStatusBox("Uptime: ...", Color3.fromRGB(210, 210, 210))
+local execLabel   = createStatusBox("Exec: detecting…", Color3.fromRGB(200, 200, 200))
+local uptimeLabel = createStatusBox("Uptime: …", Color3.fromRGB(210, 210, 210))
 
 local rejoinBtn=Instance.new("TextButton",statsContainer)
 rejoinBtn.Size=UDim2.new(0,148,0,36); rejoinBtn.BackgroundColor3=BTN_COLOR; rejoinBtn.BorderSizePixel=0
@@ -629,54 +629,6 @@ table.insert(cleanupTasks, function()
     if lagThread then pcall(task.cancel, lagThread); lagThread = nil end
 end)
 
--- DISCORD ROW
-local discordFrame = Instance.new("Frame", homePage)
-discordFrame.Size = UDim2.new(1, 0, 0, 44)
-discordFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-discordFrame.BorderSizePixel = 0
-discordFrame.LayoutOrder = 3
-Instance.new("UICorner", discordFrame).CornerRadius = UDim.new(0, 8)
-local discordStroke = Instance.new("UIStroke", discordFrame)
-discordStroke.Color = SEP_COLOR; discordStroke.Thickness = 1; discordStroke.Transparency = 0.4
-
-local discordLabel = Instance.new("TextLabel", discordFrame)
-discordLabel.Size = UDim2.new(1, -130, 1, 0)
-discordLabel.Position = UDim2.new(0, 12, 0, 0)
-discordLabel.BackgroundTransparency = 1
-discordLabel.Font = Enum.Font.GothamSemibold
-discordLabel.TextSize = 13
-discordLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
-discordLabel.TextXAlignment = Enum.TextXAlignment.Left
-discordLabel.Text = "discord.gg/bpfjSze8VB"
-
-local copyBtn = Instance.new("TextButton", discordFrame)
-copyBtn.Size = UDim2.new(0, 110, 0, 28)
-copyBtn.Position = UDim2.new(1, -118, 0.5, -14)
-copyBtn.BackgroundColor3 = BTN_COLOR
-copyBtn.Font = Enum.Font.GothamSemibold
-copyBtn.TextSize = 12
-copyBtn.TextColor3 = THEME_TEXT
-copyBtn.Text = "Copy Invite"
-copyBtn.BorderSizePixel = 0
-Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 7)
-local copyStroke = Instance.new("UIStroke", copyBtn)
-copyStroke.Color = Color3.fromRGB(55, 55, 55); copyStroke.Thickness = 1; copyStroke.Transparency = 0
-copyBtn.MouseEnter:Connect(function()
-    TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play()
-end)
-copyBtn.MouseLeave:Connect(function()
-    TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play()
-end)
-copyBtn.MouseButton1Click:Connect(function()
-    if setclipboard then
-        setclipboard("https://discord.gg/bpfjSze8VB")
-        copyBtn.Text = "Copied"
-        task.delay(2, function()
-            if copyBtn and copyBtn.Parent then copyBtn.Text = "Copy Invite" end
-        end)
-    end
-end)
-
 -- ════════════════════════════════════════════════════
 -- WORLD TAB
 -- ════════════════════════════════════════════════════
@@ -691,7 +643,7 @@ local origShadows   = Lighting.GlobalShadows
 -- LT2 default fog values
 local LT2_FOG_END   = 6400
 local LT2_FOG_START = 0
-local LT2_FOG_COLOR = Color3.fromRGB(170, 170, 170)
+local LT2_FOG_COLOR = Color3.fromRGB(170, 170, 170)  -- 0.666... * 255
 
 local dayConn   = nil
 local nightConn = nil
@@ -810,7 +762,7 @@ makeWorldToggle("Remove Fog", false, function(v)
             Lighting.FogStart = 1e9
         end)
     else
-        if fogConn then fogConn:Disconnect(); fogConn = nil end
+        -- Restore to known LT2 defaults
         Lighting.FogEnd   = LT2_FOG_END
         Lighting.FogStart = LT2_FOG_START
         Lighting.FogColor = LT2_FOG_COLOR
@@ -880,55 +832,61 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- TELEPORT TAB
+-- TELEPORT TAB  (pretty card layout)
 -- ════════════════════════════════════════════════════
 local teleportPage = pages["TeleportTab"]
 
 local locations = {
-    {name="Spawn",            x=172,     y=3,      z=74},
-    {name="The Den",          x=323,     y=41.8,   z=1930},
-    {name="LightHouse",       x=1464.8,  y=355.25, z=3257.2},
-    {name="Safari",           x=111.85,  y=11,     z=-998.8},
-    {name="Bridge",           x=112.31,  y=11,     z=-782.36},
-    {name="Bob's Shack",      x=260,     y=8.4,    z=-2542},
-    {name="EndTimesCave",     x=113,     y=-213,   z=-951},
-    {name="The Swamp",        x=-1209,   y=132.32, z=-801},
-    {name="The Cabin",        x=1244,    y=63.6,   z=2306},
-    {name="Volcano",          x=-1585,   y=622.8,  z=1140},
-    {name="Boxed Cars",       x=509,     y=3.2,    z=-1463},
-    {name="Tiaga Peak",       x=1560,    y=410.32, z=3274},
-    {name="Land Store",       x=258,     y=3.2,    z=-99},
-    {name="Link's Logic",     x=4605,    y=3,      z=-727},
-    {name="Palm Island",      x=2549,    y=-5.9,   z=-42},
-    {name="Palm Island 2",    x=1960,    y=-5.9,   z=-1501},
-    {name="Palm Island 3",    x=4344,    y=-5.9,   z=-1813},
-    {name="Fine Art Shop",    x=5207,    y=-166.2, z=719},
-    {name="SnowGlow Biome",   x=-1086.85,y=-5.9,   z=-945.32},
-    {name="Cave",             x=3581,    y=-179.54,z=430},
-    {name="Shrine Of Sight",  x=-1600,   y=195.4,  z=919},
-    {name="Fancy Furnishings",x=491,     y=3.2,    z=-1720},
-    {name="Docks",            x=1114,    y=-1.2,   z=-197},
-    {name="Strange Man",      x=1061,    y=16.8,   z=1131},
-    {name="Wood Dropoff",     x=323.41,  y=-2.8,   z=134.73},
-    {name="Snow Biome",       x=889.96,  y=59.8,   z=1195.55},
-    {name="Wood RU's",        x=265,     y=3.2,    z=57},
-    {name="Green Box",        x=-1668.05,y=349.6,  z=1475.39},
-    {name="Cherry Meadow",    x=220.9,   y=59.8,   z=1305.8},
-    {name="Bird Cave",        x=4813.1,  y=17.7,   z=-978.8},
+    {name="Spawn",          icon="🏠", x=172,     y=3,      z=74},
+    {name="The Den",        icon="🌲", x=323,     y=41.8,   z=1930},
+    {name="LightHouse",     icon="💡", x=1464.8,  y=355.25, z=3257.2},
+    {name="Safari",         icon="🦁", x=111.85,  y=11,     z=-998.8},
+    {name="Bridge",         icon="🌉", x=112.31,  y=11,     z=-782.36},
+    {name="Bob's Shack",    icon="🏚", x=260,     y=8.4,    z=-2542},
+    {name="EndTimesCave",   icon="💀", x=113,     y=-213,   z=-951},
+    {name="The Swamp",      icon="🌿", x=-1209,   y=132.32, z=-801},
+    {name="The Cabin",      icon="🏡", x=1244,    y=63.6,   z=2306},
+    {name="Volcano",        icon="🌋", x=-1585,   y=622.8,  z=1140},
+    {name="Boxed Cars",     icon="🚗", x=509,     y=3.2,    z=-1463},
+    {name="Tiaga Peak",     icon="⛰", x=1560,    y=410.32, z=3274},
+    {name="Land Store",     icon="🏪", x=258,     y=3.2,    z=-99},
+    {name="Link's Logic",   icon="⚙", x=4605,    y=3,      z=-727},
+    {name="Palm Island",    icon="🌴", x=2549,    y=-5.9,   z=-42},
+    {name="Palm Island 2",  icon="🌴", x=1960,    y=-5.9,   z=-1501},
+    {name="Palm Island 3",  icon="🌴", x=4344,    y=-5.9,   z=-1813},
+    {name="Fine Art Shop",  icon="🖼", x=5207,    y=-166.2, z=719},
+    {name="SnowGlow Biome", icon="❄", x=-1086.85, y=-5.9,  z=-945.32},
+    {name="Cave",           icon="🕳", x=3581,    y=-179.54,z=430},
+    {name="Shrine Of Sight",icon="👁", x=-1600,   y=195.4,  z=919},
+    {name="Fancy Furnishings",icon="🪑",x=491,    y=3.2,    z=-1720},
+    {name="Docks",          icon="⚓", x=1114,    y=-1.2,   z=-197},
+    {name="Strange Man",    icon="🧍", x=1061,    y=16.8,   z=1131},
+    {name="Wood Dropoff",   icon="💰", x=323.41,  y=-2.8,   z=134.73},
+    {name="Snow Biome",     icon="❄", x=889.96,  y=59.8,   z=1195.55},
+    {name="Wood RU's",      icon="🪵", x=265,     y=3.2,    z=57},
+    {name="Green Box",      icon="📦", x=-1668.05,y=349.6,  z=1475.39},
+    {name="Cherry Meadow",  icon="🌸", x=220.9,   y=59.8,   z=1305.8},
+    {name="Bird Cave",      icon="🐦", x=4813.1,  y=17.7,   z=-978.8},
 }
 
 -- Search bar
-local tpSearchBarFrame = Instance.new("Frame", teleportPage)
-tpSearchBarFrame.Size = UDim2.new(1, 0, 0, 36)
-tpSearchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-tpSearchBarFrame.BorderSizePixel = 0
-Instance.new("UICorner", tpSearchBarFrame).CornerRadius = UDim.new(0, 9)
-local tpSearchBarStroke = Instance.new("UIStroke", tpSearchBarFrame)
-tpSearchBarStroke.Color = SEP_COLOR; tpSearchBarStroke.Thickness = 1; tpSearchBarStroke.Transparency = 0.4
+local searchBarFrame = Instance.new("Frame", teleportPage)
+searchBarFrame.Size = UDim2.new(1, 0, 0, 36)
+searchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+searchBarFrame.BorderSizePixel = 0
+Instance.new("UICorner", searchBarFrame).CornerRadius = UDim.new(0, 9)
 
-local searchBox = Instance.new("TextBox", tpSearchBarFrame)
-searchBox.Size = UDim2.new(1, -12, 1, 0)
-searchBox.Position = UDim2.new(0, 10, 0, 0)
+local searchIcon = Instance.new("TextLabel", searchBarFrame)
+searchIcon.Size = UDim2.new(0, 28, 1, 0)
+searchIcon.Position = UDim2.new(0, 4, 0, 0)
+searchIcon.BackgroundTransparency = 1
+searchIcon.Text = "🔍"; searchIcon.TextSize = 14
+searchIcon.Font = Enum.Font.Gotham
+searchIcon.TextColor3 = Color3.fromRGB(100, 100, 100)
+
+local searchBox = Instance.new("TextBox", searchBarFrame)
+searchBox.Size = UDim2.new(1, -36, 1, 0)
+searchBox.Position = UDim2.new(0, 28, 0, 0)
 searchBox.BackgroundTransparency = 1
 searchBox.Font = Enum.Font.GothamSemibold
 searchBox.TextSize = 13
@@ -942,7 +900,7 @@ searchBox.TextXAlignment = Enum.TextXAlignment.Left
 -- Grid container for cards
 local tpCardGrid = Instance.new("Frame", teleportPage)
 tpCardGrid.BackgroundTransparency = 1
-tpCardGrid.Size = UDim2.new(1, 0, 0, 0)
+tpCardGrid.Size = UDim2.new(1, 0, 0, 0)  -- height set by layout
 
 local tpGridLayout = Instance.new("UIGridLayout", tpCardGrid)
 tpGridLayout.CellSize = UDim2.new(0.5, -5, 0, 52)
@@ -964,6 +922,7 @@ local function makeTpCard(loc, idx)
     card.BorderSizePixel = 0
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
 
+    -- Left accent bar
     local accent = Instance.new("Frame", card)
     accent.Size = UDim2.new(0, 3, 0.7, 0)
     accent.Position = UDim2.new(0, 0, 0.15, 0)
@@ -971,9 +930,20 @@ local function makeTpCard(loc, idx)
     accent.BorderSizePixel = 0
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
 
+    -- Icon
+    local iconLbl = Instance.new("TextLabel", card)
+    iconLbl.Size = UDim2.new(0, 28, 0, 28)
+    iconLbl.Position = UDim2.new(0, 10, 0.5, -14)
+    iconLbl.BackgroundTransparency = 1
+    iconLbl.Font = Enum.Font.Gotham
+    iconLbl.TextSize = 20
+    iconLbl.Text = loc.icon or "📍"
+    iconLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+    -- Name
     local nameLbl = Instance.new("TextLabel", card)
-    nameLbl.Size = UDim2.new(1, -14, 0, 18)
-    nameLbl.Position = UDim2.new(0, 10, 0, 8)
+    nameLbl.Size = UDim2.new(1, -50, 0, 18)
+    nameLbl.Position = UDim2.new(0, 44, 0, 8)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Font = Enum.Font.GothamBold
     nameLbl.TextSize = 12
@@ -982,9 +952,10 @@ local function makeTpCard(loc, idx)
     nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
     nameLbl.Text = loc.name
 
+    -- Coords
     local coordLbl = Instance.new("TextLabel", card)
-    coordLbl.Size = UDim2.new(1, -14, 0, 14)
-    coordLbl.Position = UDim2.new(0, 10, 0, 28)
+    coordLbl.Size = UDim2.new(1, -50, 0, 14)
+    coordLbl.Position = UDim2.new(0, 44, 0, 28)
     coordLbl.BackgroundTransparency = 1
     coordLbl.Font = Enum.Font.Gotham
     coordLbl.TextSize = 10
@@ -992,6 +963,7 @@ local function makeTpCard(loc, idx)
     coordLbl.TextXAlignment = Enum.TextXAlignment.Left
     coordLbl.Text = string.format("%.0f, %.0f, %.0f", loc.x, loc.y, loc.z)
 
+    -- Invisible click button
     local btn = Instance.new("TextButton", card)
     btn.Size = UDim2.new(1, 0, 1, 0)
     btn.BackgroundTransparency = 1
@@ -1011,6 +983,7 @@ local function makeTpCard(loc, idx)
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y + 3, loc.z)
         end
+        -- Flash feedback
         TweenService:Create(card, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
         task.delay(0.12, function()
             TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
@@ -1025,6 +998,7 @@ for i, loc in ipairs(locations) do
     table.insert(tpCards, {card = card, name = string.lower(loc.name)})
 end
 
+-- Search filtering
 searchBox:GetPropertyChangedSignal("Text"):Connect(function()
     local query = string.lower(searchBox.Text)
     local order = 1
@@ -1366,7 +1340,7 @@ itemModeHint.Size = UDim2.new(1, 0, 0, 24); itemModeHint.BackgroundColor3 = Colo
 itemModeHint.BorderSizePixel = 0; itemModeHint.Font = Enum.Font.Gotham; itemModeHint.TextSize = 11
 itemModeHint.TextColor3 = Color3.fromRGB(110,110,110); itemModeHint.TextWrapped = true
 itemModeHint.TextXAlignment = Enum.TextXAlignment.Left
-itemModeHint.Text = "  Group: sorted by item type  |  Random: shuffled order"
+itemModeHint.Text = "  Group: sorted by item type  •  Random: shuffled order"
 Instance.new("UICorner", itemModeHint).CornerRadius = UDim.new(0, 7)
 Instance.new("UIPadding", itemModeHint).PaddingLeft = UDim.new(0, 4)
 
@@ -1946,232 +1920,6 @@ createPToggle("Hard Dragger", false, function(val)
 end)
 
 table.insert(cleanupTasks, stopHardDrag)
-
--- ════════════════════════════════════════════════════
--- SEARCH TAB
--- ════════════════════════════════════════════════════
-local searchTabPage = pages["SearchTab"]
-local searchTabList = searchTabPage:FindFirstChildOfClass("UIListLayout")
-if searchTabList then searchTabList.Padding = UDim.new(0, 8) end
-
-local function stSectionLabel(text)
-    local w = Instance.new("Frame", searchTabPage)
-    w.Size = UDim2.new(1, 0, 0, 24); w.BackgroundTransparency = 1
-    local lbl = Instance.new("TextLabel", w)
-    lbl.Size = UDim2.new(1, -4, 1, 0); lbl.Position = UDim2.new(0, 4, 0, 0)
-    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
-    lbl.TextColor3 = SECTION_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = "  " .. string.upper(text)
-end
-
-local function stSep()
-    local s = Instance.new("Frame", searchTabPage)
-    s.Size = UDim2.new(1, 0, 0, 1)
-    s.BackgroundColor3 = SEP_COLOR; s.BorderSizePixel = 0
-end
-
--- Search input
-local stInputFrame = Instance.new("Frame", searchTabPage)
-stInputFrame.Size = UDim2.new(1, 0, 0, 36)
-stInputFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-stInputFrame.BorderSizePixel = 0
-Instance.new("UICorner", stInputFrame).CornerRadius = UDim.new(0, 9)
-local stInputStroke = Instance.new("UIStroke", stInputFrame)
-stInputStroke.Color = SEP_COLOR; stInputStroke.Thickness = 1; stInputStroke.Transparency = 0.4
-
-local stInput = Instance.new("TextBox", stInputFrame)
-stInput.Size = UDim2.new(1, -12, 1, 0)
-stInput.Position = UDim2.new(0, 10, 0, 0)
-stInput.BackgroundTransparency = 1
-stInput.Font = Enum.Font.GothamSemibold
-stInput.TextSize = 13
-stInput.TextColor3 = THEME_TEXT
-stInput.PlaceholderText = "Search workspace by name..."
-stInput.PlaceholderColor3 = Color3.fromRGB(70, 70, 70)
-stInput.Text = ""
-stInput.ClearTextOnFocus = false
-stInput.TextXAlignment = Enum.TextXAlignment.Left
-
--- Search button row
-local stBtnRow = Instance.new("Frame", searchTabPage)
-stBtnRow.Size = UDim2.new(1, 0, 0, 32)
-stBtnRow.BackgroundTransparency = 1
-
-local stSearchBtn = Instance.new("TextButton", stBtnRow)
-stSearchBtn.Size = UDim2.new(0.5, -4, 1, 0)
-stSearchBtn.Position = UDim2.new(0, 0, 0, 0)
-stSearchBtn.BackgroundColor3 = BTN_COLOR
-stSearchBtn.Font = Enum.Font.GothamSemibold
-stSearchBtn.TextSize = 12
-stSearchBtn.TextColor3 = THEME_TEXT
-stSearchBtn.Text = "Search"
-stSearchBtn.BorderSizePixel = 0
-Instance.new("UICorner", stSearchBtn).CornerRadius = UDim.new(0, 7)
-local stSearchBtnStroke = Instance.new("UIStroke", stSearchBtn)
-stSearchBtnStroke.Color = Color3.fromRGB(55, 55, 55); stSearchBtnStroke.Thickness = 1; stSearchBtnStroke.Transparency = 0
-
-local stClearBtn = Instance.new("TextButton", stBtnRow)
-stClearBtn.Size = UDim2.new(0.5, -4, 1, 0)
-stClearBtn.Position = UDim2.new(0.5, 4, 0, 0)
-stClearBtn.BackgroundColor3 = BTN_COLOR
-stClearBtn.Font = Enum.Font.GothamSemibold
-stClearBtn.TextSize = 12
-stClearBtn.TextColor3 = THEME_TEXT
-stClearBtn.Text = "Clear Results"
-stClearBtn.BorderSizePixel = 0
-Instance.new("UICorner", stClearBtn).CornerRadius = UDim.new(0, 7)
-local stClearBtnStroke = Instance.new("UIStroke", stClearBtn)
-stClearBtnStroke.Color = Color3.fromRGB(55, 55, 55); stClearBtnStroke.Thickness = 1; stClearBtnStroke.Transparency = 0
-
-for _, b in {stSearchBtn, stClearBtn} do
-    b.MouseEnter:Connect(function() TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
-    b.MouseLeave:Connect(function() TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play() end)
-end
-
--- Results count label
-local stCountLbl = Instance.new("TextLabel", searchTabPage)
-stCountLbl.Size = UDim2.new(1, 0, 0, 20)
-stCountLbl.BackgroundTransparency = 1
-stCountLbl.Font = Enum.Font.Gotham
-stCountLbl.TextSize = 11
-stCountLbl.TextColor3 = Color3.fromRGB(100, 100, 100)
-stCountLbl.TextXAlignment = Enum.TextXAlignment.Left
-stCountLbl.Text = "  No search performed yet."
-
-stSep()
-stSectionLabel("Results")
-
--- Results scroll area
-local stResultsScroll = Instance.new("ScrollingFrame", searchTabPage)
-stResultsScroll.Size = UDim2.new(1, 0, 0, 180)
-stResultsScroll.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
-stResultsScroll.BorderSizePixel = 0
-stResultsScroll.ScrollBarThickness = 3
-stResultsScroll.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
-stResultsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-Instance.new("UICorner", stResultsScroll).CornerRadius = UDim.new(0, 8)
-local stResultsStroke = Instance.new("UIStroke", stResultsScroll)
-stResultsStroke.Color = SEP_COLOR; stResultsStroke.Thickness = 1; stResultsStroke.Transparency = 0.5
-
-local stResultsList = Instance.new("UIListLayout", stResultsScroll)
-stResultsList.Padding = UDim.new(0, 2)
-stResultsList.SortOrder = Enum.SortOrder.LayoutOrder
-local stResultsPad = Instance.new("UIPadding", stResultsScroll)
-stResultsPad.PaddingTop = UDim.new(0, 4)
-stResultsPad.PaddingBottom = UDim.new(0, 4)
-stResultsPad.PaddingLeft = UDim.new(0, 4)
-stResultsPad.PaddingRight = UDim.new(0, 4)
-
-stResultsList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    stResultsScroll.CanvasSize = UDim2.new(0, 0, 0, stResultsList.AbsoluteContentSize.Y + 8)
-end)
-
-local stResultEntries = {}
-
-local function clearSearchResults()
-    for _, e in ipairs(stResultEntries) do
-        if e and e.Parent then e:Destroy() end
-    end
-    stResultEntries = {}
-    stCountLbl.Text = "  Results cleared."
-end
-
-local function doSearch()
-    clearSearchResults()
-    local query = string.lower(stInput.Text)
-    if query == "" then
-        stCountLbl.Text = "  Enter a name to search."
-        return
-    end
-    local found = {}
-    local function scanInstance(inst, depth)
-        if depth > 8 then return end
-        if string.find(string.lower(inst.Name), query, 1, true) then
-            table.insert(found, inst)
-        end
-        if #found >= 100 then return end
-        for _, child in ipairs(inst:GetChildren()) do
-            if #found >= 100 then break end
-            scanInstance(child, depth + 1)
-        end
-    end
-    scanInstance(workspace, 0)
-
-    stCountLbl.Text = "  Found " .. #found .. " result(s)" .. (#found >= 100 and " (capped at 100)" or "") .. "."
-
-    for i, inst in ipairs(found) do
-        local row = Instance.new("Frame", stResultsScroll)
-        row.Size = UDim2.new(1, 0, 0, 30)
-        row.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-        row.BorderSizePixel = 0
-        row.LayoutOrder = i
-        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
-
-        local nameLbl = Instance.new("TextLabel", row)
-        nameLbl.Size = UDim2.new(0.55, 0, 1, 0)
-        nameLbl.Position = UDim2.new(0, 8, 0, 0)
-        nameLbl.BackgroundTransparency = 1
-        nameLbl.Font = Enum.Font.GothamSemibold
-        nameLbl.TextSize = 11
-        nameLbl.TextColor3 = THEME_TEXT
-        nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-        nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
-        nameLbl.Text = inst.Name
-
-        local classLbl = Instance.new("TextLabel", row)
-        classLbl.Size = UDim2.new(0.3, 0, 1, 0)
-        classLbl.Position = UDim2.new(0.55, 0, 0, 0)
-        classLbl.BackgroundTransparency = 1
-        classLbl.Font = Enum.Font.Gotham
-        classLbl.TextSize = 10
-        classLbl.TextColor3 = Color3.fromRGB(90, 90, 90)
-        classLbl.TextXAlignment = Enum.TextXAlignment.Left
-        classLbl.TextTruncate = Enum.TextTruncate.AtEnd
-        classLbl.Text = inst.ClassName
-
-        local tpBtn = Instance.new("TextButton", row)
-        tpBtn.Size = UDim2.new(0, 38, 0, 20)
-        tpBtn.Position = UDim2.new(1, -44, 0.5, -10)
-        tpBtn.BackgroundColor3 = BTN_COLOR
-        tpBtn.Font = Enum.Font.GothamSemibold
-        tpBtn.TextSize = 10
-        tpBtn.TextColor3 = THEME_TEXT
-        tpBtn.Text = "TP"
-        tpBtn.BorderSizePixel = 0
-        Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0, 5)
-        local tpBtnStroke = Instance.new("UIStroke", tpBtn)
-        tpBtnStroke.Color = Color3.fromRGB(55, 55, 55); tpBtnStroke.Thickness = 1; tpBtnStroke.Transparency = 0
-        tpBtn.MouseEnter:Connect(function()
-            TweenService:Create(tpBtn, TweenInfo.new(0.12), {BackgroundColor3 = BTN_HOVER}):Play()
-        end)
-        tpBtn.MouseLeave:Connect(function()
-            TweenService:Create(tpBtn, TweenInfo.new(0.12), {BackgroundColor3 = BTN_COLOR}):Play()
-        end)
-        tpBtn.MouseButton1Click:Connect(function()
-            pcall(function()
-                local char = player.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
-                if inst:IsA("BasePart") then
-                    hrp.CFrame = inst.CFrame * CFrame.new(0, 3, 0)
-                elseif inst:IsA("Model") and inst.PrimaryPart then
-                    hrp.CFrame = inst.PrimaryPart.CFrame * CFrame.new(0, 3, 0)
-                elseif inst:IsA("Model") then
-                    local bp = inst:FindFirstChildWhichIsA("BasePart")
-                    if bp then hrp.CFrame = bp.CFrame * CFrame.new(0, 3, 0) end
-                end
-            end)
-        end)
-
-        table.insert(stResultEntries, row)
-    end
-end
-
-stSearchBtn.MouseButton1Click:Connect(doSearch)
-stInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed then doSearch() end
-end)
-stClearBtn.MouseButton1Click:Connect(clearSearchResults)
 
 -- ════════════════════════════════════════════════════
 -- GLOBAL KEY LISTENER
