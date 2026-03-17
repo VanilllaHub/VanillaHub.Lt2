@@ -193,6 +193,24 @@ local function stopFly()
     isFlyActive = false
     if _G.VH then _G.VH.isFlyActive = false end
     if flyConn then flyConn:Disconnect(); flyConn = nil end
+    -- zero out velocity and snap to upright BEFORE destroying so the
+    -- character doesn't inherit spin or pitch when fly turns off
+    pcall(function()
+        if flyBV and flyBV.Parent then
+            flyBV.Velocity = Vector3.zero
+        end
+        if flyBG and flyBG.Parent then
+            local char = player.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                -- lock to upright (yaw only, no pitch/roll)
+                local _, yaw, _ = hrp.CFrame:ToEulerAnglesYXZ()
+                flyBG.CFrame    = CFrame.Angles(0, yaw, 0)
+                flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+            end
+        end
+    end)
+    task.wait()   -- one frame for the gyro to settle upright
     pcall(function()
         if flyBV and flyBV.Parent then flyBV:Destroy() end
         if flyBG and flyBG.Parent then flyBG:Destroy() end
@@ -235,18 +253,26 @@ local function startFly()
         local h  = ch:FindFirstChild("Humanoid"); if not h then stopFly(); return end
         local r  = ch:FindFirstChild("HumanoidRootPart"); if not r then stopFly(); return end
         local cf = workspace.CurrentCamera.CFrame
+        -- flatten W/S/A/D onto the XZ plane so camera pitch does not drag
+        -- the character up or down when looking up or down
+        local look  = Vector3.new(cf.LookVector.X,  0, cf.LookVector.Z)
+        local right = Vector3.new(cf.RightVector.X, 0, cf.RightVector.Z)
+        if look.Magnitude  > 0 then look  = look.Unit  end
+        if right.Magnitude > 0 then right = right.Unit end
         local dir = Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W)         then dir = dir + cf.LookVector  end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S)         then dir = dir - cf.LookVector  end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A)         then dir = dir - cf.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D)         then dir = dir + cf.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space)     then dir = dir + Vector3.yAxis  end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.yAxis  end
+        if UserInputService:IsKeyDown(Enum.KeyCode.W)         then dir = dir + look         end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S)         then dir = dir - look         end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A)         then dir = dir - right        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D)         then dir = dir + right        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space)     then dir = dir + Vector3.yAxis end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.yAxis end
         h.PlatformStand = true
         flyBV.MaxForce  = Vector3.new(1e6, 1e6, 1e6)
         flyBV.Velocity  = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
+        -- keep body upright using yaw only — no pitch or roll regardless of camera angle
+        local _, yaw, _ = r.CFrame:ToEulerAnglesYXZ()
         flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-        flyBG.CFrame    = cf
+        flyBG.CFrame    = CFrame.Angles(0, yaw, 0)
     end)
 end
 
