@@ -416,36 +416,34 @@ local function switchTab(targetName)
         if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3  = Color3.fromRGB(110, 110, 110)}):Play() end
         if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
     end
-    local btn = side:FindFirstChild(targetName:gsub("Tab",""))
-    if btn then
-        activeTabButton = btn
-        local newLbl  = btn:FindFirstChild("TabLabel")
-        local newIcon = btn:FindFirstChild("TabIcon")
-        TweenService:Create(btn, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
+    -- Find by frame name (frames are named after the tab, buttons have "_Btn" suffix)
+    local frame = side:FindFirstChild(targetName:gsub("Tab",""))
+    if frame then
+        activeTabButton = frame
+        local newLbl  = frame:FindFirstChild("TabLabel")
+        local newIcon = frame:FindFirstChild("TabIcon")
+        TweenService:Create(frame, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
         if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3  = THEME_TEXT}):Play() end
         if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(210, 210, 210)}):Play() end
     end
 end
 
 for _, name in ipairs(tabs) do
-    local btn = Instance.new("TextButton", side)
-    btn.Name = name
-    btn.Size = UDim2.new(1, 0, 0, 34)
-    btn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-    btn.BorderSizePixel = 0
-    btn.Text = ""                                            -- text handled by label below
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 13
-    btn.TextColor3 = Color3.fromRGB(120, 120, 120)
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-    local btnStr_btn = Instance.new("UIStroke", btn)
-    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
-    btnStr_btn.Thickness    = 1
-    btnStr_btn.Transparency = 0
+    -- Outer frame acts as the visual container (like topBar does for hubIcon)
+    -- This is what gets tweened for background colour
+    local frame = Instance.new("Frame", side)
+    frame.Name            = name
+    frame.Size            = UDim2.new(1, 0, 0, 34)
+    frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+    local fStroke = Instance.new("UIStroke", frame)
+    fStroke.Color        = Color3.fromRGB(55, 55, 55)
+    fStroke.Thickness    = 1
+    fStroke.Transparency = 0
 
-    -- Icon (16×16, tinted grey, sits at left)
-    local iconImg = Instance.new("ImageLabel", btn)
+    -- Icon — parented to the Frame, not a TextButton, so it always renders
+    local iconImg = Instance.new("ImageLabel", frame)
     iconImg.Name               = "TabIcon"
     iconImg.Size               = UDim2.new(0, 16, 0, 16)
     iconImg.Position           = UDim2.new(0, 10, 0.5, -8)
@@ -454,10 +452,9 @@ for _, name in ipairs(tabs) do
     iconImg.ScaleType          = Enum.ScaleType.Fit
     iconImg.Image              = TAB_ICONS[name] or ""
     iconImg.ImageColor3        = Color3.fromRGB(110, 110, 110)
-    iconImg.ZIndex             = btn.ZIndex + 2
 
-    -- Name label (sits to the right of the icon)
-    local nameLbl = Instance.new("TextLabel", btn)
+    -- Name label — also parented to the Frame
+    local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name               = "TabLabel"
     nameLbl.Size               = UDim2.new(1, -34, 1, 0)
     nameLbl.Position           = UDim2.new(0, 32, 0, 0)
@@ -467,18 +464,26 @@ for _, name in ipairs(tabs) do
     nameLbl.TextColor3         = Color3.fromRGB(120, 120, 120)
     nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
     nameLbl.Text               = name
-    nameLbl.ZIndex             = btn.ZIndex + 2
+
+    -- Transparent click overlay on top — captures mouse events without hiding children
+    local btn = Instance.new("TextButton", frame)
+    btn.Name                 = name .. "_Btn"
+    btn.Size                 = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundTransparency = 1
+    btn.Text                 = ""
+    btn.ZIndex               = 10  -- on top of icon and label
+    btn.AutoButtonColor      = false
 
     btn.MouseEnter:Connect(function()
-        if activeTabButton ~= btn then
-            TweenService:Create(btn,     TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+        if activeTabButton ~= frame then
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
             TweenService:Create(iconImg, TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(180, 180, 180)}):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
-        if activeTabButton ~= btn then
-            TweenService:Create(btn,     TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
+        if activeTabButton ~= frame then
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
             TweenService:Create(iconImg, TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(110, 110, 110)}):Play()
         end
