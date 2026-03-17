@@ -366,21 +366,21 @@ local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","So
 local pages = {}
 
 local TAB_ICONS = {
-    ["Home"]      = "rbxassetid://77194384448338",
-    ["Player"]    = "rbxassetid://107966908673726",
-    ["World"]     = "rbxassetid://101214534117376",
-    ["Teleport"]  = "rbxassetid://92649354349672",
-    ["Wood"]      = "rbxassetid://106031824976362",
-    ["Slot"]      = "rbxassetid://136244861596002",
-    ["Dupe"]      = "rbxassetid://76204407522607",
-    ["Item"]      = "rbxassetid://107729874528981",
-    ["Sorter"]    = "rbxassetid://124649482379122",
-    ["AutoBuy"]   = "rbxassetid://75551187041542",
-    ["Pixel Art"] = "rbxassetid://139483926634191",
-    ["Build"]     = "rbxassetid://140309668216577",
-    ["Vehicle"]   = "rbxassetid://72268059112855",
-    ["Search"]    = "rbxassetid://80981469875695",
-    ["Settings"]  = "rbxassetid://93566900770353",
+    ["Home"]      = "⌂",
+    ["Player"]    = "★",
+    ["World"]     = "◉",
+    ["Teleport"]  = "➤",
+    ["Wood"]      = "▲",
+    ["Slot"]      = "▦",
+    ["Dupe"]      = "❏",
+    ["Item"]      = "◈",
+    ["Sorter"]    = "≡",
+    ["AutoBuy"]   = "⊙",
+    ["Pixel Art"] = "▣",
+    ["Build"]     = "✦",
+    ["Vehicle"]   = "◭",
+    ["Search"]    = "🔍",
+    ["Settings"]  = "⚙",
 }
 
 for _, name in ipairs(tabs) do
@@ -412,8 +412,8 @@ local function switchTab(targetName)
         local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
         local oldIcon = activeTabButton:FindFirstChild("TabIcon")
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
-        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3  = Color3.fromRGB(110, 110, 110)}):Play() end
-        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(180, 180, 180)}):Play() end
+        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
+        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(130, 130, 130)}):Play() end
     end
     local frame = side:FindFirstChild(targetName:gsub("Tab", ""))
     if frame then
@@ -421,17 +421,13 @@ local function switchTab(targetName)
         local newLbl  = frame:FindFirstChild("TabLabel")
         local newIcon = frame:FindFirstChild("TabIcon")
         TweenService:Create(frame, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
-        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3  = THEME_TEXT}):Play() end
-        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play() end
+        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3 = THEME_TEXT}):Play() end
+        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play() end
     end
 end
 
 -- ════════════════════════════════════════════════════
 -- TAB BUTTONS
--- Frame (background) → ImageLabel + TextLabel (ZIndex 3) → TextButton overlay (ZIndex 2, transparent)
--- The ScreenGui uses ZIndexBehavior.Sibling so ZIndex is local per parent.
--- We flip it: btn overlay is ZIndex 1, visuals are ZIndex 3 — button still receives input
--- because InputBegan fires on the topmost opaque hit, but transparency=1 buttons still catch mouse.
 -- ════════════════════════════════════════════════════
 for _, name in ipairs(tabs) do
     local frame = Instance.new("Frame", side)
@@ -439,53 +435,57 @@ for _, name in ipairs(tabs) do
     frame.Size             = UDim2.new(1, 0, 0, 34)
     frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
     frame.BorderSizePixel  = 0
-    frame.ClipsDescendants = false
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
-    -- Transparent click catcher — ZIndex 1 (below visuals)
+    -- Icon as TextLabel (unicode) — always visible, no asset loading needed
+    local iconLbl = Instance.new("TextLabel", frame)
+    iconLbl.Name               = "TabIcon"
+    iconLbl.Size               = UDim2.new(0, 22, 1, 0)
+    iconLbl.Position           = UDim2.new(0, 6, 0, 0)
+    iconLbl.BackgroundTransparency = 1
+    iconLbl.Font               = Enum.Font.GothamBold
+    iconLbl.TextSize           = 14
+    iconLbl.TextColor3         = Color3.fromRGB(130, 130, 130)
+    iconLbl.TextXAlignment     = Enum.TextXAlignment.Center
+    iconLbl.TextYAlignment     = Enum.TextYAlignment.Center
+    iconLbl.Text               = TAB_ICONS[name] or "•"
+    iconLbl.ZIndex             = 3
+
+    -- Name label
+    local nameLbl = Instance.new("TextLabel", frame)
+    nameLbl.Name               = "TabLabel"
+    nameLbl.Size               = UDim2.new(1, -32, 1, 0)
+    nameLbl.Position           = UDim2.new(0, 30, 0, 0)
+    nameLbl.BackgroundTransparency = 1
+    nameLbl.Font               = Enum.Font.GothamSemibold
+    nameLbl.TextSize           = 13
+    nameLbl.TextColor3         = Color3.fromRGB(120, 120, 120)
+    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    nameLbl.TextYAlignment     = Enum.TextYAlignment.Center
+    nameLbl.Text               = name
+    nameLbl.ZIndex             = 3
+
+    -- Transparent click overlay on top
     local btn = Instance.new("TextButton", frame)
     btn.Name                 = name .. "_Btn"
     btn.Size                 = UDim2.new(1, 0, 1, 0)
     btn.BackgroundTransparency = 1
     btn.Text                 = ""
     btn.AutoButtonColor      = false
-    btn.ZIndex               = 1
-
-    -- Icon — ZIndex 3, renders on top of button surface
-    local iconImg = Instance.new("ImageLabel", frame)
-    iconImg.Name                   = "TabIcon"
-    iconImg.Size                   = UDim2.new(0, 16, 0, 16)
-    iconImg.Position               = UDim2.new(0, 10, 0.5, -8)
-    iconImg.BackgroundTransparency = 1
-    iconImg.BorderSizePixel        = 0
-    iconImg.ScaleType              = Enum.ScaleType.Fit
-    iconImg.Image                  = TAB_ICONS[name] or ""
-    iconImg.ImageColor3            = Color3.fromRGB(255, 255, 255)
-    iconImg.ZIndex                 = 3
-
-    -- Label — ZIndex 3
-    local nameLbl = Instance.new("TextLabel", frame)
-    nameLbl.Name               = "TabLabel"
-    nameLbl.Size               = UDim2.new(1, -34, 1, 0)
-    nameLbl.Position           = UDim2.new(0, 32, 0, 0)
-    nameLbl.BackgroundTransparency = 1
-    nameLbl.Font               = Enum.Font.GothamSemibold
-    nameLbl.TextSize           = 13
-    nameLbl.TextColor3         = Color3.fromRGB(120, 120, 120)
-    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
-    nameLbl.Text               = name
-    nameLbl.ZIndex             = 3
+    btn.ZIndex               = 5
 
     btn.MouseEnter:Connect(function()
         if activeTabButton ~= frame then
             TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
+            TweenService:Create(iconLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(200, 200, 200)}):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= frame then
             TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
+            TweenService:Create(iconLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(130, 130, 130)}):Play()
         end
     end)
     btn.MouseButton1Click:Connect(function()
