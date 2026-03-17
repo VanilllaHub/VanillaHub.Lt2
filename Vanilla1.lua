@@ -387,22 +387,64 @@ local TAB_ICONS = {
     ["Settings"]  = "rbxassetid://93566900770353",
 }
 
+-- Example tabs list (replace with your actual tabs)
+local tabs = {
+    "Home","Player","World","Teleport","Wood","Slot","Dupe",
+    "Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"
+}
+
+-- Pages table
+local pages = {}
+
+-- Make sure 'content' exists
+local content = Instance.new("Frame")
+content.Size = UDim2.new(1,0,1,0)
+content.BackgroundTransparency = 1
+content.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("ScreenGui")
+
+-- ── Create pages with icons ─────────────────────────────────────────────
 for _, name in ipairs(tabs) do
+    -- Create the ScrollingFrame page
     local page = Instance.new("ScrollingFrame", content)
-    page.Name = name .. "Tab"; page.Size = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1; page.BorderSizePixel = 0
-    page.ScrollBarThickness = 4; page.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
-    page.Visible = false; page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.Name = name .. "Tab"
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
+    page.Visible = false
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+
     local list = Instance.new("UIListLayout", page)
-    list.Padding = UDim.new(0, 10); list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    list.Padding = UDim.new(0, 10)
+    list.HorizontalAlignment = Enum.HorizontalAlignment.Center
     list.SortOrder = Enum.SortOrder.LayoutOrder
+
     local pad = Instance.new("UIPadding", page)
-    pad.PaddingTop = UDim.new(0, 14); pad.PaddingBottom = UDim.new(0, 14)
-    pad.PaddingLeft = UDim.new(0, 12); pad.PaddingRight = UDim.new(0, 12)
+    pad.PaddingTop = UDim.new(0, 14)
+    pad.PaddingBottom = UDim.new(0, 14)
+    pad.PaddingLeft = UDim.new(0, 12)
+    pad.PaddingRight = UDim.new(0, 12)
+
     list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         page.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 32)
     end)
+
     pages[name .. "Tab"] = page
+
+    -- Create icon for the page
+    local icon = Instance.new("ImageLabel")
+    icon.Size = UDim2.new(0, 24, 0, 24) -- adjust size as needed
+    icon.Position = UDim2.new(0, 10, 0, 10) -- adjust position as needed
+    icon.BackgroundTransparency = 1
+    icon.Image = TAB_ICONS[name] or ""
+    icon.ImageColor3 = Color3.fromRGB(255, 255, 255) -- force white
+    icon.Parent = page
+end
+
+-- Optional: Show first tab by default
+if pages["HomeTab"] then
+    pages["HomeTab"].Visible = true
 end
 
 -- TAB SWITCHING
