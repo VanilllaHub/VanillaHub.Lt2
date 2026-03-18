@@ -32,46 +32,31 @@ end
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local C = {
-    -- backgrounds (black inner panels)
     BG_DEEP      = Color3.fromRGB(8,   8,   8  ),
     BG_PANEL     = Color3.fromRGB(15,  15,  15 ),
     BG_ROW       = Color3.fromRGB(22,  22,  22 ),
     BG_INPUT     = Color3.fromRGB(32,  32,  32 ),
-
-    -- borders (grey)
     BORDER       = Color3.fromRGB(55,  55,  55 ),
     BORDER_FOCUS = Color3.fromRGB(100, 100, 100),
-
-    -- text
     TEXT_DIM     = Color3.fromRGB(100, 100, 100),
     TEXT_MID     = Color3.fromRGB(155, 155, 155),
     TEXT_BRIGHT  = Color3.fromRGB(210, 210, 210),
     TEXT_WHITE   = Color3.fromRGB(240, 240, 240),
-
-    -- switches: dark grey OFF / white ON
-    KNOB         = Color3.fromRGB(30,  30,  30 ),   -- dark knob on white track
-    KNOB_OFF     = Color3.fromRGB(160, 160, 160),   -- light knob on dark track
-    TOGGLE_ON    = Color3.fromRGB(220, 220, 220),   -- white ON
-    TOGGLE_OFF   = Color3.fromRGB(50,  50,  50 ),   -- dark grey OFF
-
-    -- buttons (all grey — no green / red)
+    KNOB         = Color3.fromRGB(30,  30,  30 ),
+    KNOB_OFF     = Color3.fromRGB(160, 160, 160),
+    TOGGLE_ON    = Color3.fromRGB(220, 220, 220),
+    TOGGLE_OFF   = Color3.fromRGB(50,  50,  50 ),
     BTN_START    = Color3.fromRGB(14,  14,  14),
     BTN_START_HV = Color3.fromRGB(32,  32,  32),
     BTN_STOP     = Color3.fromRGB(14,  14,  14),
     BTN_STOP_HV  = Color3.fromRGB(32,  32,  32),
     BTN_IDLE     = Color3.fromRGB(14,  14,  14),
     BTN_IDLE_HV  = Color3.fromRGB(32,  32,  32),
-
-    -- status dot
     DOT_IDLE     = Color3.fromRGB(70,  70,  70 ),
     DOT_ACTIVE   = Color3.fromRGB(200, 200, 200),
-
-    -- progress bar (white bar + white text)
     PROG_TRACK   = Color3.fromRGB(30,  30,  30 ),
-    PROG_FILL    = Color3.fromRGB(255, 255, 255),   -- white bar
-    PROG_DONE    = Color3.fromRGB(255, 255, 255),   -- white when done
-
-    -- tab bar
+    PROG_FILL    = Color3.fromRGB(255, 255, 255),
+    PROG_DONE    = Color3.fromRGB(255, 255, 255),
     TAB_ACTIVE   = Color3.fromRGB(38,  38,  38),
     TAB_IDLE     = Color3.fromRGB(12,  12,  12),
     TAB_HOVER    = Color3.fromRGB(28,  28,  28),
@@ -111,7 +96,6 @@ local function applyHover(btn, base, hover)
     end)
 end
 
--- Generic grey button
 local function makeBtn(parent, text, color, hoverColor, callback)
     color      = color      or C.BTN_IDLE
     hoverColor = hoverColor or C.BTN_IDLE_HV
@@ -125,7 +109,7 @@ local function makeBtn(parent, text, color, hoverColor, callback)
     btn.Text             = text
     btn.AutoButtonColor  = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-local btnStr_btn = Instance.new("UIStroke", btn)
+    local btnStr_btn = Instance.new("UIStroke", btn)
     btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
     btnStr_btn.Thickness    = 1
     btnStr_btn.Transparency = 0
@@ -134,7 +118,6 @@ local btnStr_btn = Instance.new("UIStroke", btn)
     return btn
 end
 
--- Start / Stop pair (both grey)
 local function makeStartStop(parent, startCb, stopCb)
     local row = Instance.new("Frame", parent)
     row.Size             = UDim2.new(1, -12, 0, 34)
@@ -158,10 +141,10 @@ local function makeStartStop(parent, startCb, stopCb)
         btn.AutoButtonColor  = false
         btn.LayoutOrder      = order
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-local btnStr_btn = Instance.new("UIStroke", btn)
-    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
-    btnStr_btn.Thickness    = 1
-    btnStr_btn.Transparency = 0
+        local btnStr_btn = Instance.new("UIStroke", btn)
+        btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+        btnStr_btn.Thickness    = 1
+        btnStr_btn.Transparency = 0
         applyHover(btn, base, hover)
         if cb then btn.MouseButton1Click:Connect(cb) end
         return btn
@@ -172,7 +155,6 @@ local btnStr_btn = Instance.new("UIStroke", btn)
     return row, startBtn, stopBtn
 end
 
--- Status bar
 local function makeStatusBar(parent, defaultText)
     local bar = Instance.new("Frame", parent)
     bar.Size             = UDim2.new(1, -12, 0, 26)
@@ -210,7 +192,6 @@ local function makeStatusBar(parent, defaultText)
     return bar, setStatus
 end
 
--- Toggle switch: dark grey OFF / white ON
 local function makeToggle(parent, text, default, callback)
     local frame = Instance.new("Frame", parent)
     frame.Size             = UDim2.new(1, -12, 0, 30)
@@ -231,7 +212,7 @@ local function makeToggle(parent, text, default, callback)
     local tb = Instance.new("TextButton", frame)
     tb.Size             = UDim2.new(0, 32, 0, 17)
     tb.Position         = UDim2.new(1, -42, 0.5, -8.5)
-    tb.BackgroundColor3 = default and C.TOGGLE_ON or C.TOGGLE_OFF   -- white ON / dark grey OFF
+    tb.BackgroundColor3 = default and C.TOGGLE_ON or C.TOGGLE_OFF
     tb.Text             = ""
     tb.BorderSizePixel  = 0
     tb.AutoButtonColor  = false
@@ -240,7 +221,7 @@ local function makeToggle(parent, text, default, callback)
     local knob = Instance.new("Frame", tb)
     knob.Size             = UDim2.new(0, 13, 0, 13)
     knob.Position         = UDim2.new(0, default and 17 or 2, 0.5, -6.5)
-    knob.BackgroundColor3 = default and C.KNOB or C.KNOB_OFF        -- dark knob on white / light on dark
+    knob.BackgroundColor3 = default and C.KNOB or C.KNOB_OFF
     knob.BorderSizePixel  = 0
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
@@ -262,7 +243,6 @@ local function makeToggle(parent, text, default, callback)
     return frame, function() return toggled end, tb, knob
 end
 
--- Progress bar: white bar + white text
 local function makeProgressBar(parent, labelText)
     local wrap = Instance.new("Frame", parent)
     wrap.Size             = UDim2.new(1, -12, 0, 42)
@@ -295,7 +275,7 @@ local function makeProgressBar(parent, labelText)
     cntLbl.BackgroundTransparency = 1
     cntLbl.Font               = Enum.Font.GothamBold
     cntLbl.TextSize           = 11
-    cntLbl.TextColor3         = C.TEXT_WHITE                     -- white text
+    cntLbl.TextColor3         = C.TEXT_WHITE
     cntLbl.TextXAlignment     = Enum.TextXAlignment.Right
     cntLbl.Text               = "0 / 0"
 
@@ -308,7 +288,7 @@ local function makeProgressBar(parent, labelText)
 
     local fill = Instance.new("Frame", track)
     fill.Size             = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = C.PROG_FILL                          -- white bar
+    fill.BackgroundColor3 = C.PROG_FILL
     fill.BorderSizePixel  = 0
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
 
@@ -327,10 +307,10 @@ local function makeProgressBar(parent, labelText)
         local pct = math.clamp(done / math.max(total, 1), 0, 1)
         if done >= total and total > 0 then
             cntLbl.Text       = "Done"
-            cntLbl.TextColor3 = C.TEXT_WHITE                     -- white "Done"
+            cntLbl.TextColor3 = C.TEXT_WHITE
             TweenService:Create(fill, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 Size             = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = C.PROG_FILL,                  -- stays white
+                BackgroundColor3 = C.PROG_FILL,
             }):Play()
             if resetTimer then task.cancel(resetTimer) end
             resetTimer = task.delay(2, reset)
@@ -339,7 +319,7 @@ local function makeProgressBar(parent, labelText)
             cntLbl.TextColor3 = C.TEXT_WHITE
             TweenService:Create(fill, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
                 Size             = UDim2.new(pct, 0, 1, 0),
-                BackgroundColor3 = C.PROG_FILL,                  -- always white
+                BackgroundColor3 = C.PROG_FILL,
             }):Play()
         end
     end
@@ -347,7 +327,6 @@ local function makeProgressBar(parent, labelText)
     return wrap, setProgress, reset
 end
 
--- Player dropdown
 local function makeDupeDropdown(labelText, parentPage)
     local selected = ""
     local isOpen   = false
@@ -500,7 +479,7 @@ local function makeDupeDropdown(labelText, parentPage)
             local isSel = (plr.Name == selected)
             local row = Instance.new("Frame", listScroll)
             row.Size             = UDim2.new(1, 0, 0, ITEM_H)
-            row.BackgroundColor3 = isSel and Color3.fromRGB(60,60,60) or C.BG_ROW  -- grey selected
+            row.BackgroundColor3 = isSel and Color3.fromRGB(60,60,60) or C.BG_ROW
             row.BorderSizePixel  = 0
             row.LayoutOrder      = i
             Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
@@ -612,7 +591,7 @@ local function makeDupeDropdown(labelText, parentPage)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- TELEPORT CORE  (unchanged logic)
+-- TELEPORT CORE
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local MAX_ITEM_TRIES = 8
@@ -698,29 +677,6 @@ local function retryCargo(char, missedList, GiveBaseOrigin, RS, runningRef, setP
             statusFn(string.format("Done — %d part(s) couldn't be moved", #missedList), false)
         end
     end
-end
-
-local function sendLooseItems(char, itemList, RS, runningRef, setProgFn, statusFn)
-    local total   = #itemList
-    local done    = 0
-    local retried = 0
-    if setProgFn then setProgFn(0, total) end
-    for _, entry in ipairs(itemList) do
-        if not runningRef() then break end
-        local part   = entry.part
-        local Offset = entry.offset
-        if not (part and part.Parent) then
-            done += 1
-            if setProgFn then setProgFn(done, total) end
-            continue
-        end
-        local ok = sendItemPart(char, part, Offset, RS, runningRef)
-        if not ok then retried += 1 end
-        done += 1
-        if setProgFn then setProgFn(done, total) end
-    end
-    if setProgFn then setProgFn(total, total) end
-    return retried
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -902,14 +858,6 @@ startButterBtn.MouseButton1Click:Connect(function()
         local recvOriginCF = ReceiverBaseOrigin.CFrame
         local butterRunningRef = function() return butterRunning end
 
-        local function countItems(typeCheck)
-            local n = 0
-            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                if v.Name == "Owner" and tostring(v.Value) == giverName and typeCheck(v.Parent) then n += 1 end
-            end
-            return n
-        end
-
         local function getItemWorldCF(p)
             if p:FindFirstChild("MainCFrame") then return p.MainCFrame.Value
             elseif p:FindFirstChild("Main")   then return p.Main.CFrame
@@ -925,13 +873,26 @@ startButterBtn.MouseButton1Click:Connect(function()
             return false
         end
 
+        -- helper: returns true if model looks like a gift, opened item, or tool
+        local function isGiftOrItem(p)
+            if p:FindFirstChildOfClass("Script") and p:FindFirstChild("DraggableItem") then return true end
+            if p:FindFirstChild("Value") and p:FindFirstChild("Tool")       then return true end
+            if p:FindFirstChild("Value") and p:FindFirstChild("Loose Item") then return true end
+            return false
+        end
+
         -- ── STRUCTURES
         if getStructures() and butterRunning then
-            local total = countItems(function(p)
-                return isStructure(p)
-                    and (p:FindFirstChild("MainCFrame") or p:FindFirstChild("Main")
-                         or p:FindFirstChildOfClass("Part") or p:FindFirstChildOfClass("WedgePart"))
-            end)
+            local total = 0
+            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
+                if v.Name == "Owner" and tostring(v.Value) == giverName then
+                    local p = v.Parent
+                    if isStructure(p) and (p:FindFirstChild("MainCFrame") or p:FindFirstChild("Main")
+                         or p:FindFirstChildOfClass("Part") or p:FindFirstChildOfClass("WedgePart")) then
+                        total += 1
+                    end
+                end
+            end
             if total > 0 then
                 progStructures.Visible = true; setProgStructures(0, total)
                 setStatus("Sending structures...", true)
@@ -962,10 +923,16 @@ startButterBtn.MouseButton1Click:Connect(function()
 
         -- ── FURNITURE
         if getFurniture() and butterRunning then
-            local total = countItems(function(p)
-                return p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture"
-                    and (p:FindFirstChild("MainCFrame") or p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part"))
-            end)
+            local total = 0
+            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
+                if v.Name == "Owner" and tostring(v.Value) == giverName then
+                    local p = v.Parent
+                    if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture"
+                        and (p:FindFirstChild("MainCFrame") or p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")) then
+                        total += 1
+                    end
+                end
+            end
             if total > 0 then
                 progFurniture.Visible = true; setProgFurniture(0, total)
                 setStatus("Sending furniture...", true)
@@ -1095,36 +1062,83 @@ startButterBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── GIFT / ITEMS
+        -- Detects three model shapes:
+        --   1. Gift         — Script child + DraggableItem child
+        --   2. Tool         — Value child  + Tool child
+        --   3. Loose Item   — Value child  + "Loose Item" child
         if getGifs() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if not butterRunning then break end
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
                     local p = v.Parent
-                    if p:FindFirstChildOfClass("Script") and p:FindFirstChild("DraggableItem") then
+                    if isGiftOrItem(p) then
                         local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
                         if part then
                             local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or part.CFrame
                             local nPos = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                            table.insert(items, {part=part, offset=CFrame.new(nPos)*PCF.Rotation})
+                            table.insert(items, {part = part, offset = CFrame.new(nPos) * PCF.Rotation})
                         end
                     end
                 end
             end
+
             if #items > 0 then
                 progGifs.Visible = true
                 setStatus("Sending gift/items...", true)
-                local retried = sendLooseItems(Char, items, RS, butterRunningRef,
-                    function(d,t) setProgGifs(d,t) end,
-                    function(msg,act) setStatus(msg,act) end)
-                if retried > 0 then
-                    setStatus(string.format("Gift/Items done (%d retried)", retried), false)
-                    task.wait(1.5)
+                local total  = #items
+                local done   = 0
+                local missed = {}
+                setProgGifs(0, total)
+
+                for _, entry in ipairs(items) do
+                    if not butterRunning then break end
+                    local part   = entry.part
+                    local Offset = entry.offset
+
+                    if not (part and part.Parent) then
+                        done += 1; setProgGifs(done, total); continue
+                    end
+
+                    -- seek network ownership (fastest pattern from truck system)
+                    if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
+                        Char.HumanoidRootPart.CFrame = part.CFrame
+                        task.wait(0.04)
+                    end
+                    for _ = 1, 15 do
+                        task.wait(0.015)
+                        RS.Interaction.ClientIsDragging:FireServer(part.Parent)
+                    end
+
+                    -- fastest direct CFrame assignment
+                    local deadline = tick() + 0.25
+                    repeat
+                        part.CFrame = Offset
+                        task.wait()
+                    until tick() >= deadline
+
+                    if part and part.Parent and (part.Position - Offset.Position).Magnitude > 8 then
+                        table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                    end
+
+                    done += 1; setProgGifs(done, total)
+                end
+
+                -- missed-items fallback (same retryCargo used by truck system)
+                if #missed > 0 and butterRunning then
+                    setStatus(string.format("Gift retry — %d item(s) missed...", #missed), true)
+                    retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
+                        function(d, t) setProgGifs(d, t) end,
+                        function(msg, act) setStatus(msg, act) end, 25)
+                    task.wait(1)
+                else
+                    setProgGifs(total, total)
                 end
             end
         end
 
         -- ── WOOD
+        -- Excludes gift/tool/loose-item models so those are not double-processed.
         if getWood() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1132,24 +1146,68 @@ startButterBtn.MouseButton1Click:Connect(function()
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
                     local p = v.Parent
                     if p:FindFirstChild("TreeClass") and tostring(p.TreeClass.Value) ~= "Structure" then
-                        local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
-                        if part then
-                            local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or part.CFrame
-                            local nPos = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                            table.insert(items, {part=part, offset=CFrame.new(nPos)*PCF.Rotation})
+                        if not isGiftOrItem(p) then
+                            local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
+                            if part then
+                                local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or part.CFrame
+                                local nPos = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                                table.insert(items, {part = part, offset = CFrame.new(nPos) * PCF.Rotation})
+                            end
                         end
                     end
                 end
             end
+
             if #items > 0 then
                 progWood.Visible = true
                 setStatus("Sending wood...", true)
-                local retried = sendLooseItems(Char, items, RS, butterRunningRef,
-                    function(d,t) setProgWood(d,t) end,
-                    function(msg,act) setStatus(msg,act) end)
-                if retried > 0 then
-                    setStatus(string.format("Wood done (%d retried)", retried), false)
-                    task.wait(1.5)
+                local total  = #items
+                local done   = 0
+                local missed = {}
+                setProgWood(0, total)
+
+                for _, entry in ipairs(items) do
+                    if not butterRunning then break end
+                    local part   = entry.part
+                    local Offset = entry.offset
+
+                    if not (part and part.Parent) then
+                        done += 1; setProgWood(done, total); continue
+                    end
+
+                    -- seek network ownership (fastest pattern from truck system)
+                    if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
+                        Char.HumanoidRootPart.CFrame = part.CFrame
+                        task.wait(0.04)
+                    end
+                    for _ = 1, 15 do
+                        task.wait(0.015)
+                        RS.Interaction.ClientIsDragging:FireServer(part.Parent)
+                    end
+
+                    -- fastest direct CFrame assignment
+                    local deadline = tick() + 0.25
+                    repeat
+                        part.CFrame = Offset
+                        task.wait()
+                    until tick() >= deadline
+
+                    if part and part.Parent and (part.Position - Offset.Position).Magnitude > 8 then
+                        table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                    end
+
+                    done += 1; setProgWood(done, total)
+                end
+
+                -- missed-items fallback (wood-scoped, same retryCargo pattern)
+                if #missed > 0 and butterRunning then
+                    setStatus(string.format("Wood retry — %d piece(s) missed...", #missed), true)
+                    retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
+                        function(d, t) setProgWood(d, t) end,
+                        function(msg, act) setStatus(msg, act) end, 25)
+                    task.wait(1)
+                else
+                    setProgWood(total, total)
                 end
             end
         end
