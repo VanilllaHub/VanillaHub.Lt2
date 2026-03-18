@@ -810,10 +810,173 @@ makeButton(sl, "Take Selected Land", function()
 end)
 
 -- ════════════════════════════════════════════════════
+-- LAND ART SECTION — Click To Buy Land
+-- ════════════════════════════════════════════════════
+
+sep(sl)
+sectionLabel(sl, "Land Art")
+
+-- State
+local clickBuyActive  = false
+local highlightFrames = {}  -- { plot, highlight, detector }
+
+-- Reuse the same offsets as maxLand so adjacency logic is identical
+local EXPAND_OFFSETS = {
+    Vector3.new(40,0,0),   Vector3.new(-40,0,0),
+    Vector3.new(0,0,40),   Vector3.new(0,0,-40),
+    Vector3.new(40,0,40),  Vector3.new(40,0,-40),
+    Vector3.new(-40,0,40), Vector3.new(-40,0,-40),
+    Vector3.new(80,0,0),   Vector3.new(-80,0,0),
+    Vector3.new(0,0,80),   Vector3.new(0,0,-80),
+    Vector3.new(80,0,80),  Vector3.new(80,0,-80),
+    Vector3.new(-80,0,80), Vector3.new(-80,0,-80),
+    Vector3.new(40,0,80),  Vector3.new(-40,0,80),
+    Vector3.new(80,0,40),  Vector3.new(80,0,-40),
+    Vector3.new(-80,0,40), Vector3.new(-80,0,-40),
+    Vector3.new(40,0,-80), Vector3.new(-40,0,-80),
+}
+
+-- Returns true if targetPos is adjacent (within offset distance) of any plot the player owns
+local function isAdjacentToOwned(targetPos)
+    for _, owned in ipairs(workspace.Properties:GetChildren()) do
+        if owned:FindFirstChild("Owner") and owned.Owner.Value == LP
+           and owned:FindFirstChild("OriginSquare") then
+            local ownedPos = owned.OriginSquare.Position
+            for _, off in ipairs(EXPAND_OFFSETS) do
+                if (ownedPos + off - targetPos).Magnitude < 5 then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+-- Returns true if the player owns at least one plot
+local function playerOwnsAny()
+    for _, v in ipairs(workspace.Properties:GetChildren()) do
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP then
+            return true
+        end
+    end
+    return false
+end
+
+-- Clears all active highlights and click detectors
+local function clearClickBuyFrames()
+    for _, entry in ipairs(highlightFrames) do
+        pcall(function()
+            if entry.highlight and entry.highlight.Parent then entry.highlight:Destroy() end
+            if entry.detector  and entry.detector.Parent  then entry.detector:Destroy()  end
+        end)
+    end
+    highlightFrames = {}
+end
+
+-- Forward declaration so refreshClickBuyFrames can reference itself recursively via task.delay
+local refreshClickBuyFrames
+
+refreshClickBuyFrames = function()
+    clearClickBuyFrames()
+    if not clickBuyActive then return end
+
+    local ownsAny = playerOwnsAny()
+
+    for _, v in ipairs(workspace.Properties:GetChildren()) do
+        if v:FindFirstChild("Owner") and v:FindFirstChild("OriginSquare") then
+            local unowned  = (v.Owner.Value == nil)
+            -- Show slot if unowned AND (player owns nothing yet OR slot is adjacent to owned land)
+            local showable = unowned and (not ownsAny or isAdjacentToOwned(v.OriginSquare.Position))
+
+            if showable then
+                -- White outline highlight so the plot is clearly visible in-world
+                local hl = Instance.new("Highlight")
+                hl.FillColor           = Color3.fromRGB(200, 200, 200)
+                hl.FillTransparency    = 0.55
+                hl.OutlineColor        = Color3.fromRGB(255, 255, 255)
+                hl.OutlineTransparency = 0
+                hl.Parent              = v.OriginSquare
+
+                -- ClickDetector with infinite reach so player can click from anywhere
+                local cd = Instance.new("ClickDetector")
+                cd.MaxActivationDistance = 9999
+                cd.Parent = v.OriginSquare
+
+                local entry = { plot = v, highlight = hl, detector = cd }
+                table.insert(highlightFrames, entry)
+
+                -- Capture v in local so the closure stays correct per iteration
+                local capturedPlot = v
+                cd.MouseClick:Connect(function()
+                    if not clickBuyActive then return end
+                    pcall(function()
+                        RS.PropertyPurchasing.ClientPurchasedProperty:FireServer(
+                            capturedPlot,
+                            capturedPlot.OriginSquare.Position
+                        )
+                        LP.Character.HumanoidRootPart.CFrame =
+                            capturedPlot.OriginSquare.CFrame + Vector3.new(0, 2, 0)
+                    end)
+                    -- Brief delay to let server confirm ownership, then re-scan
+                    task.delay(0.6, function()
+                        if clickBuyActive then
+                            refreshClickBuyFrames()
+                        end
+                    end)
+                end)
+            end
+        end
+    end
+end
+
+-- Fully disables the click-buy system
+local function cleanupClickBuy()
+    clickBuyActive = false
+    clearClickBuyFrames()
+end
+
+-- Background refresh loop: re-scans every second while active so external
+-- ownership changes (e.g. another player buys land) are reflected automatically
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if clickBuyActive then
+            refreshClickBuyFrames()
+        end
+    end
+end)
+
+-- The toggle itself
+makeToggle(sl, "Click To Buy Land", false, function(on)
+    clickBuyActive = on
+    if on then
+        task.spawn(function()
+            -- Wait for Properties to populate (handles late load / empty workspace)
+            local attempts = 0
+            while attempts < 20 do
+                local hasAny = false
+                for _, v in ipairs(workspace.Properties:GetChildren()) do
+                    if v:FindFirstChild("Owner") then hasAny = true; break end
+                end
+                if hasAny then break end
+                attempts += 1
+                task.wait(0.5)
+            end
+            if clickBuyActive then
+                refreshClickBuyFrames()
+            end
+        end)
+    else
+        cleanupClickBuy()
+    end
+end)
+
+-- ════════════════════════════════════════════════════
 -- CLEANUP
 -- ════════════════════════════════════════════════════
 table.insert(VH.cleanupTasks, function()
     if landHL then pcall(function() landHL:Destroy() end) end
+    cleanupClickBuy()
 end)
 
 print("[VanillaHub] Vanilla6 loaded — black/grey/white theme")
