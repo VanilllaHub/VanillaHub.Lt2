@@ -830,18 +830,18 @@ makeSep(baseDupePage)
 makeLabel(baseDupePage, "What to Transfer")
 
 local _, getStructures = makeToggle(baseDupePage, "Structures",     false)
-local _, getFurniture  = makeToggle(baseDupePage, "Furniture",      false)
-local _, getTrucks     = makeToggle(baseDupePage, "Trucks + Cargo", false)
-local _, getGifs       = makeToggle(baseDupePage, "Gift / Items / Boxes", false)
+local _, getFurniture  = makeToggle(baseDupePage, "Furnitures",     false)
+local _, getTrucks     = makeToggle(baseDupePage, "Truck Loads",     false)
+local _, getGifs       = makeToggle(baseDupePage, "Gift/Item",           false)
 local _, getWood       = makeToggle(baseDupePage, "Wood",           false)
 
 makeSep(baseDupePage)
 makeLabel(baseDupePage, "Progress")
 
 local progStructures, setProgStructures, resetProgStructures = makeProgressBar(baseDupePage, "Structures")
-local progFurniture,  setProgFurniture,  resetProgFurniture  = makeProgressBar(baseDupePage, "Furniture")
+local progFurniture,  setProgFurniture,  resetProgFurniture  = makeProgressBar(baseDupePage, "Furnitures")
 local progTrucks,     setProgTrucks,     resetProgTrucks     = makeProgressBar(baseDupePage, "Trucks")
-local progGifs,       setProgGifs,       resetProgGifs       = makeProgressBar(baseDupePage, "Gift / Items / Boxes")
+local progGifs,       setProgGifs,       resetProgGifs       = makeProgressBar(baseDupePage, "Gift/Item")
 local progWood,       setProgWood,       resetProgWood       = makeProgressBar(baseDupePage, "Wood")
 
 makeSep(baseDupePage)
@@ -871,7 +871,7 @@ startButterBtn.MouseButton1Click:Connect(function()
     local giverName    = getGiverName()
     local receiverName = getReceiverName()
     if giverName == "" or receiverName == "" then
-        setStatus("⚠  Select both players!", false) return
+        return
     end
 
     butterRunning = true; VH.butter.running = true
@@ -966,7 +966,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
             if total > 0 then
                 progFurniture.Visible = true; setProgFurniture(0, total)
-                setStatus("Sending furniture...", true)
+                setStatus("Sending furnitures...", true)
                 local done = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1283,33 +1283,7 @@ end)
 -- SUB-TAB 2 — SINGLE TRUCK TELEPORT
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local stCard = Instance.new("Frame", singleTruckPage)
-stCard.Size             = UDim2.new(1, -12, 0, 46)
-stCard.BackgroundColor3 = C.BG_ROW
-stCard.BorderSizePixel  = 0
-Instance.new("UICorner", stCard).CornerRadius = UDim.new(0, 7)
-Instance.new("UIStroke", stCard).Color = C.BORDER
-
-local stIcon = Instance.new("TextLabel", stCard)
-stIcon.Size = UDim2.new(0, 36, 1, 0); stIcon.BackgroundTransparency = 1
-stIcon.Font = Enum.Font.GothamBold; stIcon.TextSize = 20
-stIcon.TextColor3 = C.TEXT_MID; stIcon.TextXAlignment = Enum.TextXAlignment.Center
-stIcon.Text = "🚛"
-
-local stTitle = Instance.new("TextLabel", stCard)
-stTitle.Size = UDim2.new(1,-44,0,15); stTitle.Position = UDim2.new(0,40,0,8)
-stTitle.BackgroundTransparency = 1; stTitle.Font = Enum.Font.GothamBold
-stTitle.TextSize = 12; stTitle.TextColor3 = C.TEXT_BRIGHT
-stTitle.TextXAlignment = Enum.TextXAlignment.Left; stTitle.Text = "Single Truck Teleport"
-
-local stHint = Instance.new("TextLabel", stCard)
-stHint.Size = UDim2.new(1,-44,0,11); stHint.Position = UDim2.new(0,40,0,27)
-stHint.BackgroundTransparency = 1; stHint.Font = Enum.Font.Gotham
-stHint.TextSize = 10; stHint.TextColor3 = C.TEXT_DIM
-stHint.TextXAlignment = Enum.TextXAlignment.Left
-stHint.Text = "Sit in the truck before clicking Start"
-
-local _, setTruckStatus = makeStatusBar(singleTruckPage, "Ready — sit in a truck first")
+local _, setTruckStatus = makeStatusBar(singleTruckPage, "Ready")
 
 makeLabel(singleTruckPage, "Players")
 local _, getTruckGiverName    = makeDupeDropdown("Giver",    singleTruckPage)
@@ -1345,7 +1319,7 @@ startSingleBtn.MouseButton1Click:Connect(function()
 
     local gName = getTruckGiverName()
     local rName = getTruckReceiverName()
-    if gName == "" or rName == "" then setTruckStatus("Select both players!", false) return end
+    if gName == "" or rName == "" then return end
 
     local GiveBaseOrigin, ReceiverBaseOrigin
     for _, v in pairs(workspace.Properties:GetDescendants()) do
@@ -1459,33 +1433,7 @@ end)
 -- SUB-TAB 3 — BATCH TRUCK TELEPORT
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local btCard = Instance.new("Frame", batchTruckPage)
-btCard.Size             = UDim2.new(1, -12, 0, 46)
-btCard.BackgroundColor3 = C.BG_ROW
-btCard.BorderSizePixel  = 0
-Instance.new("UICorner", btCard).CornerRadius = UDim.new(0, 7)
-Instance.new("UIStroke", btCard).Color = C.BORDER
-
-local btIcon = Instance.new("TextLabel", btCard)
-btIcon.Size = UDim2.new(0, 36, 1, 0); btIcon.BackgroundTransparency = 1
-btIcon.Font = Enum.Font.GothamBold; btIcon.TextSize = 20
-btIcon.TextColor3 = C.TEXT_MID; btIcon.TextXAlignment = Enum.TextXAlignment.Center
-btIcon.Text = "🚛🚛"
-
-local btTitle = Instance.new("TextLabel", btCard)
-btTitle.Size = UDim2.new(1,-44,0,15); btTitle.Position = UDim2.new(0,40,0,8)
-btTitle.BackgroundTransparency = 1; btTitle.Font = Enum.Font.GothamBold
-btTitle.TextSize = 12; btTitle.TextColor3 = C.TEXT_BRIGHT
-btTitle.TextXAlignment = Enum.TextXAlignment.Left; btTitle.Text = "Batch Truck Teleport"
-
-local btHint = Instance.new("TextLabel", btCard)
-btHint.Size = UDim2.new(1,-44,0,11); btHint.Position = UDim2.new(0,40,0,27)
-btHint.BackgroundTransparency = 1; btHint.Font = Enum.Font.Gotham
-btHint.TextSize = 10; btHint.TextColor3 = C.TEXT_DIM
-btHint.TextXAlignment = Enum.TextXAlignment.Left
-btHint.Text = "Teleports all (or N) trucks from giver's plot"
-
-local _, setBatchStatus = makeStatusBar(batchTruckPage, "Ready — enter a truck count")
+local _, setBatchStatus = makeStatusBar(batchTruckPage, "Ready")
 
 makeLabel(batchTruckPage, "Players")
 local _, getBatchGiverName    = makeDupeDropdown("Giver",    batchTruckPage)
@@ -1546,7 +1494,7 @@ startBatchBtn.MouseButton1Click:Connect(function()
 
     local gName = getBatchGiverName()
     local rName = getBatchReceiverName()
-    if gName == "" or rName == "" then setBatchStatus("Select both players!", false) return end
+    if gName == "" or rName == "" then return end
 
     local wantedCount = tonumber(batchCountBox.Text)
     if not wantedCount or wantedCount < 1 then setBatchStatus("⚠  Enter a valid truck count!", false) return end
