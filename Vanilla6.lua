@@ -632,27 +632,26 @@ local function sellSoldSign()
 end
 
 -- ════════════════════════════════════════════════════
--- LAND ART  —  Click To Expand Land
+-- LAND ART — Click To Expand Land
 --
--- Each unowned slot gets TWO parts stacked together:
---   1. borderPart  — slightly larger black slab (42 × 0.15 × 42) at Y+0.1
---      This is the visible black outline that frames the tile.
---   2. whiteTile   — white SmoothPlastic slab (40 × 0.2 × 40) at Y+0.3
---      Very transparent. Breathes slowly between 0.70 ↔ 0.88.
+-- OWNERSHIP DETECTION — two-layer approach:
+--   Layer 1: Check workspace.Properties for any model owned by LP
+--            whose OriginSquare is within 15 studs XZ of the slot.
+--   Layer 2: Check every BasePart descendant of every LP-owned
+--            property model — if one sits within 15 studs XZ of
+--            the slot position it means the tile was expanded.
+--   This covers both "new model per tile" and "parts added to
+--   the base plot model" server implementations.
 --
--- Both are grouped under a Model ("VH_SlotModel_N") so a single
--- :Destroy() removes everything cleanly.
+-- VISUALS — each unowned slot gets:
+--   • An invisible anchor Part (Transparency=1) for collision/click
+--   • A Highlight on that Part:
+--       FillColor       = white     (soft, FillTransparency = 0.55)
+--       OutlineColor    = black     (OutlineTransparency = 0)
+--     The Highlight draws BOTH the per-slot white fill AND the
+--     black border outline reliably regardless of camera angle.
 --
--- Ownership detection uses workspace.Properties.ChildAdded so the
--- tile vanishes the moment the server confirms the purchase.
---
--- Grid layout (origin = centre brown tile):
---   Col:  -2   -1    0   +1   +2
--- Row -2:  1    2    3    4    5
--- Row -1:  6    7    8    9   10
--- Row  0: 11   12  [OR]  13   14
--- Row +1: 15   16   17   18   19
--- Row +2: 20   21   22   23   24
+-- No animation — static, clean preview.
 -- ════════════════════════════════════════════════════
 
 local GRID_SLOTS = {
@@ -670,10 +669,11 @@ local GRID_SLOTS = {
     {off=Vector3.new( 40,0, 80),n=23}, {off=Vector3.new( 80,0, 80),n=24},
 }
 
-local expandActive   = false
-local slotModels     = {}   -- { model, whiteTile, thread }  — one entry per visible slot
-local propsConn      = nil  -- ChildAdded connection
+local expandActive  = false
+local activeSlots   = {}   -- key = slot number, value = anchor Part
+local watchConns    = {}   -- connections to clean up
 
+-- Returns the player's base origin plot, or nil
 local function getOriginPlot()
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         if v:FindFirstChild("Owner") and v.Owner.Value == LP
@@ -684,126 +684,122 @@ local function getOriginPlot()
     return nil
 end
 
--- Returns a set of posKeys for every tile already owned by the player
-local function buildOwnedSet()
-    local set = {}
+-- Returns true if the given world position (XZ only) is already
+-- owned/expanded by the player. Checks both model-level OriginSquares
+-- AND all BasePart descendants of LP-owned property models.
+local function isOwned(worldPos)
+    local wx, wz = worldPos.X, worldPos.Z
     for _, v in ipairs(workspace.Properties:GetChildren()) do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP
-           and v:FindFirstChild("OriginSquare") then
-            local p = v.OriginSquare.Position
-            set[math.round(p.X/10).."_"..math.round(p.Z/10)] = true
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP then
+            -- Check the model's own OriginSquare
+            if v:FindFirstChild("OriginSquare") then
+                local p = v.OriginSquare.Position
+                if math.abs(p.X - wx) < 15 and math.abs(p.Z - wz) < 15 then
+                    return true
+                end
+            end
+            -- Check every BasePart inside the model
+            -- (covers servers that add parts to the base plot rather than
+            --  creating new top-level models)
+            for _, part in ipairs(v:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    local p = part.Position
+                    if math.abs(p.X - wx) < 15 and math.abs(p.Z - wz) < 15 then
+                        return true
+                    end
+                end
+            end
         end
     end
-    return set
+    return false
 end
 
-local function posKey(v3)
-    return math.round(v3.X/10).."_"..math.round(v3.Z/10)
-end
-
-local function clearSlots()
-    for _, entry in ipairs(slotModels) do
-        pcall(function() task.cancel(entry.thread) end)
-        pcall(function()
-            if entry.model and entry.model.Parent then
-                entry.model:Destroy()
-            end
-        end)
+-- Destroy a single slot's anchor part (removes Highlight + ClickDetector too)
+local function removeSlot(n)
+    local part = activeSlots[n]
+    if part then
+        pcall(function() part:Destroy() end)
+        activeSlots[n] = nil
     end
-    slotModels = {}
 end
 
-local refreshSlots  -- forward declare
+-- Disconnect all watchers
+local function clearWatchers()
+    for _, c in ipairs(watchConns) do pcall(function() c:Disconnect() end) end
+    watchConns = {}
+end
 
-refreshSlots = function()
-    clearSlots()
-    if not expandActive then return end
+-- Remove all active slot visuals
+local function clearAllSlots()
+    for n, _ in pairs(activeSlots) do removeSlot(n) end
+    activeSlots = {}
+end
 
-    local originPlot = getOriginPlot()
-    if not originPlot then return end
+local refreshSlots -- forward declare
 
-    local originPos = originPlot.OriginSquare.Position
-    local owned     = buildOwnedSet()
+-- Check a single slot and add/remove its highlight as needed
+local function syncSlot(slot, originPos)
+    local worldPos = originPos + slot.off
+    local owned    = isOwned(worldPos)
+    if owned then
+        -- Already owned — make sure highlight is gone
+        removeSlot(slot.n)
+    else
+        -- Not owned and not yet shown — create the highlight
+        if not activeSlots[slot.n] then
+            -- Invisible anchor Part — sized to exactly one tile
+            local anchor = Instance.new("Part")
+            anchor.Name         = "VH_Slot_" .. slot.n
+            anchor.Size         = Vector3.new(40, 1, 40)
+            anchor.CFrame       = CFrame.new(worldPos + Vector3.new(0, 1, 0))
+            anchor.Anchored     = true
+            anchor.CanCollide   = false
+            anchor.Transparency = 1       -- fully invisible; Highlight provides visuals
+            anchor.CastShadow   = false
+            anchor.Parent       = workspace
 
-    for _, slot in ipairs(GRID_SLOTS) do
-        local worldPos = originPos + slot.off
-        if not owned[posKey(worldPos)] then
+            -- Highlight: soft white fill + solid black outline per slot
+            -- FillTransparency = 0.55 → subtle but visible white glow
+            -- OutlineColor = black, OutlineTransparency = 0 → solid border
+            local hl = Instance.new("Highlight")
+            hl.Adornee             = anchor
+            hl.FillColor           = Color3.fromRGB(255, 255, 255)
+            hl.FillTransparency    = 0.55
+            hl.OutlineColor        = Color3.fromRGB(0, 0, 0)
+            hl.OutlineTransparency = 0
+            hl.Parent              = anchor
 
-            -- Container model — destroy this one thing to kill everything
-            local model = Instance.new("Model")
-            model.Name  = "VH_SlotModel_" .. slot.n
-            model.Parent = workspace
-
-            -- ── BLACK BORDER PART ─────────────────────────────────────
-            -- Slightly larger than the white tile so it peeks out as a
-            -- solid black frame around every edge.
-            local border = Instance.new("Part")
-            border.Name         = "Border"
-            border.Size         = Vector3.new(41, 0.15, 41)
-            border.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.18, 0))
-            border.Anchored     = true
-            border.CanCollide   = false
-            border.Material     = Enum.Material.SmoothPlastic
-            border.Color        = Color3.fromRGB(0, 0, 0)
-            border.Transparency = 0          -- fully opaque black
-            border.CastShadow   = false
-            border.Parent       = model
-
-            -- ── WHITE GHOST TILE ──────────────────────────────────────
-            -- Sits on top of the border. SmoothPlastic (not Neon) so it
-            -- doesn't self-illuminate. Very transparent — subtle ghost.
-            local tile = Instance.new("Part")
-            tile.Name         = "Tile"
-            tile.Size         = Vector3.new(40, 0.2, 40)
-            tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.30, 0))
-            tile.Anchored     = true
-            tile.CanCollide   = false
-            tile.Material     = Enum.Material.SmoothPlastic
-            tile.Color        = Color3.fromRGB(255, 255, 255)
-            tile.Transparency = 0.82         -- very see-through to start
-            tile.CastShadow   = false
-            tile.Parent       = model
-
-            -- ClickDetector on the tile — infinite range
+            -- ClickDetector — infinite range so reachable from anywhere
             local cd = Instance.new("ClickDetector")
             cd.MaxActivationDistance = 9999
-            cd.Parent = tile
+            cd.Parent = anchor
 
-            -- Slow breathing: 0.82 (faint) → 0.68 (slightly more visible) → 0.82
-            -- 3 s per half-cycle = 6 s total period. Very calm, not blinky.
-            local thread = task.spawn(function()
-                while tile and tile.Parent do
-                    TS:Create(tile,
-                        TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                        {Transparency = 0.68}):Play()
-                    task.wait(3)
-                    TS:Create(tile,
-                        TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                        {Transparency = 0.82}):Play()
-                    task.wait(3)
-                end
-            end)
+            activeSlots[slot.n] = anchor
 
-            table.insert(slotModels, { model = model, tile = tile, thread = thread })
-
-            -- Capture per-slot locals for the closure
-            local cap_origin = originPlot
-            local cap_pos    = worldPos
-            local cap_model  = model
+            -- Capture per-iteration locals for the closure
+            local cap_origin   = getOriginPlot()  -- re-fetch to stay current
+            local cap_worldPos = worldPos
+            local cap_n        = slot.n
+            local cap_anchor   = anchor
 
             cd.MouseClick:Connect(function()
                 if not expandActive then return end
-                -- Fire the same remote maxLand uses
+                if not cap_origin or not cap_origin.Parent then
+                    cap_origin = getOriginPlot()
+                    if not cap_origin then return end
+                end
+                -- Fire the same expand remote as maxLand
                 pcall(function()
                     RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
                         cap_origin,
-                        CFrame.new(cap_pos)
+                        CFrame.new(cap_worldPos)
                     )
                 end)
-                -- Destroy instantly for immediate feedback
-                pcall(function() cap_model:Destroy() end)
-                -- Re-scan after server confirms the new tile
-                task.delay(1, function()
+                -- Remove this slot's highlight immediately
+                removeSlot(cap_n)
+                -- Re-sync all slots after a short delay so any newly
+                -- available adjacent tiles are shown
+                task.delay(1.2, function()
                     if expandActive then refreshSlots() end
                 end)
             end)
@@ -811,37 +807,69 @@ refreshSlots = function()
     end
 end
 
-local function cleanupExpand()
-    expandActive = false
-    if propsConn then pcall(function() propsConn:Disconnect() end); propsConn = nil end
-    clearSlots()
+refreshSlots = function()
+    if not expandActive then return end
+    local originPlot = getOriginPlot()
+    if not originPlot then return end
+    local originPos = originPlot.OriginSquare.Position
+    for _, slot in ipairs(GRID_SLOTS) do
+        syncSlot(slot, originPos)
+    end
 end
 
--- Watch workspace.Properties — the moment a new property model is added
--- (server confirmed the purchase) wait 1 s then rescan.
--- We also watch for Owner value changes on existing children.
-local function hookPropertyWatcher()
-    if propsConn then pcall(function() propsConn:Disconnect() end) end
-    propsConn = workspace.Properties.ChildAdded:Connect(function(child)
-        if not expandActive then return end
-        -- Wait for the Owner value to be replicated
-        task.delay(1, function()
+local function startExpand()
+    expandActive = true
+    clearWatchers()
+
+    -- Hook workspace.Properties.ChildAdded — fires when a new property
+    -- model is added (some servers create one per expanded tile)
+    local c1 = workspace.Properties.ChildAdded:Connect(function(child)
+        task.delay(0.4, function()
             if expandActive then refreshSlots() end
         end)
-        -- Also hook Owner changes in case the child arrives before Owner is set
+        -- Also watch Owner changes on the new child
         if child:FindFirstChild("Owner") then
-            child.Owner:GetPropertyChangedSignal("Value"):Connect(function()
-                if expandActive then
-                    task.delay(0.2, function()
-                        if expandActive then refreshSlots() end
-                    end)
-                end
+            local oc = child.Owner:GetPropertyChangedSignal("Value"):Connect(function()
+                task.delay(0.2, function()
+                    if expandActive then refreshSlots() end
+                end)
             end)
+            table.insert(watchConns, oc)
         end
+    end)
+    table.insert(watchConns, c1)
+
+    -- Hook DescendantAdded on all existing LP-owned property models —
+    -- fires when new Parts are added to the base plot (other server style)
+    for _, v in ipairs(workspace.Properties:GetChildren()) do
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP then
+            local c2 = v.DescendantAdded:Connect(function()
+                task.delay(0.3, function()
+                    if expandActive then refreshSlots() end
+                end)
+            end)
+            table.insert(watchConns, c2)
+        end
+    end
+
+    -- Initial scan (wait for plot to load if needed)
+    task.spawn(function()
+        local tries = 0
+        while tries < 20 do
+            if getOriginPlot() then break end
+            tries += 1; task.wait(0.5)
+        end
+        if expandActive then refreshSlots() end
     end)
 end
 
--- Fallback periodic rescan every 2 s
+local function stopExpand()
+    expandActive = false
+    clearWatchers()
+    clearAllSlots()
+end
+
+-- Periodic fallback rescan every 2 s while active
 task.spawn(function()
     while true do
         task.wait(2)
@@ -867,21 +895,7 @@ makeButton(sl, "Sell Sign", sellSoldSign)
 sep(sl)
 sectionLabel(sl, "Land Art")
 makeToggle(sl, "Click To Expand Land", false, function(on)
-    expandActive = on
-    if on then
-        hookPropertyWatcher()
-        task.spawn(function()
-            -- Wait up to 10 s for the player's plot to appear
-            local tries = 0
-            while tries < 20 do
-                if getOriginPlot() then break end
-                tries += 1; task.wait(0.5)
-            end
-            if expandActive then refreshSlots() end
-        end)
-    else
-        cleanupExpand()
-    end
+    if on then startExpand() else stopExpand() end
 end)
 
 sep(sl)
@@ -918,7 +932,7 @@ end)
 -- ════════════════════════════════════════════════════
 table.insert(VH.cleanupTasks, function()
     if landHL then pcall(function() landHL:Destroy() end) end
-    cleanupExpand()
+    stopExpand()
 end)
 
 print("[VanillaHub] Vanilla6 loaded — black/grey/white theme")
