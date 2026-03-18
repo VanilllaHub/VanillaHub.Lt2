@@ -639,7 +639,7 @@ local function retryCargo(char, missedList, GiveBaseOrigin, RS, runningRef, setP
     while #missedList > 0 and runningRef() and attempt < MAX_TRIES do
         attempt += 1
         if statusFn then
-            statusFn(string.format("Cargo retry %d/%d — %d left...", attempt, MAX_TRIES, #missedList), true)
+            statusFn(string.format("Retry %d/%d — %d left...", attempt, MAX_TRIES, #missedList), true)
         end
         for _, data in ipairs(missedList) do
             if not runningRef() then break end
@@ -672,7 +672,7 @@ local function retryCargo(char, missedList, GiveBaseOrigin, RS, runningRef, setP
     if setProgFn then setProgFn(missedTotal, missedTotal) end
     if statusFn then
         if #missedList == 0 then
-            statusFn("✓ All cargo teleported!", false)
+            statusFn("✓ All items teleported!", false)
         else
             statusFn(string.format("Done — %d part(s) couldn't be moved", #missedList), false)
         end
@@ -771,6 +771,45 @@ local singleTruckPage = subPages[2]
 local batchTruckPage  = subPages[3]
 
 -- ════════════════════════════════════════════════════════════════════════════════
+-- ITEM TYPE HELPERS
+-- ════════════════════════════════════════════════════════════════════════════════
+
+-- Returns the Type.Value string of a model, or "" if not present
+local function getTypeValue(p)
+    local tv = p:FindFirstChild("Type")
+    return tv and tostring(tv.Value) or ""
+end
+
+-- True for structures
+local function isStructure(p)
+    local tv = getTypeValue(p)
+    if tv == "Structure" then return true end
+    local tc = p:FindFirstChild("TreeClass")
+    return tc and tostring(tc.Value) == "Structure"
+end
+
+-- True for Gift / Loose Item / Tool — matched directly from Type.Value
+-- Covers: standalone gifts, box contents (Loose Item), tools, purchased items
+local function isGiftOrItem(p)
+    local tv = getTypeValue(p)
+    return tv == "Gift" or tv == "Loose Item" or tv == "Tool"
+end
+
+-- True for wood logs/planks (TreeClass present, not Structure, not a gift/item)
+local function isWood(p)
+    local tc = p:FindFirstChild("TreeClass")
+    if not tc then return false end
+    if tostring(tc.Value) == "Structure" then return false end
+    if isGiftOrItem(p) then return false end
+    return true
+end
+
+-- True for furniture
+local function isFurniture(p)
+    return getTypeValue(p) == "Furniture"
+end
+
+-- ════════════════════════════════════════════════════════════════════════════════
 -- SUB-TAB 1 — BASE DUPE
 -- ════════════════════════════════════════════════════════════════════════════════
 
@@ -867,20 +906,6 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        local function isStructure(p)
-            if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Structure" then return true end
-            if p:FindFirstChild("TreeClass") and tostring(p.TreeClass.Value) == "Structure" then return true end
-            return false
-        end
-
-        -- helper: returns true if model looks like a gift, opened item, or tool
-        local function isGiftOrItem(p)
-            if p:FindFirstChildOfClass("Script") and p:FindFirstChild("DraggableItem") then return true end
-            if p:FindFirstChild("Value") and p:FindFirstChild("Tool")       then return true end
-            if p:FindFirstChild("Value") and p:FindFirstChild("Loose Item") then return true end
-            return false
-        end
-
         -- ── STRUCTURES
         if getStructures() and butterRunning then
             local total = 0
@@ -927,8 +952,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
                     local p = v.Parent
-                    if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture"
-                        and (p:FindFirstChild("MainCFrame") or p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")) then
+                    if isFurniture(p) and (p:FindFirstChild("MainCFrame") or p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")) then
                         total += 1
                     end
                 end
@@ -942,7 +966,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                         if not butterRunning then break end
                         if v.Name == "Owner" and tostring(v.Value) == giverName then
                             local p = v.Parent
-                            if p:FindFirstChild("Type") and tostring(p.Type.Value) == "Furniture" then
+                            if isFurniture(p) then
                                 local PCF = getItemWorldCF(p)
                                 if not PCF then continue end
                                 local DA  = p:FindFirstChild("BlueprintWoodClass") and p.BlueprintWoodClass.Value or nil
@@ -1062,17 +1086,16 @@ startButterBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── GIFT / ITEMS
-        -- Detects three model shapes:
-        --   1. Gift         — Script child + DraggableItem child
-        --   2. Tool         — Value child  + Tool child
-        --   3. Loose Item   — Value child  + "Loose Item" child
+        -- Detects Gift, Loose Item, and Tool via Type.Value directly.
+        -- Covers standalone gifts, box contents, tools and purchased items.
         if getGifs() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if not butterRunning then break end
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
-                    local p = v.Parent
-                    if isGiftOrItem(p) then
+                    local p  = v.Parent
+                    local tv = getTypeValue(p)
+                    if tv == "Gift" or tv == "Loose Item" or tv == "Tool" then
                         local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
                         if part then
                             local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or part.CFrame
@@ -1084,12 +1107,13 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
 
             if #items > 0 then
-                progGifs.Visible = true
-                setStatus("Sending gift/items...", true)
                 local total  = #items
                 local done   = 0
                 local missed = {}
+
+                progGifs.Visible = true
                 setProgGifs(0, total)
+                setStatus(string.format("Sending %d gift/item(s)...", total), true)
 
                 for _, entry in ipairs(items) do
                     if not butterRunning then break end
@@ -1100,7 +1124,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                         done += 1; setProgGifs(done, total); continue
                     end
 
-                    -- seek network ownership (fastest pattern from truck system)
+                    -- seek network ownership
                     if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
                         Char.HumanoidRootPart.CFrame = part.CFrame
                         task.wait(0.04)
@@ -1110,22 +1134,25 @@ startButterBtn.MouseButton1Click:Connect(function()
                         RS.Interaction.ClientIsDragging:FireServer(part.Parent)
                     end
 
-                    -- fastest direct CFrame assignment
                     local deadline = tick() + 0.25
                     repeat
                         part.CFrame = Offset
                         task.wait()
                     until tick() >= deadline
 
-                    if part and part.Parent and (part.Position - Offset.Position).Magnitude > 8 then
-                        table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                    -- track missed immediately after first attempt
+                    if part and part.Parent then
+                        if (part.Position - Offset.Position).Magnitude > 8 then
+                            table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                        end
                     end
 
                     done += 1; setProgGifs(done, total)
                 end
 
-                -- missed-items fallback (same retryCargo used by truck system)
+                -- always run retry pass if anything missed
                 if #missed > 0 and butterRunning then
+                    progGifs.Visible = true
                     setStatus(string.format("Gift retry — %d item(s) missed...", #missed), true)
                     retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d, t) setProgGifs(d, t) end,
@@ -1138,33 +1165,32 @@ startButterBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── WOOD
-        -- Excludes gift/tool/loose-item models so those are not double-processed.
+        -- Excludes Gift / Loose Item / Tool so those aren't double-processed.
         if getWood() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if not butterRunning then break end
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
                     local p = v.Parent
-                    if p:FindFirstChild("TreeClass") and tostring(p.TreeClass.Value) ~= "Structure" then
-                        if not isGiftOrItem(p) then
-                            local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
-                            if part then
-                                local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or part.CFrame
-                                local nPos = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                                table.insert(items, {part = part, offset = CFrame.new(nPos) * PCF.Rotation})
-                            end
+                    if isWood(p) then
+                        local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
+                        if part then
+                            local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or part.CFrame
+                            local nPos = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                            table.insert(items, {part = part, offset = CFrame.new(nPos) * PCF.Rotation})
                         end
                     end
                 end
             end
 
             if #items > 0 then
-                progWood.Visible = true
-                setStatus("Sending wood...", true)
                 local total  = #items
                 local done   = 0
                 local missed = {}
+
+                progWood.Visible = true
                 setProgWood(0, total)
+                setStatus(string.format("Sending %d wood piece(s)...", total), true)
 
                 for _, entry in ipairs(items) do
                     if not butterRunning then break end
@@ -1175,7 +1201,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                         done += 1; setProgWood(done, total); continue
                     end
 
-                    -- seek network ownership (fastest pattern from truck system)
+                    -- seek network ownership
                     if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
                         Char.HumanoidRootPart.CFrame = part.CFrame
                         task.wait(0.04)
@@ -1185,22 +1211,25 @@ startButterBtn.MouseButton1Click:Connect(function()
                         RS.Interaction.ClientIsDragging:FireServer(part.Parent)
                     end
 
-                    -- fastest direct CFrame assignment
                     local deadline = tick() + 0.25
                     repeat
                         part.CFrame = Offset
                         task.wait()
                     until tick() >= deadline
 
-                    if part and part.Parent and (part.Position - Offset.Position).Magnitude > 8 then
-                        table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                    -- track missed immediately after first attempt
+                    if part and part.Parent then
+                        if (part.Position - Offset.Position).Magnitude > 8 then
+                            table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                        end
                     end
 
                     done += 1; setProgWood(done, total)
                 end
 
-                -- missed-items fallback (wood-scoped, same retryCargo pattern)
+                -- always run retry pass if anything missed
                 if #missed > 0 and butterRunning then
+                    progWood.Visible = true
                     setStatus(string.format("Wood retry — %d piece(s) missed...", #missed), true)
                     retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d, t) setProgWood(d, t) end,
