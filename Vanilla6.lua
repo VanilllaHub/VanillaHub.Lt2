@@ -632,12 +632,21 @@ local function sellSoldSign()
 end
 
 -- ════════════════════════════════════════════════════
--- LAND ART — Click To Expand Land
--- (declared before UI so helpers are in scope)
+-- LAND ART  —  Click To Expand Land
 --
--- 5×5 grid, origin = centre tile (no number).
--- Each step = 40 studs. 24 expansion slots.
+-- Each unowned slot gets TWO parts stacked together:
+--   1. borderPart  — slightly larger black slab (42 × 0.15 × 42) at Y+0.1
+--      This is the visible black outline that frames the tile.
+--   2. whiteTile   — white SmoothPlastic slab (40 × 0.2 × 40) at Y+0.3
+--      Very transparent. Breathes slowly between 0.70 ↔ 0.88.
 --
+-- Both are grouped under a Model ("VH_SlotModel_N") so a single
+-- :Destroy() removes everything cleanly.
+--
+-- Ownership detection uses workspace.Properties.ChildAdded so the
+-- tile vanishes the moment the server confirms the purchase.
+--
+-- Grid layout (origin = centre brown tile):
 --   Col:  -2   -1    0   +1   +2
 -- Row -2:  1    2    3    4    5
 -- Row -1:  6    7    8    9   10
@@ -647,11 +656,11 @@ end
 -- ════════════════════════════════════════════════════
 
 local GRID_SLOTS = {
-    {off=Vector3.new(-80,0,-80),n=1},  {off=Vector3.new(-40,0,-80),n=2},
-    {off=Vector3.new(  0,0,-80),n=3},  {off=Vector3.new( 40,0,-80),n=4},
-    {off=Vector3.new( 80,0,-80),n=5},  {off=Vector3.new(-80,0,-40),n=6},
-    {off=Vector3.new(-40,0,-40),n=7},  {off=Vector3.new(  0,0,-40),n=8},
-    {off=Vector3.new( 40,0,-40),n=9},  {off=Vector3.new( 80,0,-40),n=10},
+    {off=Vector3.new(-80,0,-80),n= 1}, {off=Vector3.new(-40,0,-80),n= 2},
+    {off=Vector3.new(  0,0,-80),n= 3}, {off=Vector3.new( 40,0,-80),n= 4},
+    {off=Vector3.new( 80,0,-80),n= 5}, {off=Vector3.new(-80,0,-40),n= 6},
+    {off=Vector3.new(-40,0,-40),n= 7}, {off=Vector3.new(  0,0,-40),n= 8},
+    {off=Vector3.new( 40,0,-40),n= 9}, {off=Vector3.new( 80,0,-40),n=10},
     {off=Vector3.new(-80,0,  0),n=11}, {off=Vector3.new(-40,0,  0),n=12},
     {off=Vector3.new( 40,0,  0),n=13}, {off=Vector3.new( 80,0,  0),n=14},
     {off=Vector3.new(-80,0, 40),n=15}, {off=Vector3.new(-40,0, 40),n=16},
@@ -661,9 +670,9 @@ local GRID_SLOTS = {
     {off=Vector3.new( 40,0, 80),n=23}, {off=Vector3.new( 80,0, 80),n=24},
 }
 
-local expandClickActive = false
-local expandParts       = {}
-local pulseThreads      = {}
+local expandActive   = false
+local slotModels     = {}   -- { model, whiteTile, thread }  — one entry per visible slot
+local propsConn      = nil  -- ChildAdded connection
 
 local function getOriginPlot()
     for _, v in ipairs(workspace.Properties:GetChildren()) do
@@ -675,9 +684,7 @@ local function getOriginPlot()
     return nil
 end
 
--- Builds a lookup set of world positions already owned by the player.
--- Every expanded tile appears as its own entry in workspace.Properties
--- with Owner + OriginSquare, exactly like the base plot.
+-- Returns a set of posKeys for every tile already owned by the player
 local function buildOwnedSet()
     local set = {}
     for _, v in ipairs(workspace.Properties:GetChildren()) do
@@ -694,22 +701,23 @@ local function posKey(v3)
     return math.round(v3.X/10).."_"..math.round(v3.Z/10)
 end
 
-local function clearExpandParts()
-    for _, t in ipairs(pulseThreads) do
-        pcall(function() task.cancel(t) end)
+local function clearSlots()
+    for _, entry in ipairs(slotModels) do
+        pcall(function() task.cancel(entry.thread) end)
+        pcall(function()
+            if entry.model and entry.model.Parent then
+                entry.model:Destroy()
+            end
+        end)
     end
-    pulseThreads = {}
-    for _, p in ipairs(expandParts) do
-        pcall(function() if p and p.Parent then p:Destroy() end end)
-    end
-    expandParts = {}
+    slotModels = {}
 end
 
-local refreshExpandSlots
+local refreshSlots  -- forward declare
 
-refreshExpandSlots = function()
-    clearExpandParts()
-    if not expandClickActive then return end
+refreshSlots = function()
+    clearSlots()
+    if not expandActive then return end
 
     local originPlot = getOriginPlot()
     if not originPlot then return end
@@ -719,112 +727,131 @@ refreshExpandSlots = function()
 
     for _, slot in ipairs(GRID_SLOTS) do
         local worldPos = originPos + slot.off
-        local key      = posKey(worldPos)
+        if not owned[posKey(worldPos)] then
 
-        if not owned[key] then
-            -- ── Ghost preview tile ───────────────────────────────────────
-            -- Semi-transparent white SmoothPlastic tile — visible but subtle.
-            -- Neon is intentionally NOT used; SmoothPlastic keeps it dim.
+            -- Container model — destroy this one thing to kill everything
+            local model = Instance.new("Model")
+            model.Name  = "VH_SlotModel_" .. slot.n
+            model.Parent = workspace
+
+            -- ── BLACK BORDER PART ─────────────────────────────────────
+            -- Slightly larger than the white tile so it peeks out as a
+            -- solid black frame around every edge.
+            local border = Instance.new("Part")
+            border.Name         = "Border"
+            border.Size         = Vector3.new(41, 0.15, 41)
+            border.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.18, 0))
+            border.Anchored     = true
+            border.CanCollide   = false
+            border.Material     = Enum.Material.SmoothPlastic
+            border.Color        = Color3.fromRGB(0, 0, 0)
+            border.Transparency = 0          -- fully opaque black
+            border.CastShadow   = false
+            border.Parent       = model
+
+            -- ── WHITE GHOST TILE ──────────────────────────────────────
+            -- Sits on top of the border. SmoothPlastic (not Neon) so it
+            -- doesn't self-illuminate. Very transparent — subtle ghost.
             local tile = Instance.new("Part")
-            tile.Name         = "VH_ExpandSlot_" .. slot.n
-            tile.Size         = Vector3.new(40, 0.3, 40)
-            tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.25, 0))
+            tile.Name         = "Tile"
+            tile.Size         = Vector3.new(40, 0.2, 40)
+            tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.30, 0))
             tile.Anchored     = true
             tile.CanCollide   = false
             tile.Material     = Enum.Material.SmoothPlastic
             tile.Color        = Color3.fromRGB(255, 255, 255)
-            -- Start at high transparency so it looks like a faint ghost
-            tile.Transparency = 0.78
+            tile.Transparency = 0.82         -- very see-through to start
             tile.CastShadow   = false
-            tile.Parent       = workspace
-            table.insert(expandParts, tile)
+            tile.Parent       = model
 
-            -- Black outline — FillTransparency = 1 so only the outline shows;
-            -- the Part itself provides the white surface colour.
-            local hl = Instance.new("Highlight")
-            hl.FillTransparency    = 1
-            hl.OutlineColor        = Color3.fromRGB(0, 0, 0)
-            hl.OutlineTransparency = 0
-            hl.Adornee             = tile
-            hl.Parent              = tile
-
-            -- ClickDetector — infinite range
+            -- ClickDetector on the tile — infinite range
             local cd = Instance.new("ClickDetector")
             cd.MaxActivationDistance = 9999
             cd.Parent = tile
 
-            -- Slow, gentle pulse between 0.72 (nearly invisible) and 0.55 (slightly visible)
-            -- This is subtle breathing, not a blinky flash
+            -- Slow breathing: 0.82 (faint) → 0.68 (slightly more visible) → 0.82
+            -- 3 s per half-cycle = 6 s total period. Very calm, not blinky.
             local thread = task.spawn(function()
                 while tile and tile.Parent do
                     TS:Create(tile,
-                        TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                        {Transparency = 0.55}):Play()
-                    task.wait(2.2)
+                        TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Transparency = 0.68}):Play()
+                    task.wait(3)
                     TS:Create(tile,
-                        TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                        {Transparency = 0.78}):Play()
-                    task.wait(2.2)
+                        TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Transparency = 0.82}):Play()
+                    task.wait(3)
                 end
             end)
-            table.insert(pulseThreads, thread)
 
-            local cap_plot     = originPlot
-            local cap_worldPos = worldPos
-            local cap_tile     = tile
+            table.insert(slotModels, { model = model, tile = tile, thread = thread })
+
+            -- Capture per-slot locals for the closure
+            local cap_origin = originPlot
+            local cap_pos    = worldPos
+            local cap_model  = model
 
             cd.MouseClick:Connect(function()
-                if not expandClickActive then return end
+                if not expandActive then return end
+                -- Fire the same remote maxLand uses
                 pcall(function()
                     RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
-                        cap_plot,
-                        CFrame.new(cap_worldPos)
+                        cap_origin,
+                        CFrame.new(cap_pos)
                     )
                 end)
-                -- Remove tile immediately on click for instant visual feedback
-                pcall(function() cap_tile:Destroy() end)
-                -- Quick re-scan to confirm ownership and update remaining tiles
-                task.delay(0.5, function()
-                    if expandClickActive then refreshExpandSlots() end
+                -- Destroy instantly for immediate feedback
+                pcall(function() cap_model:Destroy() end)
+                -- Re-scan after server confirms the new tile
+                task.delay(1, function()
+                    if expandActive then refreshSlots() end
                 end)
             end)
         end
     end
 end
 
--- Watch workspace.Properties for any ownership changes so tiles
--- disappear as soon as the server confirms (e.g. via ChildAdded)
-task.spawn(function()
-    workspace.Properties.ChildAdded:Connect(function()
-        if expandClickActive then
-            task.wait(0.3)
-            refreshExpandSlots()
-        end
-    end)
-    workspace.Properties.ChildRemoved:Connect(function()
-        if expandClickActive then
-            task.wait(0.3)
-            refreshExpandSlots()
-        end
-    end)
-end)
+local function cleanupExpand()
+    expandActive = false
+    if propsConn then pcall(function() propsConn:Disconnect() end); propsConn = nil end
+    clearSlots()
+end
 
--- Fallback periodic re-scan every 3 s
+-- Watch workspace.Properties — the moment a new property model is added
+-- (server confirmed the purchase) wait 1 s then rescan.
+-- We also watch for Owner value changes on existing children.
+local function hookPropertyWatcher()
+    if propsConn then pcall(function() propsConn:Disconnect() end) end
+    propsConn = workspace.Properties.ChildAdded:Connect(function(child)
+        if not expandActive then return end
+        -- Wait for the Owner value to be replicated
+        task.delay(1, function()
+            if expandActive then refreshSlots() end
+        end)
+        -- Also hook Owner changes in case the child arrives before Owner is set
+        if child:FindFirstChild("Owner") then
+            child.Owner:GetPropertyChangedSignal("Value"):Connect(function()
+                if expandActive then
+                    task.delay(0.2, function()
+                        if expandActive then refreshSlots() end
+                    end)
+                end
+            end)
+        end
+    end)
+end
+
+-- Fallback periodic rescan every 2 s
 task.spawn(function()
     while true do
-        task.wait(3)
-        if expandClickActive then refreshExpandSlots() end
+        task.wait(2)
+        if expandActive then refreshSlots() end
     end
 end)
 
-local function cleanupExpandClick()
-    expandClickActive = false
-    clearExpandParts()
-end
-
 -- ════════════════════════════════════════════════════
--- SLOT TAB UI — section order:
---   Fast Load → Land Management → Land Art → Land Claim
+-- SLOT TAB UI
+-- Order: Fast Load → Land Management → Land Art → Land Claim
 -- ════════════════════════════════════════════════════
 
 sectionLabel(sl, "Fast Load")
@@ -833,26 +860,27 @@ makeButton(sl, "Load Base", function() loadSlot(slotNum) end)
 
 sep(sl)
 sectionLabel(sl, "Land Management")
-makeButton(sl, "Free Land",  freeLand)
-makeButton(sl, "Max Land",   maxLand)
-makeButton(sl, "Sell Sign",  sellSoldSign)
+makeButton(sl, "Free Land", freeLand)
+makeButton(sl, "Max Land",  maxLand)
+makeButton(sl, "Sell Sign", sellSoldSign)
 
 sep(sl)
 sectionLabel(sl, "Land Art")
 makeToggle(sl, "Click To Expand Land", false, function(on)
-    expandClickActive = on
+    expandActive = on
     if on then
+        hookPropertyWatcher()
         task.spawn(function()
-            local attempts = 0
-            while attempts < 20 do
+            -- Wait up to 10 s for the player's plot to appear
+            local tries = 0
+            while tries < 20 do
                 if getOriginPlot() then break end
-                attempts += 1
-                task.wait(0.5)
+                tries += 1; task.wait(0.5)
             end
-            if expandClickActive then refreshExpandSlots() end
+            if expandActive then refreshSlots() end
         end)
     else
-        cleanupExpandClick()
+        cleanupExpand()
     end
 end)
 
@@ -890,7 +918,7 @@ end)
 -- ════════════════════════════════════════════════════
 table.insert(VH.cleanupTasks, function()
     if landHL then pcall(function() landHL:Destroy() end) end
-    cleanupExpandClick()
+    cleanupExpand()
 end)
 
 print("[VanillaHub] Vanilla6 loaded — black/grey/white theme")
