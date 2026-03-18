@@ -788,14 +788,19 @@ local function isStructure(p)
     return tc and tostring(tc.Value) == "Structure"
 end
 
--- True for Gift / Loose Item / Tool — matched directly from Type.Value
--- Covers: standalone gifts, box contents (Loose Item), tools, purchased items
+-- True for Gift / Loose Item / Tool / Box — matched directly from Type.Value
+-- Covers: standalone gifts, box contents (Loose Item), tools, purchased items,
+--         and Box models (Type = "Furniture" but has PurchasedBoxItemName child —
+--         these are draggable boxes sitting on the plot, NOT placed furniture).
 local function isGiftOrItem(p)
     local tv = getTypeValue(p)
-    return tv == "Gift" or tv == "Loose Item" or tv == "Tool"
+    if tv == "Gift" or tv == "Loose Item" or tv == "Tool" then return true end
+    -- Box: Type = "Furniture" AND has PurchasedBoxItemName → draggable box, not placed furniture
+    if tv == "Furniture" and p:FindFirstChild("PurchasedBoxItemName") then return true end
+    return false
 end
 
--- True for wood logs/planks (TreeClass present, not Structure, not a gift/item)
+-- True for wood logs/planks (TreeClass present, not Structure, not a gift/item/box)
 local function isWood(p)
     local tc = p:FindFirstChild("TreeClass")
     if not tc then return false end
@@ -804,9 +809,11 @@ local function isWood(p)
     return true
 end
 
--- True for furniture
+-- True for PLACED furniture (Type = "Furniture" but NOT a Box)
 local function isFurniture(p)
-    return getTypeValue(p) == "Furniture"
+    if getTypeValue(p) ~= "Furniture" then return false end
+    if p:FindFirstChild("PurchasedBoxItemName") then return false end  -- skip boxes
+    return true
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -825,7 +832,7 @@ makeLabel(baseDupePage, "What to Transfer")
 local _, getStructures = makeToggle(baseDupePage, "Structures",     false)
 local _, getFurniture  = makeToggle(baseDupePage, "Furniture",      false)
 local _, getTrucks     = makeToggle(baseDupePage, "Trucks + Cargo", false)
-local _, getGifs       = makeToggle(baseDupePage, "Gift / Items",   false)
+local _, getGifs       = makeToggle(baseDupePage, "Gift / Items / Boxes", false)
 local _, getWood       = makeToggle(baseDupePage, "Wood",           false)
 
 makeSep(baseDupePage)
@@ -834,7 +841,7 @@ makeLabel(baseDupePage, "Progress")
 local progStructures, setProgStructures, resetProgStructures = makeProgressBar(baseDupePage, "Structures")
 local progFurniture,  setProgFurniture,  resetProgFurniture  = makeProgressBar(baseDupePage, "Furniture")
 local progTrucks,     setProgTrucks,     resetProgTrucks     = makeProgressBar(baseDupePage, "Trucks")
-local progGifs,       setProgGifs,       resetProgGifs       = makeProgressBar(baseDupePage, "Gift / Items")
+local progGifs,       setProgGifs,       resetProgGifs       = makeProgressBar(baseDupePage, "Gift / Items / Boxes")
 local progWood,       setProgWood,       resetProgWood       = makeProgressBar(baseDupePage, "Wood")
 
 makeSep(baseDupePage)
@@ -1085,9 +1092,10 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── GIFT / ITEMS
-        -- Detects Gift, Loose Item, and Tool via Type.Value directly.
-        -- Covers standalone gifts, box contents, tools and purchased items.
+        -- ── GIFT / ITEMS / BOXES
+        -- Detects Gift, Loose Item, Tool via Type.Value directly.
+        -- Also detects Box models (Type = "Furniture" + PurchasedBoxItemName child).
+        -- Covers standalone gifts, box contents, tools, purchased items, and boxes.
         if getGifs() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
