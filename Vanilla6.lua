@@ -614,117 +614,6 @@ local function loadSlot(slot)
     end)
 end
 
-local function showSavePopup()
-    local CoreGui = game:GetService("CoreGui")
-    local existing = CoreGui:FindFirstChild("VH_SavePopup")
-    if existing then existing:Destroy() end
-    local sg = Instance.new("ScreenGui")
-    sg.Name = "VH_SavePopup"; sg.ResetOnSpawn = false
-    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    pcall(function() if syn and syn.protect_gui then syn.protect_gui(sg) end end)
-    sg.Parent = CoreGui
-    local frame = Instance.new("Frame", sg)
-    frame.Size        = UDim2.new(0, 240, 0, 48)
-    frame.AnchorPoint = Vector2.new(0.5, 0)
-    frame.Position    = UDim2.new(0.5, 0, 0, -60)
-    frame.BackgroundColor3 = C.CARD; frame.BorderSizePixel = 0
-    corner(frame, 10)
-    local stroke = Instance.new("UIStroke", frame)
-    stroke.Color = C.BORDER; stroke.Thickness = 1.5
-    local icon = Instance.new("TextLabel", frame)
-    icon.Size = UDim2.new(0, 36, 1, 0); icon.Position = UDim2.new(0, 8, 0, 0)
-    icon.BackgroundTransparency = 1; icon.Font = Enum.Font.GothamBold
-    icon.TextSize = 20; icon.TextColor3 = C.TEXT; icon.Text = "💾"
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -52, 1, 0); lbl.Position = UDim2.new(0, 48, 0, 0)
-    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 14; lbl.TextColor3 = C.TEXT
-    lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Text = "Saved Successfully!"
-    TS:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Position = UDim2.new(0.5, 0, 0, 18)}):Play()
-    task.delay(2.5, function()
-        TS:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            {Position = UDim2.new(0.5, 0, 0, -60)}):Play()
-        task.wait(0.35)
-        pcall(function() sg:Destroy() end)
-    end)
-end
-
-local function forceSave()
-    local slot = LP:FindFirstChild("CurrentSaveSlot") and LP.CurrentSaveSlot.Value
-    if not slot or slot == -1 then print("[VH] No slot currently loaded!"); return end
-    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then print("[VH] No character found!"); return end
-    local originCF = hrp.CFrame
-    local plotCF   = nil
-    for _, v in ipairs(workspace.Properties:GetChildren()) do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP and v:FindFirstChild("OriginSquare") then
-            plotCF = v.OriginSquare.CFrame; break
-        end
-    end
-    if not plotCF then
-        pcall(function() RS.LoadSaveRequests.RequestSave:InvokeServer(slot, LP) end)
-        showSavePopup(); return
-    end
-    local vehicleOriginalCFrames = {}
-    for _, v in ipairs(workspace.PlayerModels:GetChildren()) do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP then
-            local typeVal = v:FindFirstChild("Type")
-            if typeVal and typeVal.Value == "Vehicle" then
-                local root = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
-                if root then
-                    vehicleOriginalCFrames[v] = root.CFrame
-                    hrp.CFrame = root.CFrame * CFrame.new(5, 1, 0); task.wait(0.1)
-                    local t = tick()
-                    repeat
-                        pcall(function()
-                            RS.Interaction.ClientIsDragging:FireServer(v)
-                            RS.Interaction.ClientIsDragging:FireServer(v)
-                            RS.Interaction.ClientIsDragging:FireServer(v)
-                        end)
-                        task.wait(0.03)
-                    until (tick() - t > 2) or (root.ReceiveAge == 0)
-                    local idx = 0
-                    for _ in pairs(vehicleOriginalCFrames) do idx = idx + 1 end
-                    local offset = Vector3.new((idx - 1) * 8, 2, 0)
-                    pcall(function()
-                        RS.Interaction.ClientIsDragging:FireServer(v)
-                        if v.PrimaryPart then v:SetPrimaryPartCFrame(plotCF + offset)
-                        else root.CFrame = plotCF + offset end
-                    end)
-                    for _ = 1, 10 do
-                        pcall(function()
-                            RS.Interaction.ClientIsDragging:FireServer(v)
-                            if v.PrimaryPart then v:SetPrimaryPartCFrame(plotCF + offset)
-                            else root.CFrame = plotCF + offset end
-                        end)
-                        task.wait(0.05)
-                    end
-                end
-            end
-        end
-    end
-    hrp.CFrame = plotCF + Vector3.new(0, 3, 0); task.wait(0.2)
-    pcall(function() RS.LoadSaveRequests.RequestSave:InvokeServer(slot, LP) end)
-    task.wait(0.5)
-    pcall(function() RS.LoadSaveRequests.RequestSave:InvokeServer(slot, LP) end)
-    task.wait(0.3)
-    for v, originalCF in pairs(vehicleOriginalCFrames) do
-        local root = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
-        if root and v.Parent then
-            pcall(function()
-                RS.Interaction.ClientIsDragging:FireServer(v)
-                if v.PrimaryPart then v:SetPrimaryPartCFrame(originalCF)
-                else root.CFrame = originalCF end
-            end)
-            task.wait(0.05)
-        end
-    end
-    hrp.CFrame = originCF
-    print("[VH] Force saved slot " .. tostring(slot))
-    showSavePopup()
-end
-
 local function sellSoldSign()
     for _, v in ipairs(workspace.PlayerModels:GetChildren()) do
         if v:FindFirstChild("Owner") and v.Owner.Value == LP
@@ -742,48 +631,9 @@ local function sellSoldSign()
     end
 end
 
-sectionLabel(sl, "Fast Load")
-makeSlider(sl, "Slot Number", 1, 6, 1, function(v) slotNum = v end)
-makeButton(sl, "Load Base",  function() loadSlot(slotNum) end)
-makeButton(sl, "Force Save", function() forceSave() end)
-
-sep(sl)
-sectionLabel(sl, "Land Management")
-makeButton(sl, "Free Land",  freeLand)
-makeButton(sl, "Max Land",   maxLand)
-makeButton(sl, "Sell Sign",  sellSoldSign)
-
-sep(sl)
-sectionLabel(sl, "Land Claim")
-
-local landPlotOptions = {"1","2","3","4","5","6","7","8","9"}
-makeFancyDropdown(sl, "Plot", function() return landPlotOptions end, function(val)
-    if landHL then pcall(function() landHL:Destroy() end) end
-    landToTake = tonumber(val)
-    local props = workspace.Properties:GetChildren()
-    if props[landToTake] and props[landToTake]:FindFirstChild("OriginSquare") then
-        landHL = Instance.new("Highlight")
-        landHL.FillColor        = Color3.fromRGB(180, 180, 180)
-        landHL.FillTransparency = 0.5
-        landHL.Parent           = props[landToTake].OriginSquare
-    end
-end)
-
-makeButton(sl, "Take Selected Land", function()
-    if not landToTake then return end
-    local props = workspace.Properties:GetChildren()
-    if props[landToTake] then
-        local land = props[landToTake]
-        pcall(function()
-            RS.PropertyPurchasing.ClientPurchasedProperty:FireServer(land, land.OriginSquare.Position)
-            LP.Character.HumanoidRootPart.CFrame = land.OriginSquare.CFrame + Vector3.new(0,2,0)
-        end)
-        if landHL then pcall(function() landHL:Destroy() end); landHL = nil end
-    end
-end)
-
 -- ════════════════════════════════════════════════════
 -- LAND ART — Click To Expand Land
+-- (declared before UI so helpers are in scope)
 --
 -- 5×5 grid, origin = centre tile (no number).
 -- Each step = 40 studs. 24 expansion slots.
@@ -795,9 +645,6 @@ end)
 -- Row +1: 15   16   17   18   19
 -- Row +2: 20   21   22   23   24
 -- ════════════════════════════════════════════════════
-
-sep(sl)
-sectionLabel(sl, "Land Art")
 
 local GRID_SLOTS = {
     {off=Vector3.new(-80,0,-80),n=1},  {off=Vector3.new(-40,0,-80),n=2},
@@ -815,8 +662,8 @@ local GRID_SLOTS = {
 }
 
 local expandClickActive = false
-local expandParts       = {}  -- all VH_ExpandSlot_ parts we spawned
-local pulseThreads      = {}  -- coroutines driving the white glow pulse
+local expandParts       = {}
+local pulseThreads      = {}
 
 local function getOriginPlot()
     for _, v in ipairs(workspace.Properties:GetChildren()) do
@@ -828,9 +675,9 @@ local function getOriginPlot()
     return nil
 end
 
--- Build a set of world-positions already owned by the player.
--- Each expanded tile appears as its own model in workspace.Properties
--- with an Owner and OriginSquare, exactly like the base plot.
+-- Builds a lookup set of world positions already owned by the player.
+-- Every expanded tile appears as its own entry in workspace.Properties
+-- with Owner + OriginSquare, exactly like the base plot.
 local function buildOwnedSet()
     local set = {}
     for _, v in ipairs(workspace.Properties:GetChildren()) do
@@ -848,7 +695,6 @@ local function posKey(v3)
 end
 
 local function clearExpandParts()
-    -- Cancel all pulse threads first
     for _, t in ipairs(pulseThreads) do
         pcall(function() task.cancel(t) end)
     end
@@ -876,27 +722,27 @@ refreshExpandSlots = function()
         local key      = posKey(worldPos)
 
         if not owned[key] then
-            -- ── Visible preview tile ────────────────────────────────────
-            -- Use a semi-transparent white Part so it looks like a ghost
-            -- of the land that will appear when purchased.
+            -- ── Ghost preview tile ───────────────────────────────────────
+            -- Semi-transparent white SmoothPlastic tile — visible but subtle.
+            -- Neon is intentionally NOT used; SmoothPlastic keeps it dim.
             local tile = Instance.new("Part")
             tile.Name         = "VH_ExpandSlot_" .. slot.n
-            tile.Size         = Vector3.new(40, 0.4, 40)   -- full tile footprint
-            tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.3, 0))
+            tile.Size         = Vector3.new(40, 0.3, 40)
+            tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.25, 0))
             tile.Anchored     = true
             tile.CanCollide   = false
-            -- White glowing surface colour
-            tile.Material     = Enum.Material.Neon
+            tile.Material     = Enum.Material.SmoothPlastic
             tile.Color        = Color3.fromRGB(255, 255, 255)
-            tile.Transparency = 0.35   -- semi-transparent so you can see ground beneath
+            -- Start at high transparency so it looks like a faint ghost
+            tile.Transparency = 0.78
             tile.CastShadow   = false
             tile.Parent       = workspace
             table.insert(expandParts, tile)
 
-            -- Black outline via Highlight (FillTransparency=1 so only the
-            -- outline is visible — the neon Part itself provides the white glow)
+            -- Black outline — FillTransparency = 1 so only the outline shows;
+            -- the Part itself provides the white surface colour.
             local hl = Instance.new("Highlight")
-            hl.FillTransparency    = 1          -- no fill — Part colour is the fill
+            hl.FillTransparency    = 1
             hl.OutlineColor        = Color3.fromRGB(0, 0, 0)
             hl.OutlineTransparency = 0
             hl.Adornee             = tile
@@ -907,37 +753,38 @@ refreshExpandSlots = function()
             cd.MaxActivationDistance = 9999
             cd.Parent = tile
 
-            -- Gentle pulse: oscillate transparency between 0.25 and 0.6
+            -- Slow, gentle pulse between 0.72 (nearly invisible) and 0.55 (slightly visible)
+            -- This is subtle breathing, not a blinky flash
             local thread = task.spawn(function()
                 while tile and tile.Parent do
-                    TS:Create(tile, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                        {Transparency = 0.62}):Play()
-                    task.wait(1.1)
-                    TS:Create(tile, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                        {Transparency = 0.22}):Play()
-                    task.wait(1.1)
+                    TS:Create(tile,
+                        TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Transparency = 0.55}):Play()
+                    task.wait(2.2)
+                    TS:Create(tile,
+                        TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Transparency = 0.78}):Play()
+                    task.wait(2.2)
                 end
             end)
             table.insert(pulseThreads, thread)
 
-            -- Capture for closure
             local cap_plot     = originPlot
             local cap_worldPos = worldPos
             local cap_tile     = tile
 
             cd.MouseClick:Connect(function()
                 if not expandClickActive then return end
-                -- Fire expand remote — same as maxLand
                 pcall(function()
                     RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
                         cap_plot,
                         CFrame.new(cap_worldPos)
                     )
                 end)
-                -- Remove tile immediately for instant feedback
+                -- Remove tile immediately on click for instant visual feedback
                 pcall(function() cap_tile:Destroy() end)
-                -- Re-scan after server confirms ownership
-                task.delay(0.8, function()
+                -- Quick re-scan to confirm ownership and update remaining tiles
+                task.delay(0.5, function()
                     if expandClickActive then refreshExpandSlots() end
                 end)
             end)
@@ -945,19 +792,53 @@ refreshExpandSlots = function()
     end
 end
 
+-- Watch workspace.Properties for any ownership changes so tiles
+-- disappear as soon as the server confirms (e.g. via ChildAdded)
+task.spawn(function()
+    workspace.Properties.ChildAdded:Connect(function()
+        if expandClickActive then
+            task.wait(0.3)
+            refreshExpandSlots()
+        end
+    end)
+    workspace.Properties.ChildRemoved:Connect(function()
+        if expandClickActive then
+            task.wait(0.3)
+            refreshExpandSlots()
+        end
+    end)
+end)
+
+-- Fallback periodic re-scan every 3 s
+task.spawn(function()
+    while true do
+        task.wait(3)
+        if expandClickActive then refreshExpandSlots() end
+    end
+end)
+
 local function cleanupExpandClick()
     expandClickActive = false
     clearExpandParts()
 end
 
--- Re-scan every 2 s to catch server-side confirmations
-task.spawn(function()
-    while true do
-        task.wait(2)
-        if expandClickActive then refreshExpandSlots() end
-    end
-end)
+-- ════════════════════════════════════════════════════
+-- SLOT TAB UI — section order:
+--   Fast Load → Land Management → Land Art → Land Claim
+-- ════════════════════════════════════════════════════
 
+sectionLabel(sl, "Fast Load")
+makeSlider(sl, "Slot Number", 1, 6, 1, function(v) slotNum = v end)
+makeButton(sl, "Load Base", function() loadSlot(slotNum) end)
+
+sep(sl)
+sectionLabel(sl, "Land Management")
+makeButton(sl, "Free Land",  freeLand)
+makeButton(sl, "Max Land",   maxLand)
+makeButton(sl, "Sell Sign",  sellSoldSign)
+
+sep(sl)
+sectionLabel(sl, "Land Art")
 makeToggle(sl, "Click To Expand Land", false, function(on)
     expandClickActive = on
     if on then
@@ -972,6 +853,35 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
         end)
     else
         cleanupExpandClick()
+    end
+end)
+
+sep(sl)
+sectionLabel(sl, "Land Claim")
+
+local landPlotOptions = {"1","2","3","4","5","6","7","8","9"}
+makeFancyDropdown(sl, "Plot", function() return landPlotOptions end, function(val)
+    if landHL then pcall(function() landHL:Destroy() end) end
+    landToTake = tonumber(val)
+    local props = workspace.Properties:GetChildren()
+    if props[landToTake] and props[landToTake]:FindFirstChild("OriginSquare") then
+        landHL = Instance.new("Highlight")
+        landHL.FillColor        = Color3.fromRGB(180, 180, 180)
+        landHL.FillTransparency = 0.5
+        landHL.Parent           = props[landToTake].OriginSquare
+    end
+end)
+
+makeButton(sl, "Take Selected Land", function()
+    if not landToTake then return end
+    local props = workspace.Properties:GetChildren()
+    if props[landToTake] then
+        local land = props[landToTake]
+        pcall(function()
+            RS.PropertyPurchasing.ClientPurchasedProperty:FireServer(land, land.OriginSquare.Position)
+            LP.Character.HumanoidRootPart.CFrame = land.OriginSquare.CFrame + Vector3.new(0,2,0)
+        end)
+        if landHL then pcall(function() landHL:Destroy() end); landHL = nil end
     end
 end)
 
