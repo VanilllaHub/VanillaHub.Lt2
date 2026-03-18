@@ -22,30 +22,30 @@ local BTN_HOVER  = VH.BTN_HOVER
 local pages      = VH.pages
 
 -- ════════════════════════════════════════════════════
--- THEME  (Black / Grey / White only)
+-- THEME
 -- ════════════════════════════════════════════════════
 local C = {
-    BG         = Color3.fromRGB(10,  10,  10 ),
+    BG         = Color3.fromRGB(10,  10,  10),
     CARD       = Color3.fromRGB(10,  10,  10),
     ROW        = Color3.fromRGB(16,  16,  16),
-    INPUT      = Color3.fromRGB(30,  30,  30 ),
-    TRACK      = Color3.fromRGB(38,  38,  38 ),
-    BORDER     = Color3.fromRGB(55,  55,  55 ),
-    BORDER_DIM = Color3.fromRGB(40,  40,  40 ),
+    INPUT      = Color3.fromRGB(30,  30,  30),
+    TRACK      = Color3.fromRGB(38,  38,  38),
+    BORDER     = Color3.fromRGB(55,  55,  55),
+    BORDER_DIM = Color3.fromRGB(40,  40,  40),
     TEXT       = Color3.fromRGB(210, 210, 210),
     TEXT_MID   = Color3.fromRGB(150, 150, 150),
-    TEXT_DIM   = Color3.fromRGB(90,  90,  90 ),
+    TEXT_DIM   = Color3.fromRGB(90,  90,  90),
     BTN        = Color3.fromRGB(14,  14,  14),
     BTN_HV     = Color3.fromRGB(32,  32,  32),
     FILL       = Color3.fromRGB(255, 255, 255),
     FILL_MID   = Color3.fromRGB(200, 200, 200),
     SW_ON      = Color3.fromRGB(220, 220, 220),
-    SW_OFF     = Color3.fromRGB(50,  50,  50 ),
-    KNOB_ON    = Color3.fromRGB(30,  30,  30 ),
+    SW_OFF     = Color3.fromRGB(50,  50,  50),
+    KNOB_ON    = Color3.fromRGB(30,  30,  30),
     KNOB_OFF   = Color3.fromRGB(160, 160, 160),
-    DOT_IDLE   = Color3.fromRGB(70,  70,  70 ),
+    DOT_IDLE   = Color3.fromRGB(70,  70,  70),
     DOT_ACT    = Color3.fromRGB(200, 200, 200),
-    GLOW       = Color3.fromRGB(75,  75,  75 ),
+    GLOW       = Color3.fromRGB(75,  75,  75),
 }
 
 -- ════════════════════════════════════════════════════
@@ -389,7 +389,7 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
 end
 
 -- ════════════════════════════════════════════════════
--- AUTOBUY TAB — COMING SOON / UNDER DEVELOPMENT SCREEN
+-- AUTOBUY TAB — COMING SOON
 -- ════════════════════════════════════════════════════
 
 local ab = pages["AutoBuyTab"]
@@ -522,10 +522,8 @@ end)
 
 task.spawn(function()
     local cols = {
-        Color3.fromRGB(60,  60,  60),
-        Color3.fromRGB(85,  85,  85),
-        Color3.fromRGB(45,  45,  45),
-        Color3.fromRGB(75,  75,  75),
+        Color3.fromRGB(60,60,60), Color3.fromRGB(85,85,85),
+        Color3.fromRGB(45,45,45), Color3.fromRGB(75,75,75),
     }
     local i = 1
     while true do
@@ -585,18 +583,18 @@ local function maxLand()
         if d:FindFirstChild("Owner") and d:FindFirstChild("OriginSquare") and d.Owner.Value == LP then
             local p = d.OriginSquare.Position
             local offsets = {
-                Vector3.new(40,0,0),  Vector3.new(-40,0,0),
-                Vector3.new(0,0,40),  Vector3.new(0,0,-40),
-                Vector3.new(40,0,40), Vector3.new(40,0,-40),
-                Vector3.new(-40,0,40),Vector3.new(-40,0,-40),
-                Vector3.new(80,0,0),  Vector3.new(-80,0,0),
-                Vector3.new(0,0,80),  Vector3.new(0,0,-80),
-                Vector3.new(80,0,80), Vector3.new(80,0,-80),
-                Vector3.new(-80,0,80),Vector3.new(-80,0,-80),
-                Vector3.new(40,0,80), Vector3.new(-40,0,80),
-                Vector3.new(80,0,40), Vector3.new(80,0,-40),
-                Vector3.new(-80,0,40),Vector3.new(-80,0,-40),
-                Vector3.new(40,0,-80),Vector3.new(-40,0,-80),
+                Vector3.new(40,0,0),   Vector3.new(-40,0,0),
+                Vector3.new(0,0,40),   Vector3.new(0,0,-40),
+                Vector3.new(40,0,40),  Vector3.new(40,0,-40),
+                Vector3.new(-40,0,40), Vector3.new(-40,0,-40),
+                Vector3.new(80,0,0),   Vector3.new(-80,0,0),
+                Vector3.new(0,0,80),   Vector3.new(0,0,-80),
+                Vector3.new(80,0,80),  Vector3.new(80,0,-80),
+                Vector3.new(-80,0,80), Vector3.new(-80,0,-80),
+                Vector3.new(40,0,80),  Vector3.new(-40,0,80),
+                Vector3.new(80,0,40),  Vector3.new(80,0,-40),
+                Vector3.new(-80,0,40), Vector3.new(-80,0,-40),
+                Vector3.new(40,0,-80), Vector3.new(-40,0,-80),
             }
             for _, off in ipairs(offsets) do
                 pcall(function()
@@ -620,40 +618,33 @@ local function showSavePopup()
     local CoreGui = game:GetService("CoreGui")
     local existing = CoreGui:FindFirstChild("VH_SavePopup")
     if existing then existing:Destroy() end
-
     local sg = Instance.new("ScreenGui")
     sg.Name = "VH_SavePopup"; sg.ResetOnSpawn = false
     sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     pcall(function() if syn and syn.protect_gui then syn.protect_gui(sg) end end)
     sg.Parent = CoreGui
-
     local frame = Instance.new("Frame", sg)
-    frame.Size       = UDim2.new(0, 240, 0, 48)
+    frame.Size        = UDim2.new(0, 240, 0, 48)
     frame.AnchorPoint = Vector2.new(0.5, 0)
-    frame.Position   = UDim2.new(0.5, 0, 0, -60)
+    frame.Position    = UDim2.new(0.5, 0, 0, -60)
     frame.BackgroundColor3 = C.CARD; frame.BorderSizePixel = 0
     corner(frame, 10)
     local stroke = Instance.new("UIStroke", frame)
     stroke.Color = C.BORDER; stroke.Thickness = 1.5
-
     local icon = Instance.new("TextLabel", frame)
     icon.Size = UDim2.new(0, 36, 1, 0); icon.Position = UDim2.new(0, 8, 0, 0)
     icon.BackgroundTransparency = 1; icon.Font = Enum.Font.GothamBold
     icon.TextSize = 20; icon.TextColor3 = C.TEXT; icon.Text = "💾"
-
     local lbl = Instance.new("TextLabel", frame)
     lbl.Size = UDim2.new(1, -52, 1, 0); lbl.Position = UDim2.new(0, 48, 0, 0)
     lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold
     lbl.TextSize = 14; lbl.TextColor3 = C.TEXT
     lbl.TextXAlignment = Enum.TextXAlignment.Left; lbl.Text = "Saved Successfully!"
-
-    TS:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0.5, 0, 0, 18)
-    }):Play()
+    TS:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Position = UDim2.new(0.5, 0, 0, 18)}):Play()
     task.delay(2.5, function()
-        TS:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(0.5, 0, 0, -60)
-        }):Play()
+        TS:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {Position = UDim2.new(0.5, 0, 0, -60)}):Play()
         task.wait(0.35)
         pcall(function() sg:Destroy() end)
     end)
@@ -794,62 +785,39 @@ end)
 -- ════════════════════════════════════════════════════
 -- LAND ART — Click To Expand Land
 --
--- The grid from the image is 5×5 (25 tiles total).
--- The brown centre tile is the origin (no number).
--- The 24 surrounding tiles map left→right, top→bottom
--- exactly matching the numbered slots 1-24 in the screenshot.
--- Each grid step = 40 studs.  These offsets are the same
--- set used by maxLand, just laid out in row/column order.
+-- Grid layout (origin = centre brown tile, no number):
+--   Col:  -2   -1    0   +1   +2
+-- Row -2:  1    2    3    4    5
+-- Row -1:  6    7    8    9   10
+-- Row  0: 11   12  [OR]  13   14
+-- Row +1: 15   16   17   18   19
+-- Row +2: 20   21   22   23   24
 --
---   Col:  -2    -1     0    +1    +2
--- Row -2:   1    2     3     4     5
--- Row -1:   6    7     8     9    10
--- Row  0:  11   12  ORIGIN  13   14
--- Row +1:  15   16    17    18   19
--- Row +2:  20   21    22    23   24
+-- Step = 40 studs. Same offsets as maxLand.
 -- ════════════════════════════════════════════════════
 
 sep(sl)
 sectionLabel(sl, "Land Art")
 
--- 24 expansion slots ordered as shown in the grid image
 local GRID_SLOTS = {
-    -- Row 1  (Z = -80)
-    { off = Vector3.new(-80, 0, -80), n =  1 },
-    { off = Vector3.new(-40, 0, -80), n =  2 },
-    { off = Vector3.new(  0, 0, -80), n =  3 },
-    { off = Vector3.new( 40, 0, -80), n =  4 },
-    { off = Vector3.new( 80, 0, -80), n =  5 },
-    -- Row 2  (Z = -40)
-    { off = Vector3.new(-80, 0, -40), n =  6 },
-    { off = Vector3.new(-40, 0, -40), n =  7 },
-    { off = Vector3.new(  0, 0, -40), n =  8 },
-    { off = Vector3.new( 40, 0, -40), n =  9 },
-    { off = Vector3.new( 80, 0, -40), n = 10 },
-    -- Row 3  (Z = 0, origin is centre — skipped)
-    { off = Vector3.new(-80, 0,   0), n = 11 },
-    { off = Vector3.new(-40, 0,   0), n = 12 },
-    { off = Vector3.new( 40, 0,   0), n = 13 },
-    { off = Vector3.new( 80, 0,   0), n = 14 },
-    -- Row 4  (Z = +40)
-    { off = Vector3.new(-80, 0,  40), n = 15 },
-    { off = Vector3.new(-40, 0,  40), n = 16 },
-    { off = Vector3.new(  0, 0,  40), n = 17 },
-    { off = Vector3.new( 40, 0,  40), n = 18 },
-    { off = Vector3.new( 80, 0,  40), n = 19 },
-    -- Row 5  (Z = +80)
-    { off = Vector3.new(-80, 0,  80), n = 20 },
-    { off = Vector3.new(-40, 0,  80), n = 21 },
-    { off = Vector3.new(  0, 0,  80), n = 22 },
-    { off = Vector3.new( 40, 0,  80), n = 23 },
-    { off = Vector3.new( 80, 0,  80), n = 24 },
+    {off=Vector3.new(-80,0,-80),n=1},  {off=Vector3.new(-40,0,-80),n=2},
+    {off=Vector3.new(  0,0,-80),n=3},  {off=Vector3.new( 40,0,-80),n=4},
+    {off=Vector3.new( 80,0,-80),n=5},  {off=Vector3.new(-80,0,-40),n=6},
+    {off=Vector3.new(-40,0,-40),n=7},  {off=Vector3.new(  0,0,-40),n=8},
+    {off=Vector3.new( 40,0,-40),n=9},  {off=Vector3.new( 80,0,-40),n=10},
+    {off=Vector3.new(-80,0,  0),n=11}, {off=Vector3.new(-40,0,  0),n=12},
+    {off=Vector3.new( 40,0,  0),n=13}, {off=Vector3.new( 80,0,  0),n=14},
+    {off=Vector3.new(-80,0, 40),n=15}, {off=Vector3.new(-40,0, 40),n=16},
+    {off=Vector3.new(  0,0, 40),n=17}, {off=Vector3.new( 40,0, 40),n=18},
+    {off=Vector3.new( 80,0, 40),n=19}, {off=Vector3.new(-80,0, 80),n=20},
+    {off=Vector3.new(-40,0, 80),n=21}, {off=Vector3.new(  0,0, 80),n=22},
+    {off=Vector3.new( 40,0, 80),n=23}, {off=Vector3.new( 80,0, 80),n=24},
 }
 
--- State
 local expandClickActive = false
-local expandEntries     = {}  -- { part, highlight, detector }
+local expandParts       = {}  -- all VH_ExpandSlot_ parts we spawned
 
--- Returns the plot the player owns (used to anchor the grid)
+-- Returns the player's owned origin plot, or nil
 local function getOriginPlot()
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         if v:FindFirstChild("Owner") and v.Owner.Value == LP
@@ -860,103 +828,96 @@ local function getOriginPlot()
     return nil
 end
 
--- Checks whether a world-position slot has already been expanded by
--- looking for any owned Part that is very close to that position.
-local function isSlotExpanded(originPlot, worldPos)
-    for _, child in ipairs(originPlot:GetDescendants()) do
-        if child:IsA("BasePart") and child ~= originPlot.OriginSquare then
-            if (child.Position - worldPos).Magnitude < 8 then
-                return true
-            end
+-- Build a set of world positions that are already owned/expanded by the player.
+-- We scan ALL property models in workspace.Properties — each expanded tile
+-- becomes its own model with an Owner and OriginSquare, just like the base plot.
+local function buildOwnedPositionSet()
+    local set = {}
+    for _, v in ipairs(workspace.Properties:GetChildren()) do
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP
+           and v:FindFirstChild("OriginSquare") then
+            local p = v.OriginSquare.Position
+            -- key rounded to nearest 10 studs to absorb floating point drift
+            local key = math.round(p.X/10).."_"..math.round(p.Z/10)
+            set[key] = true
         end
     end
-    return false
+    return set
 end
 
--- Destroys all active highlight parts/detectors
-local function clearExpandEntries()
-    for _, e in ipairs(expandEntries) do
-        pcall(function()
-            if e.highlight and e.highlight.Parent then e.highlight:Destroy() end
-            if e.detector  and e.detector.Parent  then e.detector:Destroy()  end
-            if e.part      and e.part.Parent       then e.part:Destroy()      end
-        end)
+local function posKey(v3)
+    return math.round(v3.X/10).."_"..math.round(v3.Z/10)
+end
+
+-- Destroy all anchor parts we created
+local function clearExpandParts()
+    for _, p in ipairs(expandParts) do
+        pcall(function() if p and p.Parent then p:Destroy() end end)
     end
-    expandEntries = {}
+    expandParts = {}
 end
 
-local refreshExpandSlots  -- forward declared so the click handler can call it
+local refreshExpandSlots  -- forward declare
 
 refreshExpandSlots = function()
-    clearExpandEntries()
+    clearExpandParts()
     if not expandClickActive then return end
 
     local originPlot = getOriginPlot()
-    if not originPlot then return end  -- player has no land yet
+    if not originPlot then return end
 
     local originPos = originPlot.OriginSquare.Position
+    local owned     = buildOwnedPositionSet()
 
     for _, slot in ipairs(GRID_SLOTS) do
         local worldPos = originPos + slot.off
+        local key      = posKey(worldPos)
 
-        -- Only show a highlight if this slot is NOT already expanded
-        if not isSlotExpanded(originPlot, worldPos) then
-
-            -- Invisible anchor Part sized to fill the tile
+        -- Only highlight slots the player does NOT already own
+        if not owned[key] then
             local anchorPart = Instance.new("Part")
-            anchorPart.Name         = "VH_ExpandSlot_" .. tostring(slot.n)
-            anchorPart.Size         = Vector3.new(38, 0.2, 38)
+            anchorPart.Name         = "VH_ExpandSlot_" .. slot.n
+            anchorPart.Size         = Vector3.new(38, 0.5, 38)
             anchorPart.CFrame       = CFrame.new(worldPos)
             anchorPart.Anchored     = true
             anchorPart.CanCollide   = false
             anchorPart.Transparency = 1
             anchorPart.Parent       = workspace
 
-            -- Grey fill + white outline as requested
+            table.insert(expandParts, anchorPart)
+
+            -- Grey fill + white outline highlight
             local hl = Instance.new("Highlight")
             hl.FillColor           = Color3.fromRGB(160, 160, 160)
             hl.FillTransparency    = 0.45
             hl.OutlineColor        = Color3.fromRGB(255, 255, 255)
             hl.OutlineTransparency = 0
+            hl.Adornee             = anchorPart
             hl.Parent              = anchorPart
 
-            -- Infinite-range ClickDetector so the player can click from anywhere
             local cd = Instance.new("ClickDetector")
             cd.MaxActivationDistance = 9999
             cd.Parent = anchorPart
 
-            -- Capture loop variables for the closure
+            -- Capture for closure
             local cap_plot     = originPlot
             local cap_worldPos = worldPos
             local cap_part     = anchorPart
-            local cap_hl       = hl
-            local cap_cd       = cd
-
-            table.insert(expandEntries, { part = cap_part, highlight = cap_hl, detector = cap_cd })
 
             cd.MouseClick:Connect(function()
                 if not expandClickActive then return end
-
-                -- Fire expansion remote — same call as maxLand
+                -- Fire the expand remote — identical to maxLand's call
                 pcall(function()
                     RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
                         cap_plot,
                         CFrame.new(cap_worldPos)
                     )
                 end)
-
-                -- Remove this slot's visuals immediately for snappy feedback
-                pcall(function()
-                    cap_hl:Destroy()
-                    cap_cd:Destroy()
-                    cap_part:Destroy()
-                end)
-
-                -- Re-scan after server has time to confirm
-                task.delay(0.7, function()
-                    if expandClickActive then
-                        refreshExpandSlots()
-                    end
+                -- Remove this tile's visuals immediately
+                pcall(function() cap_part:Destroy() end)
+                -- Re-scan after server confirms
+                task.delay(0.8, function()
+                    if expandClickActive then refreshExpandSlots() end
                 end)
             end)
         end
@@ -965,16 +926,14 @@ end
 
 local function cleanupExpandClick()
     expandClickActive = false
-    clearExpandEntries()
+    clearExpandParts()
 end
 
--- Background re-scan every 1.5 s while active (catches server-side confirmations)
+-- Re-scan every 2 s while active to catch server-side confirmations
 task.spawn(function()
     while true do
-        task.wait(1.5)
-        if expandClickActive then
-            refreshExpandSlots()
-        end
+        task.wait(2)
+        if expandClickActive then refreshExpandSlots() end
     end
 end)
 
@@ -982,16 +941,13 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
     expandClickActive = on
     if on then
         task.spawn(function()
-            -- Wait up to 10 s for the player's plot to load
             local attempts = 0
             while attempts < 20 do
                 if getOriginPlot() then break end
                 attempts += 1
                 task.wait(0.5)
             end
-            if expandClickActive then
-                refreshExpandSlots()
-            end
+            if expandClickActive then refreshExpandSlots() end
         end)
     else
         cleanupExpandClick()
