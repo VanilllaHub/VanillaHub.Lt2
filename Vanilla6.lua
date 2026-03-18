@@ -785,15 +785,15 @@ end)
 -- ════════════════════════════════════════════════════
 -- LAND ART — Click To Expand Land
 --
--- Grid layout (origin = centre brown tile, no number):
+-- 5×5 grid, origin = centre tile (no number).
+-- Each step = 40 studs. 24 expansion slots.
+--
 --   Col:  -2   -1    0   +1   +2
 -- Row -2:  1    2    3    4    5
 -- Row -1:  6    7    8    9   10
 -- Row  0: 11   12  [OR]  13   14
 -- Row +1: 15   16   17   18   19
 -- Row +2: 20   21   22   23   24
---
--- Step = 40 studs. Same offsets as maxLand.
 -- ════════════════════════════════════════════════════
 
 sep(sl)
@@ -816,8 +816,8 @@ local GRID_SLOTS = {
 
 local expandClickActive = false
 local expandParts       = {}  -- all VH_ExpandSlot_ parts we spawned
+local pulseThreads      = {}  -- coroutines driving the white glow pulse
 
--- Returns the player's owned origin plot, or nil
 local function getOriginPlot()
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         if v:FindFirstChild("Owner") and v.Owner.Value == LP
@@ -828,18 +828,16 @@ local function getOriginPlot()
     return nil
 end
 
--- Build a set of world positions that are already owned/expanded by the player.
--- We scan ALL property models in workspace.Properties — each expanded tile
--- becomes its own model with an Owner and OriginSquare, just like the base plot.
-local function buildOwnedPositionSet()
+-- Build a set of world-positions already owned by the player.
+-- Each expanded tile appears as its own model in workspace.Properties
+-- with an Owner and OriginSquare, exactly like the base plot.
+local function buildOwnedSet()
     local set = {}
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         if v:FindFirstChild("Owner") and v.Owner.Value == LP
            and v:FindFirstChild("OriginSquare") then
             local p = v.OriginSquare.Position
-            -- key rounded to nearest 10 studs to absorb floating point drift
-            local key = math.round(p.X/10).."_"..math.round(p.Z/10)
-            set[key] = true
+            set[math.round(p.X/10).."_"..math.round(p.Z/10)] = true
         end
     end
     return set
@@ -849,15 +847,19 @@ local function posKey(v3)
     return math.round(v3.X/10).."_"..math.round(v3.Z/10)
 end
 
--- Destroy all anchor parts we created
 local function clearExpandParts()
+    -- Cancel all pulse threads first
+    for _, t in ipairs(pulseThreads) do
+        pcall(function() task.cancel(t) end)
+    end
+    pulseThreads = {}
     for _, p in ipairs(expandParts) do
         pcall(function() if p and p.Parent then p:Destroy() end end)
     end
     expandParts = {}
 end
 
-local refreshExpandSlots  -- forward declare
+local refreshExpandSlots
 
 refreshExpandSlots = function()
     clearExpandParts()
@@ -867,55 +869,74 @@ refreshExpandSlots = function()
     if not originPlot then return end
 
     local originPos = originPlot.OriginSquare.Position
-    local owned     = buildOwnedPositionSet()
+    local owned     = buildOwnedSet()
 
     for _, slot in ipairs(GRID_SLOTS) do
         local worldPos = originPos + slot.off
         local key      = posKey(worldPos)
 
-        -- Only highlight slots the player does NOT already own
         if not owned[key] then
-            local anchorPart = Instance.new("Part")
-            anchorPart.Name         = "VH_ExpandSlot_" .. slot.n
-            anchorPart.Size         = Vector3.new(38, 0.5, 38)
-            anchorPart.CFrame       = CFrame.new(worldPos)
-            anchorPart.Anchored     = true
-            anchorPart.CanCollide   = false
-            anchorPart.Transparency = 1
-            anchorPart.Parent       = workspace
+            -- ── Visible preview tile ────────────────────────────────────
+            -- Use a semi-transparent white Part so it looks like a ghost
+            -- of the land that will appear when purchased.
+            local tile = Instance.new("Part")
+            tile.Name         = "VH_ExpandSlot_" .. slot.n
+            tile.Size         = Vector3.new(40, 0.4, 40)   -- full tile footprint
+            tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.3, 0))
+            tile.Anchored     = true
+            tile.CanCollide   = false
+            -- White glowing surface colour
+            tile.Material     = Enum.Material.Neon
+            tile.Color        = Color3.fromRGB(255, 255, 255)
+            tile.Transparency = 0.35   -- semi-transparent so you can see ground beneath
+            tile.CastShadow   = false
+            tile.Parent       = workspace
+            table.insert(expandParts, tile)
 
-            table.insert(expandParts, anchorPart)
-
-            -- Grey fill + white outline highlight
+            -- Black outline via Highlight (FillTransparency=1 so only the
+            -- outline is visible — the neon Part itself provides the white glow)
             local hl = Instance.new("Highlight")
-            hl.FillColor           = Color3.fromRGB(160, 160, 160)
-            hl.FillTransparency    = 0.45
-            hl.OutlineColor        = Color3.fromRGB(255, 255, 255)
+            hl.FillTransparency    = 1          -- no fill — Part colour is the fill
+            hl.OutlineColor        = Color3.fromRGB(0, 0, 0)
             hl.OutlineTransparency = 0
-            hl.Adornee             = anchorPart
-            hl.Parent              = anchorPart
+            hl.Adornee             = tile
+            hl.Parent              = tile
 
+            -- ClickDetector — infinite range
             local cd = Instance.new("ClickDetector")
             cd.MaxActivationDistance = 9999
-            cd.Parent = anchorPart
+            cd.Parent = tile
+
+            -- Gentle pulse: oscillate transparency between 0.25 and 0.6
+            local thread = task.spawn(function()
+                while tile and tile.Parent do
+                    TS:Create(tile, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Transparency = 0.62}):Play()
+                    task.wait(1.1)
+                    TS:Create(tile, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Transparency = 0.22}):Play()
+                    task.wait(1.1)
+                end
+            end)
+            table.insert(pulseThreads, thread)
 
             -- Capture for closure
             local cap_plot     = originPlot
             local cap_worldPos = worldPos
-            local cap_part     = anchorPart
+            local cap_tile     = tile
 
             cd.MouseClick:Connect(function()
                 if not expandClickActive then return end
-                -- Fire the expand remote — identical to maxLand's call
+                -- Fire expand remote — same as maxLand
                 pcall(function()
                     RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
                         cap_plot,
                         CFrame.new(cap_worldPos)
                     )
                 end)
-                -- Remove this tile's visuals immediately
-                pcall(function() cap_part:Destroy() end)
-                -- Re-scan after server confirms
+                -- Remove tile immediately for instant feedback
+                pcall(function() cap_tile:Destroy() end)
+                -- Re-scan after server confirms ownership
                 task.delay(0.8, function()
                     if expandClickActive then refreshExpandSlots() end
                 end)
@@ -929,7 +950,7 @@ local function cleanupExpandClick()
     clearExpandParts()
 end
 
--- Re-scan every 2 s while active to catch server-side confirmations
+-- Re-scan every 2 s to catch server-side confirmations
 task.spawn(function()
     while true do
         task.wait(2)
