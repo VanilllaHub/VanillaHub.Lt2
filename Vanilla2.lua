@@ -1092,21 +1092,38 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── GIFT / ITEMS / BOXES
-        -- Detects Gift, Loose Item, Tool via Type.Value directly.
-        -- Also detects Box models (Type = "Furniture" + PurchasedBoxItemName child).
-        -- Covers standalone gifts, box contents, tools, purchased items, and boxes.
+        -- ── GIFT / ITEMS / BOXES / PAINTINGS
+        -- Uses isGiftOrItem() which covers:
+        --   Gift, Loose Item, Tool  (by Type.Value)
+        --   Box / Painting / etc    (Type="Furniture" + PurchasedBoxItemName child)
+        -- Part resolution: tries Main directly first, then deep-searches for any
+        -- BasePart so models whose Main is a sub-Model (paintings etc.) still work.
         if getGifs() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if not butterRunning then break end
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
-                    local p  = v.Parent
-                    local tv = getTypeValue(p)
-                    if tv == "Gift" or tv == "Loose Item" or tv == "Tool" then
-                        local part = p:FindFirstChild("Main") or p:FindFirstChildOfClass("Part")
-                        if part then
-                            local PCF  = (p:FindFirstChild("Main") and p.Main.CFrame) or part.CFrame
+                    local p = v.Parent
+                    if isGiftOrItem(p) then
+                        local mainChild = p:FindFirstChild("Main")
+                        local part, PCF
+                        if mainChild and mainChild:IsA("BasePart") then
+                            part = mainChild
+                            PCF  = mainChild.CFrame
+                        elseif mainChild then
+                            -- Main is a Model/folder — find its primary or first BasePart
+                            part = mainChild.PrimaryPart
+                                or mainChild:FindFirstChildOfClass("BasePart")
+                                or mainChild:FindFirstChildWhichIsA("BasePart", true)
+                            PCF  = part and part.CFrame or nil
+                        end
+                        if not part then
+                            -- No Main at all — deep search whole model
+                            part = p:FindFirstChildOfClass("BasePart")
+                                or p:FindFirstChildWhichIsA("BasePart", true)
+                            PCF  = part and part.CFrame or nil
+                        end
+                        if part and PCF then
                             local nPos = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
                             table.insert(items, {part = part, offset = CFrame.new(nPos) * PCF.Rotation})
                         end
