@@ -16,9 +16,9 @@ local UIS        = VH.UserInputService
 local RunService = VH.RunService
 local LP         = Players.LocalPlayer
 
-local THEME_TEXT = VH.THEME_TEXT  -- near-white (set in Vanilla1)
-local BTN_COLOR  = VH.BTN_COLOR   -- grey (set in Vanilla1)
-local BTN_HOVER  = VH.BTN_HOVER   -- lighter grey
+local THEME_TEXT = VH.THEME_TEXT
+local BTN_COLOR  = VH.BTN_COLOR
+local BTN_HOVER  = VH.BTN_HOVER
 local pages      = VH.pages
 
 -- ════════════════════════════════════════════════════
@@ -26,8 +26,8 @@ local pages      = VH.pages
 -- ════════════════════════════════════════════════════
 local C = {
     BG         = Color3.fromRGB(10,  10,  10 ),
-    CARD       = Color3.fromRGB(10,  10,  10),   -- black panel
-    ROW        = Color3.fromRGB(16,  16,  16),   -- near-black row
+    CARD       = Color3.fromRGB(10,  10,  10),
+    ROW        = Color3.fromRGB(16,  16,  16),
     INPUT      = Color3.fromRGB(30,  30,  30 ),
     TRACK      = Color3.fromRGB(38,  38,  38 ),
     BORDER     = Color3.fromRGB(55,  55,  55 ),
@@ -35,10 +35,10 @@ local C = {
     TEXT       = Color3.fromRGB(210, 210, 210),
     TEXT_MID   = Color3.fromRGB(150, 150, 150),
     TEXT_DIM   = Color3.fromRGB(90,  90,  90 ),
-    BTN        = Color3.fromRGB(14,  14,  14),   -- black button bg
-    BTN_HV     = Color3.fromRGB(32,  32,  32),   -- dark grey hover
-    FILL       = Color3.fromRGB(255, 255, 255),   -- white bar
-    FILL_MID   = Color3.fromRGB(200, 200, 200),   -- mid-white fill
+    BTN        = Color3.fromRGB(14,  14,  14),
+    BTN_HV     = Color3.fromRGB(32,  32,  32),
+    FILL       = Color3.fromRGB(255, 255, 255),
+    FILL_MID   = Color3.fromRGB(200, 200, 200),
     SW_ON      = Color3.fromRGB(220, 220, 220),
     SW_OFF     = Color3.fromRGB(50,  50,  50 ),
     KNOB_ON    = Color3.fromRGB(30,  30,  30 ),
@@ -76,7 +76,6 @@ local function sep(page)
     s.BorderSizePixel  = 0
 end
 
--- Grey button
 local function makeButton(page, text, cb)
     local btn = Instance.new("TextButton", page)
     btn.Size             = UDim2.new(1, -12, 0, 34)
@@ -102,7 +101,6 @@ local function makeButton(page, text, cb)
     return btn
 end
 
--- Toggle: dark grey OFF / white ON
 local function makeToggle(page, text, default, cb)
     local frame = Instance.new("Frame", page)
     frame.Size             = UDim2.new(1, -12, 0, 32)
@@ -149,7 +147,6 @@ local function makeToggle(page, text, default, cb)
     return {Set = setState, Get = function() return state end}
 end
 
--- Slider: white bar + white value text
 local function makeSlider(page, text, min, max, default, cb)
     local frame = Instance.new("Frame", page)
     frame.Size             = UDim2.new(1, -12, 0, 52)
@@ -168,7 +165,7 @@ local function makeSlider(page, text, min, max, default, cb)
     valLbl.Position        = UDim2.new(0.6, -8, 0, 6)
     valLbl.BackgroundTransparency = 1
     valLbl.Font            = Enum.Font.GothamBold; valLbl.TextSize = 13
-    valLbl.TextColor3      = C.FILL                                 -- white text
+    valLbl.TextColor3      = C.FILL
     valLbl.TextXAlignment  = Enum.TextXAlignment.Right
     valLbl.Text            = tostring(default)
     local track = Instance.new("Frame", frame)
@@ -178,7 +175,7 @@ local function makeSlider(page, text, min, max, default, cb)
     corner(track, 3)
     local fill = Instance.new("Frame", track)
     fill.Size             = UDim2.new((default-min)/(max-min), 0, 1, 0)
-    fill.BackgroundColor3 = C.FILL                                  -- white bar
+    fill.BackgroundColor3 = C.FILL
     fill.BorderSizePixel  = 0
     corner(fill, 3)
     local knob = Instance.new("TextButton", track)
@@ -210,7 +207,6 @@ local function makeSlider(page, text, min, max, default, cb)
     end)
 end
 
--- Status bar (grey dot + grey text)
 local function makeStatus(page, initText)
     local f = Instance.new("Frame", page)
     f.Size             = UDim2.new(1, -12, 0, 28)
@@ -238,7 +234,6 @@ local function makeStatus(page, initText)
     }
 end
 
--- Progress bar (white bar + white text)
 local function makeProgress(page)
     local bg = Instance.new("Frame", page)
     bg.Size             = UDim2.new(1, -12, 0, 40)
@@ -251,7 +246,7 @@ local function makeProgress(page)
     lb.Position           = UDim2.new(0, 6, 0, 4)
     lb.BackgroundTransparency = 1
     lb.Font               = Enum.Font.GothamSemibold; lb.TextSize = 11
-    lb.TextColor3         = C.FILL                                  -- white text
+    lb.TextColor3         = C.FILL
     lb.TextXAlignment     = Enum.TextXAlignment.Left; lb.Text = ""
     local track = Instance.new("Frame", bg)
     track.Size             = UDim2.new(1, -12, 0, 10)
@@ -260,7 +255,7 @@ local function makeProgress(page)
     corner(track, 5)
     local fill = Instance.new("Frame", track)
     fill.Size             = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = C.FILL                                  -- white bar
+    fill.BackgroundColor3 = C.FILL
     fill.BorderSizePixel  = 0
     corner(fill, 5)
     return {
@@ -273,7 +268,6 @@ local function makeProgress(page)
     }
 end
 
--- Dropdown (grey palette)
 local function makeFancyDropdown(page, labelText, getOptions, cb)
     local selected = ""
     local isOpen   = false
@@ -400,7 +394,6 @@ end
 
 local ab = pages["AutoBuyTab"]
 
--- ── Card container (black inner panel) ─────────────────────────────────────
 local csOuter = Instance.new("Frame", ab)
 csOuter.Size             = UDim2.new(1, -12, 0, 200)
 csOuter.BackgroundColor3 = C.BG
@@ -412,7 +405,6 @@ csBorderStroke.Color        = C.BORDER_DIM
 csBorderStroke.Thickness    = 1.5
 csBorderStroke.Transparency = 0
 
--- Subtle grid lines
 for row = 0, 3 do
     local g = Instance.new("Frame", csOuter)
     g.Size             = UDim2.new(1, 0, 0, 1)
@@ -428,7 +420,6 @@ for col = 0, 5 do
     g.BorderSizePixel  = 0; g.ZIndex = 1
 end
 
--- Glow blob (grey)
 local glowBlob = Instance.new("Frame", csOuter)
 glowBlob.Size                   = UDim2.new(0, 80, 0, 80)
 glowBlob.AnchorPoint            = Vector2.new(0.5, 0)
@@ -439,7 +430,6 @@ glowBlob.BackgroundTransparency = 0.68
 glowBlob.ZIndex                 = 2
 corner(glowBlob, 40)
 
--- Floating circle
 local lockCircle = Instance.new("Frame", csOuter)
 lockCircle.Size             = UDim2.new(0, 46, 0, 46)
 lockCircle.AnchorPoint      = Vector2.new(0.5, 0)
@@ -459,7 +449,6 @@ lockIcon.TextXAlignment     = Enum.TextXAlignment.Center
 lockIcon.TextYAlignment     = Enum.TextYAlignment.Center
 lockIcon.ZIndex             = 4
 
--- Title (near-white)
 local csTitleLbl = Instance.new("TextLabel", csOuter)
 csTitleLbl.Size               = UDim2.new(1, -16, 0, 24)
 csTitleLbl.Position           = UDim2.new(0, 8, 0, 78)
@@ -469,7 +458,6 @@ csTitleLbl.TextColor3         = Color3.fromRGB(200, 200, 200)
 csTitleLbl.TextXAlignment     = Enum.TextXAlignment.Center
 csTitleLbl.Text               = "COMING SOON"; csTitleLbl.ZIndex = 5
 
--- Accent line (grey)
 local accentLine = Instance.new("Frame", csOuter)
 accentLine.Size             = UDim2.new(0, 56, 0, 2)
 accentLine.AnchorPoint      = Vector2.new(0.5, 0)
@@ -477,7 +465,6 @@ accentLine.Position         = UDim2.new(0.5, 0, 0, 105)
 accentLine.BackgroundColor3 = C.BORDER; accentLine.BorderSizePixel = 0
 accentLine.ZIndex           = 5; corner(accentLine, 1)
 
--- Sub-label
 local csSubLbl = Instance.new("TextLabel", csOuter)
 csSubLbl.Size               = UDim2.new(1, -20, 0, 14)
 csSubLbl.Position           = UDim2.new(0, 10, 0, 112)
@@ -487,7 +474,6 @@ csSubLbl.TextColor3         = C.TEXT_DIM
 csSubLbl.TextXAlignment     = Enum.TextXAlignment.Center
 csSubLbl.Text               = "AUTO BUY  —  UNDER DEVELOPMENT"; csSubLbl.ZIndex = 5
 
--- Description
 local csDescLbl = Instance.new("TextLabel", csOuter)
 csDescLbl.Size               = UDim2.new(1, -24, 0, 36)
 csDescLbl.Position           = UDim2.new(0, 12, 0, 130)
@@ -499,7 +485,6 @@ csDescLbl.TextWrapped        = true
 csDescLbl.Text               = "Being rebuilt with improved bypass logic, smarter counter detection & network ownership handling."
 csDescLbl.ZIndex             = 5
 
--- Status pill (dark card + grey border)
 local statusPill = Instance.new("Frame", csOuter)
 statusPill.Size             = UDim2.new(0, 148, 0, 20)
 statusPill.AnchorPoint      = Vector2.new(0.5, 0)
@@ -509,7 +494,6 @@ statusPill.ZIndex           = 5; corner(statusPill, 10)
 local pillStroke = Instance.new("UIStroke", statusPill)
 pillStroke.Color = C.BORDER; pillStroke.Thickness = 1; pillStroke.Transparency = 0.4
 
--- Pulse dot (white)
 local pulseDot = Instance.new("Frame", statusPill)
 pulseDot.Size             = UDim2.new(0, 6, 0, 6)
 pulseDot.Position         = UDim2.new(0, 10, 0.5, -3)
@@ -525,7 +509,6 @@ pillLbl.TextColor3         = C.TEXT_MID
 pillLbl.TextXAlignment     = Enum.TextXAlignment.Left
 pillLbl.Text               = "In Development  •  v0.0"; pillLbl.ZIndex = 6
 
--- ── Animations ───────────────────────────────────────────────────────────────
 task.spawn(function()
     while true do
         TS:Create(pulseDot, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
@@ -537,7 +520,6 @@ task.spawn(function()
     end
 end)
 
--- Border cycles through grey shades only
 task.spawn(function()
     local cols = {
         Color3.fromRGB(60,  60,  60),
@@ -790,7 +772,7 @@ makeFancyDropdown(sl, "Plot", function() return landPlotOptions end, function(va
     local props = workspace.Properties:GetChildren()
     if props[landToTake] and props[landToTake]:FindFirstChild("OriginSquare") then
         landHL = Instance.new("Highlight")
-        landHL.FillColor        = Color3.fromRGB(180, 180, 180)  -- grey highlight
+        landHL.FillColor        = Color3.fromRGB(180, 180, 180)
         landHL.FillTransparency = 0.5
         landHL.Parent           = props[landToTake].OriginSquare
     end
@@ -810,164 +792,209 @@ makeButton(sl, "Take Selected Land", function()
 end)
 
 -- ════════════════════════════════════════════════════
--- LAND ART SECTION — Click To Buy Land
+-- LAND ART — Click To Expand Land
+--
+-- The grid from the image is 5×5 (25 tiles total).
+-- The brown centre tile is the origin (no number).
+-- The 24 surrounding tiles map left→right, top→bottom
+-- exactly matching the numbered slots 1-24 in the screenshot.
+-- Each grid step = 40 studs.  These offsets are the same
+-- set used by maxLand, just laid out in row/column order.
+--
+--   Col:  -2    -1     0    +1    +2
+-- Row -2:   1    2     3     4     5
+-- Row -1:   6    7     8     9    10
+-- Row  0:  11   12  ORIGIN  13   14
+-- Row +1:  15   16    17    18   19
+-- Row +2:  20   21    22    23   24
 -- ════════════════════════════════════════════════════
 
 sep(sl)
 sectionLabel(sl, "Land Art")
 
--- State
-local clickBuyActive  = false
-local highlightFrames = {}  -- { plot, highlight, detector }
-
--- Reuse the same offsets as maxLand so adjacency logic is identical
-local EXPAND_OFFSETS = {
-    Vector3.new(40,0,0),   Vector3.new(-40,0,0),
-    Vector3.new(0,0,40),   Vector3.new(0,0,-40),
-    Vector3.new(40,0,40),  Vector3.new(40,0,-40),
-    Vector3.new(-40,0,40), Vector3.new(-40,0,-40),
-    Vector3.new(80,0,0),   Vector3.new(-80,0,0),
-    Vector3.new(0,0,80),   Vector3.new(0,0,-80),
-    Vector3.new(80,0,80),  Vector3.new(80,0,-80),
-    Vector3.new(-80,0,80), Vector3.new(-80,0,-80),
-    Vector3.new(40,0,80),  Vector3.new(-40,0,80),
-    Vector3.new(80,0,40),  Vector3.new(80,0,-40),
-    Vector3.new(-80,0,40), Vector3.new(-80,0,-40),
-    Vector3.new(40,0,-80), Vector3.new(-40,0,-80),
+-- 24 expansion slots ordered as shown in the grid image
+local GRID_SLOTS = {
+    -- Row 1  (Z = -80)
+    { off = Vector3.new(-80, 0, -80), n =  1 },
+    { off = Vector3.new(-40, 0, -80), n =  2 },
+    { off = Vector3.new(  0, 0, -80), n =  3 },
+    { off = Vector3.new( 40, 0, -80), n =  4 },
+    { off = Vector3.new( 80, 0, -80), n =  5 },
+    -- Row 2  (Z = -40)
+    { off = Vector3.new(-80, 0, -40), n =  6 },
+    { off = Vector3.new(-40, 0, -40), n =  7 },
+    { off = Vector3.new(  0, 0, -40), n =  8 },
+    { off = Vector3.new( 40, 0, -40), n =  9 },
+    { off = Vector3.new( 80, 0, -40), n = 10 },
+    -- Row 3  (Z = 0, origin is centre — skipped)
+    { off = Vector3.new(-80, 0,   0), n = 11 },
+    { off = Vector3.new(-40, 0,   0), n = 12 },
+    { off = Vector3.new( 40, 0,   0), n = 13 },
+    { off = Vector3.new( 80, 0,   0), n = 14 },
+    -- Row 4  (Z = +40)
+    { off = Vector3.new(-80, 0,  40), n = 15 },
+    { off = Vector3.new(-40, 0,  40), n = 16 },
+    { off = Vector3.new(  0, 0,  40), n = 17 },
+    { off = Vector3.new( 40, 0,  40), n = 18 },
+    { off = Vector3.new( 80, 0,  40), n = 19 },
+    -- Row 5  (Z = +80)
+    { off = Vector3.new(-80, 0,  80), n = 20 },
+    { off = Vector3.new(-40, 0,  80), n = 21 },
+    { off = Vector3.new(  0, 0,  80), n = 22 },
+    { off = Vector3.new( 40, 0,  80), n = 23 },
+    { off = Vector3.new( 80, 0,  80), n = 24 },
 }
 
--- Returns true if targetPos is adjacent (within offset distance) of any plot the player owns
-local function isAdjacentToOwned(targetPos)
-    for _, owned in ipairs(workspace.Properties:GetChildren()) do
-        if owned:FindFirstChild("Owner") and owned.Owner.Value == LP
-           and owned:FindFirstChild("OriginSquare") then
-            local ownedPos = owned.OriginSquare.Position
-            for _, off in ipairs(EXPAND_OFFSETS) do
-                if (ownedPos + off - targetPos).Magnitude < 5 then
-                    return true
-                end
+-- State
+local expandClickActive = false
+local expandEntries     = {}  -- { part, highlight, detector }
+
+-- Returns the plot the player owns (used to anchor the grid)
+local function getOriginPlot()
+    for _, v in ipairs(workspace.Properties:GetChildren()) do
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP
+           and v:FindFirstChild("OriginSquare") then
+            return v
+        end
+    end
+    return nil
+end
+
+-- Checks whether a world-position slot has already been expanded by
+-- looking for any owned Part that is very close to that position.
+local function isSlotExpanded(originPlot, worldPos)
+    for _, child in ipairs(originPlot:GetDescendants()) do
+        if child:IsA("BasePart") and child ~= originPlot.OriginSquare then
+            if (child.Position - worldPos).Magnitude < 8 then
+                return true
             end
         end
     end
     return false
 end
 
--- Returns true if the player owns at least one plot
-local function playerOwnsAny()
-    for _, v in ipairs(workspace.Properties:GetChildren()) do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP then
-            return true
-        end
-    end
-    return false
-end
-
--- Clears all active highlights and click detectors
-local function clearClickBuyFrames()
-    for _, entry in ipairs(highlightFrames) do
+-- Destroys all active highlight parts/detectors
+local function clearExpandEntries()
+    for _, e in ipairs(expandEntries) do
         pcall(function()
-            if entry.highlight and entry.highlight.Parent then entry.highlight:Destroy() end
-            if entry.detector  and entry.detector.Parent  then entry.detector:Destroy()  end
+            if e.highlight and e.highlight.Parent then e.highlight:Destroy() end
+            if e.detector  and e.detector.Parent  then e.detector:Destroy()  end
+            if e.part      and e.part.Parent       then e.part:Destroy()      end
         end)
     end
-    highlightFrames = {}
+    expandEntries = {}
 end
 
--- Forward declaration so refreshClickBuyFrames can reference itself recursively via task.delay
-local refreshClickBuyFrames
+local refreshExpandSlots  -- forward declared so the click handler can call it
 
-refreshClickBuyFrames = function()
-    clearClickBuyFrames()
-    if not clickBuyActive then return end
+refreshExpandSlots = function()
+    clearExpandEntries()
+    if not expandClickActive then return end
 
-    local ownsAny = playerOwnsAny()
+    local originPlot = getOriginPlot()
+    if not originPlot then return end  -- player has no land yet
 
-    for _, v in ipairs(workspace.Properties:GetChildren()) do
-        if v:FindFirstChild("Owner") and v:FindFirstChild("OriginSquare") then
-            local unowned  = (v.Owner.Value == nil)
-            -- Show slot if unowned AND (player owns nothing yet OR slot is adjacent to owned land)
-            local showable = unowned and (not ownsAny or isAdjacentToOwned(v.OriginSquare.Position))
+    local originPos = originPlot.OriginSquare.Position
 
-            if showable then
-                -- White outline highlight so the plot is clearly visible in-world
-                local hl = Instance.new("Highlight")
-                hl.FillColor           = Color3.fromRGB(200, 200, 200)
-                hl.FillTransparency    = 0.55
-                hl.OutlineColor        = Color3.fromRGB(255, 255, 255)
-                hl.OutlineTransparency = 0
-                hl.Parent              = v.OriginSquare
+    for _, slot in ipairs(GRID_SLOTS) do
+        local worldPos = originPos + slot.off
 
-                -- ClickDetector with infinite reach so player can click from anywhere
-                local cd = Instance.new("ClickDetector")
-                cd.MaxActivationDistance = 9999
-                cd.Parent = v.OriginSquare
+        -- Only show a highlight if this slot is NOT already expanded
+        if not isSlotExpanded(originPlot, worldPos) then
 
-                local entry = { plot = v, highlight = hl, detector = cd }
-                table.insert(highlightFrames, entry)
+            -- Invisible anchor Part sized to fill the tile
+            local anchorPart = Instance.new("Part")
+            anchorPart.Name         = "VH_ExpandSlot_" .. tostring(slot.n)
+            anchorPart.Size         = Vector3.new(38, 0.2, 38)
+            anchorPart.CFrame       = CFrame.new(worldPos)
+            anchorPart.Anchored     = true
+            anchorPart.CanCollide   = false
+            anchorPart.Transparency = 1
+            anchorPart.Parent       = workspace
 
-                -- Capture v in local so the closure stays correct per iteration
-                local capturedPlot = v
-                cd.MouseClick:Connect(function()
-                    if not clickBuyActive then return end
-                    pcall(function()
-                        RS.PropertyPurchasing.ClientPurchasedProperty:FireServer(
-                            capturedPlot,
-                            capturedPlot.OriginSquare.Position
-                        )
-                        LP.Character.HumanoidRootPart.CFrame =
-                            capturedPlot.OriginSquare.CFrame + Vector3.new(0, 2, 0)
-                    end)
-                    -- Brief delay to let server confirm ownership, then re-scan
-                    task.delay(0.6, function()
-                        if clickBuyActive then
-                            refreshClickBuyFrames()
-                        end
-                    end)
+            -- Grey fill + white outline as requested
+            local hl = Instance.new("Highlight")
+            hl.FillColor           = Color3.fromRGB(160, 160, 160)
+            hl.FillTransparency    = 0.45
+            hl.OutlineColor        = Color3.fromRGB(255, 255, 255)
+            hl.OutlineTransparency = 0
+            hl.Parent              = anchorPart
+
+            -- Infinite-range ClickDetector so the player can click from anywhere
+            local cd = Instance.new("ClickDetector")
+            cd.MaxActivationDistance = 9999
+            cd.Parent = anchorPart
+
+            -- Capture loop variables for the closure
+            local cap_plot     = originPlot
+            local cap_worldPos = worldPos
+            local cap_part     = anchorPart
+            local cap_hl       = hl
+            local cap_cd       = cd
+
+            table.insert(expandEntries, { part = cap_part, highlight = cap_hl, detector = cap_cd })
+
+            cd.MouseClick:Connect(function()
+                if not expandClickActive then return end
+
+                -- Fire expansion remote — same call as maxLand
+                pcall(function()
+                    RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
+                        cap_plot,
+                        CFrame.new(cap_worldPos)
+                    )
                 end)
-            end
+
+                -- Remove this slot's visuals immediately for snappy feedback
+                pcall(function()
+                    cap_hl:Destroy()
+                    cap_cd:Destroy()
+                    cap_part:Destroy()
+                end)
+
+                -- Re-scan after server has time to confirm
+                task.delay(0.7, function()
+                    if expandClickActive then
+                        refreshExpandSlots()
+                    end
+                end)
+            end)
         end
     end
 end
 
--- Fully disables the click-buy system
-local function cleanupClickBuy()
-    clickBuyActive = false
-    clearClickBuyFrames()
+local function cleanupExpandClick()
+    expandClickActive = false
+    clearExpandEntries()
 end
 
--- Background refresh loop: re-scans every second while active so external
--- ownership changes (e.g. another player buys land) are reflected automatically
+-- Background re-scan every 1.5 s while active (catches server-side confirmations)
 task.spawn(function()
     while true do
-        task.wait(1)
-        if clickBuyActive then
-            refreshClickBuyFrames()
+        task.wait(1.5)
+        if expandClickActive then
+            refreshExpandSlots()
         end
     end
 end)
 
--- The toggle itself
-makeToggle(sl, "Click To Buy Land", false, function(on)
-    clickBuyActive = on
+makeToggle(sl, "Click To Expand Land", false, function(on)
+    expandClickActive = on
     if on then
         task.spawn(function()
-            -- Wait for Properties to populate (handles late load / empty workspace)
+            -- Wait up to 10 s for the player's plot to load
             local attempts = 0
             while attempts < 20 do
-                local hasAny = false
-                for _, v in ipairs(workspace.Properties:GetChildren()) do
-                    if v:FindFirstChild("Owner") then hasAny = true; break end
-                end
-                if hasAny then break end
+                if getOriginPlot() then break end
                 attempts += 1
                 task.wait(0.5)
             end
-            if clickBuyActive then
-                refreshClickBuyFrames()
+            if expandClickActive then
+                refreshExpandSlots()
             end
         end)
     else
-        cleanupClickBuy()
+        cleanupExpandClick()
     end
 end)
 
@@ -976,7 +1003,7 @@ end)
 -- ════════════════════════════════════════════════════
 table.insert(VH.cleanupTasks, function()
     if landHL then pcall(function() landHL:Destroy() end) end
-    cleanupClickBuy()
+    cleanupExpandClick()
 end)
 
 print("[VanillaHub] Vanilla6 loaded — black/grey/white theme")
