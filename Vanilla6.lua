@@ -898,7 +898,9 @@ local function cleanupExpand()
     expandActive = false
     if propsConn then pcall(function() propsConn:Disconnect() end); propsConn = nil end
     clearSlots()
-    pendingKeys = {}   -- reset so a fresh toggle re-scans everything correctly
+    -- NOTE: pendingKeys is intentionally NOT cleared here.
+    -- It must survive toggle off/on cycles so purchased slots stay hidden.
+    -- It is only wiped on full script unload (see VH.cleanupTasks below).
 end
 
 local function hookPropertyWatcher()
@@ -946,32 +948,45 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
             end
             if not expandActive then return end
 
-            -- Seed pendingKeys with every grid slot LP already owns.
-            -- Expanded tiles aren't separate Property objects so we fire
-            -- ClientExpandedProperty and check what the server accepts —
-            -- instead we just pre-mark every slot that currently has any
-            -- owner so refreshSlots never draws a tile there.
-            -- (buildTakenSet already handles base plots via workspace.Properties;
-            --  this seeds the *expanded* slots LP bought in previous sessions
-            --  by doing a one-time scan of all Property objects for any owner.)
-            local seeded = {}
+            -- ── Seed pendingKeys every time the toggle is turned on ───────────
+            -- Source A: every workspace.Properties entry with any owner (base plots).
             for _, v in ipairs(workspace.Properties:GetChildren()) do
                 local ownerVal = v:FindFirstChild("Owner")
                 local origSq   = v:FindFirstChild("OriginSquare")
                 if ownerVal and origSq and ownerVal.Value ~= nil then
-                    seeded[posKey(origSq.Position)] = true
+                    pendingKeys[posKey(origSq.Position)] = true
                 end
             end
-            -- Also mark the grid offsets that match LP's existing origin
+
+            -- Source B: expanded tiles owned by LP.
+            -- Expanded tiles are NOT separate workspace.Properties entries —
+            -- they live as Part/BasePart descendants of the origin plot model.
+            -- We scan every BasePart child of LP's origin plot and check
+            -- whether its position snaps to one of our grid slot positions.
             local op = getOriginPlot()
             if op then
                 local originPos = op.OriginSquare.Position
-                seeded[posKey(originPos)] = true
-                -- Fold seeded into pendingKeys
-                for k in pairs(seeded) do
-                    pendingKeys[k] = true
+                pendingKeys[posKey(originPos)] = true
+
+                -- Build a lookup of all expected grid world positions
+                local gridLookup = {}
+                for _, slot in ipairs(GRID_SLOTS) do
+                    local wp = originPos + slot.off
+                    gridLookup[posKey(wp)] = true
+                end
+
+                -- Walk every descendant Part of the origin plot and mark
+                -- any whose position falls on a grid slot as taken.
+                for _, part in ipairs(op:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        local k = posKey(part.Position)
+                        if gridLookup[k] then
+                            pendingKeys[k] = true
+                        end
+                    end
                 end
             end
+            -- ─────────────────────────────────────────────────────────────────
 
             refreshSlots()
         end)
@@ -1015,6 +1030,7 @@ end)
 table.insert(VH.cleanupTasks, function()
     if landHL then pcall(function() landHL:Destroy() end) end
     cleanupExpand()
+    pendingKeys = {}   -- full wipe only on script unload
 end)
 
 print("[VanillaHub] Vanilla6 loaded — neon frame land art + fixed ownership check")
