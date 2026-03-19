@@ -1,5 +1,5 @@
--- VanillaHub | Vanilla7.lua
--- Populates: Vehicle tab (Spawner only)
+-- VanillaHub | Vanilla7_SpawnerOnly.lua
+-- Spawner section only.
 -- Requires Vanilla1 (_G.VH) to already be loaded.
 
 if not _G.VH then
@@ -7,19 +7,13 @@ if not _G.VH then
     return
 end
 
-local VH         = _G.VH
-local TS         = VH.TweenService
-local Players    = VH.Players
-local RS         = game:GetService("ReplicatedStorage")
-local UIS        = VH.UserInputService
-local LP         = Players.LocalPlayer
-local Mouse      = LP:GetMouse()
+local VH      = _G.VH
+local TS      = VH.TweenService
+local Players = VH.Players
+local RS      = game:GetService("ReplicatedStorage")
+local LP      = Players.LocalPlayer
+local Mouse   = LP:GetMouse()
 
-local pages      = VH.pages
-
--- ════════════════════════════════════════════════════
--- THEME
--- ════════════════════════════════════════════════════
 local C = {
     CARD     = Color3.fromRGB(10,  10,  10),
     ROW      = Color3.fromRGB(16,  16,  16),
@@ -34,9 +28,12 @@ local C = {
     DOT_ACT  = Color3.fromRGB(200, 200, 200),
 }
 
+local pages = VH.pages
+
 -- ════════════════════════════════════════════════════
--- SHARED UI HELPERS
+-- SHARED UI HELPERS (only what spawner needs)
 -- ════════════════════════════════════════════════════
+
 local function corner(p, r)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, r or 6)
@@ -324,7 +321,7 @@ local function makeStatus(page, initText)
 end
 
 -- ════════════════════════════════════════════════════
--- VEHICLE TAB
+-- SPAWNER LOGIC
 -- ════════════════════════════════════════════════════
 
 local vh = pages["VehicleTab"]
@@ -410,4 +407,4 @@ table.insert(VH.cleanupTasks, function()
     abortSpawner = true
 end)
 
-print("[VanillaHub] Vanilla7 loaded")
+print("[VanillaHub] Vanilla7_SpawnerOnly loaded")
