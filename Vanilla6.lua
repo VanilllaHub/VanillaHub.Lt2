@@ -1,6 +1,6 @@
 -- ════════════════════════════════════════════════════
 -- VANILLA6 — FULL REWRITE
--- AutoBuy + Slot Tab
+-- Slot Tab
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -389,174 +389,6 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
 end
 
 -- ════════════════════════════════════════════════════
--- AUTOBUY TAB — COMING SOON
--- ════════════════════════════════════════════════════
-
-local ab = pages["AutoBuyTab"]
-
-local csOuter = Instance.new("Frame", ab)
-csOuter.Size             = UDim2.new(1, -12, 0, 200)
-csOuter.BackgroundColor3 = C.BG
-csOuter.BorderSizePixel  = 0
-corner(csOuter, 12)
-
-local csBorderStroke = Instance.new("UIStroke", csOuter)
-csBorderStroke.Color        = C.BORDER_DIM
-csBorderStroke.Thickness    = 1.5
-csBorderStroke.Transparency = 0
-
-for row = 0, 3 do
-    local g = Instance.new("Frame", csOuter)
-    g.Size             = UDim2.new(1, 0, 0, 1)
-    g.Position         = UDim2.new(0, 0, 0, 22 + row * 46)
-    g.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-    g.BorderSizePixel  = 0; g.ZIndex = 1
-end
-for col = 0, 5 do
-    local g = Instance.new("Frame", csOuter)
-    g.Size             = UDim2.new(0, 1, 1, 0)
-    g.Position         = UDim2.new(0, 28 + col * 44, 0, 0)
-    g.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-    g.BorderSizePixel  = 0; g.ZIndex = 1
-end
-
-local glowBlob = Instance.new("Frame", csOuter)
-glowBlob.Size                   = UDim2.new(0, 80, 0, 80)
-glowBlob.AnchorPoint            = Vector2.new(0.5, 0)
-glowBlob.Position               = UDim2.new(0.5, 0, 0, 16)
-glowBlob.BackgroundColor3       = C.GLOW
-glowBlob.BorderSizePixel        = 0
-glowBlob.BackgroundTransparency = 0.68
-glowBlob.ZIndex                 = 2
-corner(glowBlob, 40)
-
-local lockCircle = Instance.new("Frame", csOuter)
-lockCircle.Size             = UDim2.new(0, 46, 0, 46)
-lockCircle.AnchorPoint      = Vector2.new(0.5, 0)
-lockCircle.Position         = UDim2.new(0.5, 0, 0, 22)
-lockCircle.BackgroundColor3 = C.CARD
-lockCircle.BorderSizePixel  = 0; lockCircle.ZIndex = 3
-corner(lockCircle, 23)
-local lockStroke = Instance.new("UIStroke", lockCircle)
-lockStroke.Color = C.BORDER; lockStroke.Thickness = 1.5
-
-local lockIcon = Instance.new("TextLabel", lockCircle)
-lockIcon.Size               = UDim2.new(1, 0, 1, 0)
-lockIcon.BackgroundTransparency = 1
-lockIcon.Text               = "🛒"
-lockIcon.Font               = Enum.Font.GothamBold; lockIcon.TextSize = 20
-lockIcon.TextXAlignment     = Enum.TextXAlignment.Center
-lockIcon.TextYAlignment     = Enum.TextYAlignment.Center
-lockIcon.ZIndex             = 4
-
-local csTitleLbl = Instance.new("TextLabel", csOuter)
-csTitleLbl.Size               = UDim2.new(1, -16, 0, 24)
-csTitleLbl.Position           = UDim2.new(0, 8, 0, 78)
-csTitleLbl.BackgroundTransparency = 1
-csTitleLbl.Font               = Enum.Font.GothamBold; csTitleLbl.TextSize = 17
-csTitleLbl.TextColor3         = Color3.fromRGB(200, 200, 200)
-csTitleLbl.TextXAlignment     = Enum.TextXAlignment.Center
-csTitleLbl.Text               = "COMING SOON"; csTitleLbl.ZIndex = 5
-
-local accentLine = Instance.new("Frame", csOuter)
-accentLine.Size             = UDim2.new(0, 56, 0, 2)
-accentLine.AnchorPoint      = Vector2.new(0.5, 0)
-accentLine.Position         = UDim2.new(0.5, 0, 0, 105)
-accentLine.BackgroundColor3 = C.BORDER; accentLine.BorderSizePixel = 0
-accentLine.ZIndex           = 5; corner(accentLine, 1)
-
-local csSubLbl = Instance.new("TextLabel", csOuter)
-csSubLbl.Size               = UDim2.new(1, -20, 0, 14)
-csSubLbl.Position           = UDim2.new(0, 10, 0, 112)
-csSubLbl.BackgroundTransparency = 1
-csSubLbl.Font               = Enum.Font.GothamSemibold; csSubLbl.TextSize = 10
-csSubLbl.TextColor3         = C.TEXT_DIM
-csSubLbl.TextXAlignment     = Enum.TextXAlignment.Center
-csSubLbl.Text               = "AUTO BUY  —  UNDER DEVELOPMENT"; csSubLbl.ZIndex = 5
-
-local csDescLbl = Instance.new("TextLabel", csOuter)
-csDescLbl.Size               = UDim2.new(1, -24, 0, 36)
-csDescLbl.Position           = UDim2.new(0, 12, 0, 130)
-csDescLbl.BackgroundTransparency = 1
-csDescLbl.Font               = Enum.Font.Gotham; csDescLbl.TextSize = 10
-csDescLbl.TextColor3         = C.TEXT_DIM
-csDescLbl.TextXAlignment     = Enum.TextXAlignment.Center
-csDescLbl.TextWrapped        = true
-csDescLbl.Text               = "Being rebuilt with improved bypass logic, smarter counter detection & network ownership handling."
-csDescLbl.ZIndex             = 5
-
-local statusPill = Instance.new("Frame", csOuter)
-statusPill.Size             = UDim2.new(0, 148, 0, 20)
-statusPill.AnchorPoint      = Vector2.new(0.5, 0)
-statusPill.Position         = UDim2.new(0.5, 0, 0, 172)
-statusPill.BackgroundColor3 = C.CARD; statusPill.BorderSizePixel = 0
-statusPill.ZIndex           = 5; corner(statusPill, 10)
-local pillStroke = Instance.new("UIStroke", statusPill)
-pillStroke.Color = C.BORDER; pillStroke.Thickness = 1; pillStroke.Transparency = 0.4
-
-local pulseDot = Instance.new("Frame", statusPill)
-pulseDot.Size             = UDim2.new(0, 6, 0, 6)
-pulseDot.Position         = UDim2.new(0, 10, 0.5, -3)
-pulseDot.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-pulseDot.BorderSizePixel  = 0; pulseDot.ZIndex = 6; corner(pulseDot, 3)
-
-local pillLbl = Instance.new("TextLabel", statusPill)
-pillLbl.Size               = UDim2.new(1, -24, 1, 0)
-pillLbl.Position           = UDim2.new(0, 22, 0, 0)
-pillLbl.BackgroundTransparency = 1
-pillLbl.Font               = Enum.Font.GothamSemibold; pillLbl.TextSize = 10
-pillLbl.TextColor3         = C.TEXT_MID
-pillLbl.TextXAlignment     = Enum.TextXAlignment.Left
-pillLbl.Text               = "In Development  •  v0.0"; pillLbl.ZIndex = 6
-
-task.spawn(function()
-    while true do
-        TS:Create(pulseDot, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {BackgroundTransparency = 0.75}):Play()
-        task.wait(0.9)
-        TS:Create(pulseDot, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {BackgroundTransparency = 0}):Play()
-        task.wait(0.9)
-    end
-end)
-
-task.spawn(function()
-    local cols = {
-        Color3.fromRGB(60,60,60), Color3.fromRGB(85,85,85),
-        Color3.fromRGB(45,45,45), Color3.fromRGB(75,75,75),
-    }
-    local i = 1
-    while true do
-        local nx = i % #cols + 1
-        TS:Create(csBorderStroke, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Color = cols[nx]}):Play()
-        i = nx; task.wait(2)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        TS:Create(lockCircle, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Position = UDim2.new(0.5,0,0,18)}):Play()
-        task.wait(1.4)
-        TS:Create(lockCircle, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Position = UDim2.new(0.5,0,0,26)}):Play()
-        task.wait(1.4)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        TS:Create(glowBlob, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Position = UDim2.new(0.5,0,0,12)}):Play()
-        task.wait(1.4)
-        TS:Create(glowBlob, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Position = UDim2.new(0.5,0,0,20)}):Play()
-        task.wait(1.4)
-    end
-end)
-
--- ════════════════════════════════════════════════════
 -- SLOT TAB
 -- ════════════════════════════════════════════════════
 
@@ -734,23 +566,10 @@ local slotModels   = {}
 local propsConn    = nil
 local pendingKeys  = {}
 
--- posKey: rounds to nearest 10 studs so minor float drift never breaks matching
 local function posKey(v3)
     return math.round(v3.X / 10) .. "_" .. math.round(v3.Z / 10)
 end
 
--- ════════════════════════════════════════════════════
--- buildTakenSet  (FIX 1)
---
--- Now checks two sources for every owned property:
---   (a) The OriginSquare position  — catches base plots.
---   (b) ALL BasePart descendants   — catches expanded tiles, which are
---       parts inside the origin plot model rather than separate
---       workspace.Properties entries.
---
--- This means already-purchased expansion tiles are marked taken
--- immediately, without relying on the ownership watcher firing later.
--- ════════════════════════════════════════════════════
 local function buildTakenSet()
     local taken = {}
 
@@ -758,12 +577,9 @@ local function buildTakenSet()
         local ownerVal = v:FindFirstChild("Owner")
         local origSq   = v:FindFirstChild("OriginSquare")
         if ownerVal and ownerVal.Value ~= nil then
-            -- (a) base plot origin
             if origSq then
                 taken[posKey(origSq.Position)] = true
             end
-            -- (b) every BasePart inside this property model
-            --     (covers expanded tiles of any player)
             for _, part in ipairs(v:GetDescendants()) do
                 if part:IsA("BasePart") then
                     taken[posKey(part.Position)] = true
@@ -772,7 +588,6 @@ local function buildTakenSet()
         end
     end
 
-    -- Slots clicked this session (may not have replicated yet)
     for k in pairs(pendingKeys) do
         taken[k] = true
     end
@@ -895,12 +710,10 @@ refreshSlots = function()
             local oVal = propChild:FindFirstChild("Owner")
             if not oVal then return end
             if oVal.Value ~= nil then
-                -- Check origin square
                 local oSq = propChild:FindFirstChild("OriginSquare")
                 if oSq and posKey(oSq.Position) == cap_key then
                     removeSlotByKey(cap_key); return
                 end
-                -- Check all descendant parts (expanded tiles)
                 for _, part in ipairs(propChild:GetDescendants()) do
                     if part:IsA("BasePart") and posKey(part.Position) == cap_key then
                         removeSlotByKey(cap_key); return
@@ -1001,7 +814,6 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
     if on then
         hookPropertyWatcher()
         task.spawn(function()
-            -- Wait for origin plot to exist
             local tries = 0
             while tries < 20 do
                 if getOriginPlot() then break end
@@ -1009,33 +821,14 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
             end
             if not expandActive then return end
 
-            -- ════════════════════════════════════════════════════
-            -- FIX 2: Wait for server ownership data to fully
-            -- replicate before seeding pendingKeys and rendering.
-            --
-            -- Without this wait, workspace.Properties children may
-            -- still have Owner.Value == nil at this point (not yet
-            -- pushed from the server). The tile highlights would
-            -- appear for already-owned slots, then the ownership
-            -- watcher would fire ~1–2 s later and remove them,
-            -- producing the "flash then disappear" behaviour.
-            --
-            -- 2 seconds is enough for a typical server round-trip
-            -- while being imperceptible to the user on enable.
-            -- ════════════════════════════════════════════════════
             task.wait(2)
             if not expandActive then return end
 
-            -- Seed pendingKeys from current replicated state.
-            -- buildTakenSet() already covers all of this dynamically,
-            -- but we pre-populate pendingKeys as a fast-path cache so
-            -- that subsequent refreshSlots() calls are instant.
             local op = getOriginPlot()
             if op then
                 local originPos = op.OriginSquare.Position
                 pendingKeys[posKey(originPos)] = true
 
-                -- Mark all owned properties' positions (base + expanded)
                 for _, v in ipairs(workspace.Properties:GetChildren()) do
                     local ownerVal = v:FindFirstChild("Owner")
                     local origSq   = v:FindFirstChild("OriginSquare")
@@ -1043,7 +836,6 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
                         if origSq then
                             pendingKeys[posKey(origSq.Position)] = true
                         end
-                        -- Walk descendants to catch expanded tiles
                         for _, part in ipairs(v:GetDescendants()) do
                             if part:IsA("BasePart") then
                                 pendingKeys[posKey(part.Position)] = true
@@ -1083,12 +875,10 @@ makeButton(sl, "Take Selected Land", function()
     if not land then return end
     local ownerVal = land:FindFirstChild("Owner")
     local origSq   = land:FindFirstChild("OriginSquare")
-    -- Only attempt purchase on unowned plots, matching freeLand behaviour
     if ownerVal and ownerVal.Value == nil and origSq then
         pcall(function()
             RS.PropertyPurchasing.ClientPurchasedProperty:FireServer(land, origSq.Position)
         end)
-        -- Teleport outside the pcall so it always fires even if the remote errors
         pcall(function()
             LP.Character.HumanoidRootPart.CFrame = origSq.CFrame + Vector3.new(0, 2, 0)
         end)
@@ -1105,4 +895,4 @@ table.insert(VH.cleanupTasks, function()
     pendingKeys = {}
 end)
 
-print("[VanillaHub] Vanilla6 loaded — neon frame land art + fixed ownership check")
+print("[VanillaHub] Vanilla6 loaded — Slot Tab")
