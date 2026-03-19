@@ -633,22 +633,12 @@ end
 
 -- ════════════════════════════════════════════════════
 -- LAND ART  —  Click To Expand Land
---
--- Visual design:
---   frame  — 4 thin neon-white strips forming a complete outline around
---             each available slot. Each strip is BORDER_T studs wide.
---   tile   — Neon white SmoothPlastic fill, Transparency 0.55 (bright glow).
---
--- Ownership check:
---   Rebuilds the taken-key set fresh on every refresh.
---   Skips any slot whose position matches ANY property that has an owner
---   (including other players) — you can only expand onto truly empty plots.
 -- ════════════════════════════════════════════════════
 
-local TILE_SIZE = 40    -- land slot size in studs
-local BORDER_T  = 0.35  -- outline strip thickness (thin & clean)
-local TILE_Y    = 0.15  -- Y height of the tile slab above ground
-local FRAME_Y   = 0.18  -- Y height of the border strips (slightly above tile)
+local TILE_SIZE = 40
+local BORDER_T  = 0.35
+local TILE_Y    = 0.15
+local FRAME_Y   = 0.18
 
 local GRID_SLOTS = {
     {off=Vector3.new(-80,0,-80),n= 1}, {off=Vector3.new(-40,0,-80),n= 2},
@@ -668,10 +658,6 @@ local GRID_SLOTS = {
 local expandActive = false
 local slotModels   = {}
 local propsConn    = nil
-
--- pendingKeys: slots the player has already clicked this session.
--- These are marked taken immediately on click and survive all refreshes.
--- Only cleared when the toggle is turned off.
 local pendingKeys  = {}
 
 -- posKey: rounds to nearest 10 studs so minor float drift never breaks matching
@@ -679,28 +665,40 @@ local function posKey(v3)
     return math.round(v3.X / 10) .. "_" .. math.round(v3.Z / 10)
 end
 
--- buildTakenSet: collects all slot positions that are already occupied.
+-- ════════════════════════════════════════════════════
+-- buildTakenSet  (FIX 1)
 --
--- Two sources:
---   1. workspace.Properties entries whose Owner is non-nil (base plots, other players)
---   2. pendingKeys — slots this session's player has already clicked/purchased,
---      which the server may not have replicated yet on the next refresh.
+-- Now checks two sources for every owned property:
+--   (a) The OriginSquare position  — catches base plots.
+--   (b) ALL BasePart descendants   — catches expanded tiles, which are
+--       parts inside the origin plot model rather than separate
+--       workspace.Properties entries.
 --
--- NOTE: Expanded tiles are NOT separate Property objects in workspace.Properties —
--- they extend the origin plot. That's why we rely on pendingKeys for them.
+-- This means already-purchased expansion tiles are marked taken
+-- immediately, without relying on the ownership watcher firing later.
+-- ════════════════════════════════════════════════════
 local function buildTakenSet()
     local taken = {}
 
-    -- Source 1: any property with a real owner (origin squares only)
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         local ownerVal = v:FindFirstChild("Owner")
         local origSq   = v:FindFirstChild("OriginSquare")
-        if ownerVal and origSq and ownerVal.Value ~= nil then
-            taken[posKey(origSq.Position)] = true
+        if ownerVal and ownerVal.Value ~= nil then
+            -- (a) base plot origin
+            if origSq then
+                taken[posKey(origSq.Position)] = true
+            end
+            -- (b) every BasePart inside this property model
+            --     (covers expanded tiles of any player)
+            for _, part in ipairs(v:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    taken[posKey(part.Position)] = true
+                end
+            end
         end
     end
 
-    -- Source 2: slots already clicked this session
+    -- Slots clicked this session (may not have replicated yet)
     for k in pairs(pendingKeys) do
         taken[k] = true
     end
@@ -739,7 +737,6 @@ local function clearSlots()
 end
 
 local function removeSlotByKey(key)
-    -- Mark taken permanently in pendingKeys so refreshes don't re-spawn it
     pendingKeys[key] = true
     for i, entry in ipairs(slotModels) do
         if entry.key == key then
@@ -750,7 +747,6 @@ local function removeSlotByKey(key)
     end
 end
 
--- ── makeBorderStrip: one thin neon white flat Part ─────────────────────────
 local function makeBorderStrip(parent, cx, cz, sx, sz, baseY)
     local p = Instance.new("Part")
     p.Name         = "BorderStrip"
@@ -760,7 +756,7 @@ local function makeBorderStrip(parent, cx, cz, sx, sz, baseY)
     p.CanCollide   = false
     p.Material     = Enum.Material.Neon
     p.Color        = Color3.fromRGB(255, 255, 255)
-    p.Transparency = 0.05    -- nearly solid neon white — very bright outline
+    p.Transparency = 0.05
     p.CastShadow   = false
     p.Parent       = parent
     return p
@@ -776,20 +772,16 @@ refreshSlots = function()
     if not originPlot then return end
 
     local originPos = originPlot.OriginSquare.Position
-    local taken     = buildTakenSet()   -- fresh set every call
+    local taken     = buildTakenSet()
 
-    -- also mark the origin plot itself as taken
     taken[posKey(originPos)] = true
 
     for _, slot in ipairs(GRID_SLOTS) do
         local worldPos = originPos + slot.off
         local key      = posKey(worldPos)
 
-        if taken[key] then
-            -- slot is owned by LP, another player, or otherwise taken — skip it
-        else
+        if not taken[key] then
 
-        -- ── Container ────────────────────────────────────────────────────────
         local model  = Instance.new("Model")
         model.Name   = "VH_SlotModel_" .. slot.n
         model.Parent = workspace
@@ -800,7 +792,6 @@ refreshSlots = function()
         local half   = TILE_SIZE / 2
         local bt     = BORDER_T
 
-        -- ── TILE — Neon white fill, semi-transparent glow ────────────────────
         local tile = Instance.new("Part")
         tile.Name         = "Tile"
         tile.Size         = Vector3.new(TILE_SIZE, 0.1, TILE_SIZE)
@@ -809,36 +800,38 @@ refreshSlots = function()
         tile.CanCollide   = false
         tile.Material     = Enum.Material.Neon
         tile.Color        = Color3.fromRGB(255, 255, 255)
-        tile.Transparency = 0.6   -- bright white glow visible through it
+        tile.Transparency = 0.6
         tile.CastShadow   = false
         tile.Parent       = model
 
-        -- ── BORDER FRAME — 4 thin neon strips, all the way around ────────────
-        -- Top strip    (north edge, -Z side)
         makeBorderStrip(model, wx,         wz - half - bt/2, TILE_SIZE + bt*2, bt, fy)
-        -- Bottom strip (south edge, +Z side)
         makeBorderStrip(model, wx,         wz + half + bt/2, TILE_SIZE + bt*2, bt, fy)
-        -- Left strip   (west edge,  -X side)
         makeBorderStrip(model, wx - half - bt/2, wz,         bt, TILE_SIZE,        fy)
-        -- Right strip  (east edge,  +X side)
         makeBorderStrip(model, wx + half + bt/2, wz,         bt, TILE_SIZE,        fy)
 
-        -- ClickDetector — infinite range on the tile
         local cd = Instance.new("ClickDetector")
         cd.MaxActivationDistance = 9999
         cd.Parent = tile
 
-        -- ── Per-slot ownership watcher ────────────────────────────────────────
         local ownerConns = {}
         local cap_key    = key
 
         local function checkAndRemove(propChild)
             if not (propChild and propChild.Parent) then return end
-            local oSq  = propChild:FindFirstChild("OriginSquare")
             local oVal = propChild:FindFirstChild("Owner")
-            if not (oSq and oVal) then return end
-            if posKey(oSq.Position) == cap_key and oVal.Value ~= nil then
-                removeSlotByKey(cap_key)
+            if not oVal then return end
+            if oVal.Value ~= nil then
+                -- Check origin square
+                local oSq = propChild:FindFirstChild("OriginSquare")
+                if oSq and posKey(oSq.Position) == cap_key then
+                    removeSlotByKey(cap_key); return
+                end
+                -- Check all descendant parts (expanded tiles)
+                for _, part in ipairs(propChild:GetDescendants()) do
+                    if part:IsA("BasePart") and posKey(part.Position) == cap_key then
+                        removeSlotByKey(cap_key); return
+                    end
+                end
             end
         end
 
@@ -865,13 +858,11 @@ refreshSlots = function()
         end)
         table.insert(ownerConns, newChildConn)
 
-        -- ── Click to expand ───────────────────────────────────────────────────
         local cap_origin = originPlot
         local cap_wpos   = worldPos
 
         cd.MouseClick:Connect(function()
             if not expandActive then return end
-            -- Mark taken immediately — don't wait for server replication
             pendingKeys[cap_key] = true
             removeSlotByKey(cap_key)
             pcall(function()
@@ -890,7 +881,7 @@ refreshSlots = function()
             ownerConns = ownerConns,
         })
 
-        end -- end if not taken
+        end
     end
 end
 
@@ -898,9 +889,6 @@ local function cleanupExpand()
     expandActive = false
     if propsConn then pcall(function() propsConn:Disconnect() end); propsConn = nil end
     clearSlots()
-    -- NOTE: pendingKeys is intentionally NOT cleared here.
-    -- It must survive toggle off/on cycles so purchased slots stay hidden.
-    -- It is only wiped on full script unload (see VH.cleanupTasks below).
 end
 
 local function hookPropertyWatcher()
@@ -941,6 +929,7 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
     if on then
         hookPropertyWatcher()
         task.spawn(function()
+            -- Wait for origin plot to exist
             local tries = 0
             while tries < 20 do
                 if getOriginPlot() then break end
@@ -948,45 +937,49 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
             end
             if not expandActive then return end
 
-            -- ── Seed pendingKeys every time the toggle is turned on ───────────
-            -- Source A: every workspace.Properties entry with any owner (base plots).
-            for _, v in ipairs(workspace.Properties:GetChildren()) do
-                local ownerVal = v:FindFirstChild("Owner")
-                local origSq   = v:FindFirstChild("OriginSquare")
-                if ownerVal and origSq and ownerVal.Value ~= nil then
-                    pendingKeys[posKey(origSq.Position)] = true
-                end
-            end
+            -- ════════════════════════════════════════════════════
+            -- FIX 2: Wait for server ownership data to fully
+            -- replicate before seeding pendingKeys and rendering.
+            --
+            -- Without this wait, workspace.Properties children may
+            -- still have Owner.Value == nil at this point (not yet
+            -- pushed from the server). The tile highlights would
+            -- appear for already-owned slots, then the ownership
+            -- watcher would fire ~1–2 s later and remove them,
+            -- producing the "flash then disappear" behaviour.
+            --
+            -- 2 seconds is enough for a typical server round-trip
+            -- while being imperceptible to the user on enable.
+            -- ════════════════════════════════════════════════════
+            task.wait(2)
+            if not expandActive then return end
 
-            -- Source B: expanded tiles owned by LP.
-            -- Expanded tiles are NOT separate workspace.Properties entries —
-            -- they live as Part/BasePart descendants of the origin plot model.
-            -- We scan every BasePart child of LP's origin plot and check
-            -- whether its position snaps to one of our grid slot positions.
+            -- Seed pendingKeys from current replicated state.
+            -- buildTakenSet() already covers all of this dynamically,
+            -- but we pre-populate pendingKeys as a fast-path cache so
+            -- that subsequent refreshSlots() calls are instant.
             local op = getOriginPlot()
             if op then
                 local originPos = op.OriginSquare.Position
                 pendingKeys[posKey(originPos)] = true
 
-                -- Build a lookup of all expected grid world positions
-                local gridLookup = {}
-                for _, slot in ipairs(GRID_SLOTS) do
-                    local wp = originPos + slot.off
-                    gridLookup[posKey(wp)] = true
-                end
-
-                -- Walk every descendant Part of the origin plot and mark
-                -- any whose position falls on a grid slot as taken.
-                for _, part in ipairs(op:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        local k = posKey(part.Position)
-                        if gridLookup[k] then
-                            pendingKeys[k] = true
+                -- Mark all owned properties' positions (base + expanded)
+                for _, v in ipairs(workspace.Properties:GetChildren()) do
+                    local ownerVal = v:FindFirstChild("Owner")
+                    local origSq   = v:FindFirstChild("OriginSquare")
+                    if ownerVal and ownerVal.Value ~= nil then
+                        if origSq then
+                            pendingKeys[posKey(origSq.Position)] = true
+                        end
+                        -- Walk descendants to catch expanded tiles
+                        for _, part in ipairs(v:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                pendingKeys[posKey(part.Position)] = true
+                            end
                         end
                     end
                 end
             end
-            -- ─────────────────────────────────────────────────────────────────
 
             refreshSlots()
         end)
@@ -1030,7 +1023,7 @@ end)
 table.insert(VH.cleanupTasks, function()
     if landHL then pcall(function() landHL:Destroy() end) end
     cleanupExpand()
-    pendingKeys = {}   -- full wipe only on script unload
+    pendingKeys = {}
 end)
 
 print("[VanillaHub] Vanilla6 loaded — neon frame land art + fixed ownership check")
