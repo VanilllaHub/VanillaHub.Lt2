@@ -1,5 +1,5 @@
 -- VanillaHub | Vanilla7.lua
--- Populates: Build, Vehicle tabs
+-- Populates: Vehicle tab (Spawner only)
 -- Requires Vanilla1 (_G.VH) to already be loaded.
 
 if not _G.VH then
@@ -12,13 +12,9 @@ local TS         = VH.TweenService
 local Players    = VH.Players
 local RS         = game:GetService("ReplicatedStorage")
 local UIS        = VH.UserInputService
-local RunService = VH.RunService
 local LP         = Players.LocalPlayer
 local Mouse      = LP:GetMouse()
 
-local THEME_TEXT = VH.THEME_TEXT
-local BTN_COLOR  = VH.BTN_COLOR
-local BTN_HOVER  = VH.BTN_HOVER
 local pages      = VH.pages
 
 -- ════════════════════════════════════════════════════
@@ -28,18 +24,12 @@ local C = {
     CARD     = Color3.fromRGB(10,  10,  10),
     ROW      = Color3.fromRGB(16,  16,  16),
     INPUT    = Color3.fromRGB(30,  30,  30),
-    TRACK    = Color3.fromRGB(38,  38,  38),
     BORDER   = Color3.fromRGB(55,  55,  55),
     TEXT     = Color3.fromRGB(210, 210, 210),
     TEXT_MID = Color3.fromRGB(150, 150, 150),
     TEXT_DIM = Color3.fromRGB(90,  90,  90),
     BTN      = Color3.fromRGB(14,  14,  14),
     BTN_HV   = Color3.fromRGB(32,  32,  32),
-    FILL     = Color3.fromRGB(255, 255, 255),
-    SW_ON    = Color3.fromRGB(220, 220, 220),
-    SW_OFF   = Color3.fromRGB(50,  50,  50),
-    KNOB_ON  = Color3.fromRGB(30,  30,  30),
-    KNOB_OFF = Color3.fromRGB(160, 160, 160),
     DOT_IDLE = Color3.fromRGB(70,  70,  70),
     DOT_ACT  = Color3.fromRGB(200, 200, 200),
 }
@@ -65,13 +55,6 @@ local function sectionLabel(page, text)
     Instance.new("UIPadding", lbl).PaddingLeft = UDim.new(0, 4)
 end
 
-local function sep(page)
-    local s = Instance.new("Frame", page)
-    s.Size             = UDim2.new(1, -12, 0, 1)
-    s.BackgroundColor3 = C.BORDER
-    s.BorderSizePixel  = 0
-end
-
 local function makeButton(page, text, cb)
     local btn = Instance.new("TextButton", page)
     btn.Size             = UDim2.new(1, -12, 0, 34)
@@ -95,131 +78,6 @@ local function makeButton(page, text, cb)
     end)
     btn.MouseButton1Click:Connect(function() task.spawn(cb) end)
     return btn
-end
-
-local function makeToggle(page, text, default, cb)
-    local frame = Instance.new("Frame", page)
-    frame.Size             = UDim2.new(1, -12, 0, 32)
-    frame.BackgroundColor3 = C.CARD
-    frame.BorderSizePixel  = 0
-    corner(frame, 6)
-
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size               = UDim2.new(1, -52, 1, 0)
-    lbl.Position           = UDim2.new(0, 10, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Font               = Enum.Font.GothamSemibold
-    lbl.TextSize           = 13
-    lbl.TextColor3         = C.TEXT
-    lbl.TextXAlignment     = Enum.TextXAlignment.Left
-    lbl.Text               = text
-
-    local tb = Instance.new("TextButton", frame)
-    tb.Size             = UDim2.new(0, 34, 0, 18)
-    tb.Position         = UDim2.new(1, -44, 0.5, -9)
-    tb.BackgroundColor3 = default and C.SW_ON or C.SW_OFF
-    tb.Text             = ""
-    tb.BorderSizePixel  = 0
-    tb.AutoButtonColor  = false
-    corner(tb, 9)
-
-    local knob = Instance.new("Frame", tb)
-    knob.Size             = UDim2.new(0, 14, 0, 14)
-    knob.Position         = UDim2.new(0, default and 18 or 2, 0.5, -7)
-    knob.BackgroundColor3 = default and C.KNOB_ON or C.KNOB_OFF
-    knob.BorderSizePixel  = 0
-    corner(knob, 7)
-
-    local state = default
-    local function setState(v)
-        state = v
-        TS:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            BackgroundColor3 = v and C.SW_ON or C.SW_OFF,
-        }):Play()
-        TS:Create(knob, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            Position         = UDim2.new(0, v and 18 or 2, 0.5, -7),
-            BackgroundColor3 = v and C.KNOB_ON or C.KNOB_OFF,
-        }):Play()
-        cb(v)
-    end
-    setState(default)
-    tb.MouseButton1Click:Connect(function() setState(not state) end)
-    return {Set = setState, Get = function() return state end}
-end
-
-local function makeSlider(page, text, min, max, default, cb)
-    local frame = Instance.new("Frame", page)
-    frame.Size             = UDim2.new(1, -12, 0, 52)
-    frame.BackgroundColor3 = C.CARD
-    frame.BorderSizePixel  = 0
-    corner(frame, 6)
-
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size              = UDim2.new(0.6, 0, 0, 22)
-    lbl.Position          = UDim2.new(0, 8, 0, 6)
-    lbl.BackgroundTransparency = 1
-    lbl.Font              = Enum.Font.GothamSemibold
-    lbl.TextSize          = 13
-    lbl.TextColor3        = C.TEXT
-    lbl.TextXAlignment    = Enum.TextXAlignment.Left
-    lbl.Text              = text
-
-    local valLbl = Instance.new("TextLabel", frame)
-    valLbl.Size           = UDim2.new(0.4, 0, 0, 22)
-    valLbl.Position       = UDim2.new(0.6, -8, 0, 6)
-    valLbl.BackgroundTransparency = 1
-    valLbl.Font           = Enum.Font.GothamBold
-    valLbl.TextSize       = 13
-    valLbl.TextColor3     = C.FILL
-    valLbl.TextXAlignment = Enum.TextXAlignment.Right
-    valLbl.Text           = tostring(default)
-
-    local track = Instance.new("Frame", frame)
-    track.Size             = UDim2.new(1, -16, 0, 6)
-    track.Position         = UDim2.new(0, 8, 0, 36)
-    track.BackgroundColor3 = C.TRACK
-    track.BorderSizePixel  = 0
-    corner(track, 3)
-
-    local fill = Instance.new("Frame", track)
-    fill.Size             = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = C.FILL
-    fill.BorderSizePixel  = 0
-    corner(fill, 3)
-
-    local knob = Instance.new("TextButton", track)
-    knob.Size             = UDim2.new(0, 16, 0, 16)
-    knob.AnchorPoint      = Vector2.new(0.5, 0.5)
-    knob.Position         = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
-    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    knob.Text             = ""
-    knob.BorderSizePixel  = 0
-    knob.AutoButtonColor  = false
-    corner(knob, 8)
-
-    local dragging = false
-    local function update(absX)
-        local ratio = math.clamp((absX - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-        local val   = math.round(min + ratio * (max - min))
-        fill.Size     = UDim2.new(ratio, 0, 1, 0)
-        knob.Position = UDim2.new(ratio, 0, 0.5, 0)
-        valLbl.Text   = tostring(val)
-        cb(val)
-    end
-    knob.MouseButton1Down:Connect(function() dragging = true end)
-    track.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true; update(i.Position.X)
-        end
-    end)
-    UIS.InputChanged:Connect(function(i)
-        if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-            update(i.Position.X)
-        end
-    end)
-    UIS.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
 end
 
 local function makeFancyDropdown(page, labelText, getOptions, cb)
@@ -411,7 +269,6 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
     }
 end
 
--- Status bar — auto-resets to idle text 3 s after going inactive
 local function makeStatus(page, initText)
     local f = Instance.new("Frame", page)
     f.Size             = UDim2.new(1, -12, 0, 28)
@@ -466,370 +323,11 @@ local function makeStatus(page, initText)
     }
 end
 
-local function getPlayerNames()
-    local names = {}
-    for _, p in next, Players:GetPlayers() do table.insert(names, p.Name) end
-    return names
-end
-
--- ════════════════════════════════════════════════════
--- BUILD TAB
--- ════════════════════════════════════════════════════
-
-local bd = pages["BuildTab"]
-
-local fillSpeed   = 0.3
-local buildOwner  = LP.Name
-local lassoActive = false
-local includeBPs  = false
-local lassoSG     = nil
-local lassoRect   = nil
-local lassoConn   = nil
-
-local function isNetOwner(part)
-    local ok, v = pcall(function() return part.ReceiveAge == 0 end)
-    return ok and v
-end
-
-local function deselectAll()
-    for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-        if v.Name == "Selection" then pcall(function() v:Destroy() end) end
-    end
-    if workspace:FindFirstChild("Preview") then
-        for _, v in pairs(workspace.Preview:GetDescendants()) do
-            if v.Name == "Selection" then pcall(function() v:Destroy() end) end
-        end
-    end
-end
-
-local function inRect(rect, screenPos)
-    local minX = math.min(rect.sx, rect.ex); local maxX = math.max(rect.sx, rect.ex)
-    local minY = math.min(rect.sy, rect.ey); local maxY = math.max(rect.sy, rect.ey)
-    return screenPos.X >= minX and screenPos.X <= maxX
-       and screenPos.Y >= minY and screenPos.Y <= maxY
-end
-
-local function setupLasso()
-    if lassoSG then pcall(function() lassoSG:Destroy() end) end
-    lassoSG = Instance.new("ScreenGui")
-    lassoSG.Name           = "VH_Lasso"
-    lassoSG.ResetOnSpawn   = false
-    lassoSG.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    lassoSG.Parent         = game.CoreGui
-
-    lassoRect                        = Instance.new("Frame", lassoSG)
-    lassoRect.BackgroundColor3       = Color3.fromRGB(100, 100, 100)
-    lassoRect.BackgroundTransparency = 0.85
-    lassoRect.BorderSizePixel        = 0
-    lassoRect.Visible                = false
-    lassoRect.ZIndex                 = 20
-    local stroke = Instance.new("UIStroke", lassoRect)
-    stroke.Color     = Color3.fromRGB(180, 180, 180)
-    stroke.Thickness = 1.5
-
-    table.insert(VH.cleanupTasks, function()
-        if lassoSG and lassoSG.Parent then lassoSG:Destroy() end
-        if lassoConn then lassoConn:Disconnect() end
-    end)
-end
-setupLasso()
-
-UIS.InputBegan:Connect(function(input)
-    if not lassoActive then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-
-    local rect = {sx = Mouse.X, sy = Mouse.Y, ex = Mouse.X, ey = Mouse.Y}
-    lassoRect.Position = UDim2.new(0, rect.sx, 0, rect.sy)
-    lassoRect.Size     = UDim2.new(0, 0, 0, 0)
-    lassoRect.Visible  = true
-
-    local cam = workspace.CurrentCamera
-    local conn; conn = RunService.RenderStepped:Connect(function()
-        if not UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-            conn:Disconnect()
-            lassoRect.Visible = false
-
-            for _, v in pairs(workspace.PlayerModels:GetChildren()) do
-                local main = v:FindFirstChild("WoodSection") or v:FindFirstChild("Main")
-                if main then
-                    local sp, vis = cam:WorldToScreenPoint(main.CFrame.p)
-                    if vis and inRect(rect, sp) then
-                        if not main:FindFirstChild("Selection") then
-                            local sb = Instance.new("SelectionBox", main)
-                            sb.Name                = "Selection"
-                            sb.Adornee             = main
-                            sb.SurfaceTransparency = 0.6
-                            sb.LineThickness       = 0.08
-                            sb.Color3              = Color3.fromRGB(180, 180, 180)
-                        end
-                    end
-                end
-                if includeBPs and v:FindFirstChild("BuildDependentWood") then
-                    local bdw = v.BuildDependentWood
-                    local sp, vis = cam:WorldToScreenPoint(bdw.CFrame.p)
-                    if vis and inRect(rect, sp) then
-                        if not bdw:FindFirstChild("Selection") then
-                            local sb = Instance.new("SelectionBox", bdw)
-                            sb.Name                = "Selection"
-                            sb.Adornee             = bdw
-                            sb.SurfaceTransparency = 0.6
-                            sb.LineThickness       = 0.08
-                            sb.Color3              = Color3.fromRGB(150, 150, 150)
-                        end
-                    end
-                end
-            end
-            return
-        end
-
-        rect.ex = Mouse.X; rect.ey = Mouse.Y
-        local minX = math.min(rect.sx, rect.ex); local minY = math.min(rect.sy, rect.ey)
-        lassoRect.Position = UDim2.new(0, minX, 0, minY)
-        lassoRect.Size     = UDim2.new(0, math.abs(rect.ex - rect.sx), 0, math.abs(rect.ey - rect.sy))
-    end)
-end)
-
-local function fillBlueprints(speed, owner)
-    local wood = {}; local bps = {}
-    for _, v in ipairs(workspace.PlayerModels:GetDescendants()) do
-        if v.Name == "Selection" then table.insert(wood, v.Parent) end
-    end
-    for _, v in pairs(workspace.PlayerModels:GetChildren()) do
-        if v:FindFirstChild("Type") and v.Type.Value == "Blueprint"
-           and tostring(v:FindFirstChild("Owner") and v.Owner.Value) == owner
-           and v:FindFirstChild("BuildDependentWood")
-           and v.BuildDependentWood.Transparency ~= 1 then
-            table.insert(bps, v.BuildDependentWood)
-        end
-    end
-    for i = 1, math.min(#wood, #bps) do
-        local w = wood[i]; local bp = bps[i]
-        if not (w and w.Parent and bp and bp.Parent) then continue end
-        pcall(function()
-            LP.Character.HumanoidRootPart.CFrame = w.CFrame * CFrame.new(5, 0, 0)
-        end)
-        task.wait(speed)
-        pcall(function()
-            local t0 = tick()
-            while not isNetOwner(w) do
-                RS.Interaction.ClientIsDragging:FireServer(w.Parent)
-                task.wait(speed)
-                if tick() - t0 > 6 then break end
-            end
-            RS.Interaction.ClientIsDragging:FireServer(w.Parent)
-            w:PivotTo(bp.CFrame)
-        end)
-        task.wait(speed)
-    end
-end
-
-local function loadPreview()
-    if not workspace:FindFirstChild("Preview") then return end
-    local baseCF
-    for _, v in next, workspace.Properties:GetChildren() do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP then
-            baseCF = v.OriginSquare.CFrame
-        end
-    end
-    if not baseCF then return end
-    local offset = baseCF.Position
-
-    local colorMap = {
-        LoneCave    = {Color3.fromRGB(248, 248, 248), Enum.Material.Foil},
-        Frost       = {Color3.fromRGB(159, 243, 233), Enum.Material.Ice},
-        Spooky      = {Color3.fromRGB(170,  85,   0), Enum.Material.Granite},
-        SnowGlow    = {Color3.fromRGB(255, 255,   0), Enum.Material.SmoothPlastic},
-        CaveCrawler = {Color3.fromRGB( 16,  42, 220), Enum.Material.Neon},
-        SpookyNeon  = {Color3.fromRGB(170,  85,   0), Enum.Material.Neon},
-        Volcano     = {Color3.fromRGB(255,   0,   0), Enum.Material.Wood},
-        GreenSwampy = {Color3.fromRGB( 52, 142,  64), Enum.Material.Wood},
-        GoldSwampy  = {Color3.fromRGB(226, 155,  64), Enum.Material.Wood},
-        Cherry      = {Color3.fromRGB(163,  75,  75), Enum.Material.Wood},
-        Pine        = {Color3.fromRGB(215, 197, 154), Enum.Material.Wood},
-        Walnut      = {Color3.fromRGB(105,  64,  40), Enum.Material.Wood},
-        Oak         = {Color3.fromRGB(234, 184, 146), Enum.Material.Wood},
-        Birch       = {Color3.fromRGB(205, 205, 205), Enum.Material.Wood},
-        Koa         = {Color3.fromRGB(143,  76,  42), Enum.Material.Wood},
-        Generic     = {Color3.fromRGB(204, 142, 105), Enum.Material.Wood},
-        Palm        = {Color3.fromRGB(226, 220, 188), Enum.Material.Wood},
-    }
-    for _, v in pairs(workspace.Preview:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Position = v.Position + offset
-            local tc = v.Parent:FindFirstChild("TreeClass")
-            if tc and v.Transparency == 0.5 then
-                local info = colorMap[tc.Value]
-                if info then v.Color = info[1]; v.Material = info[2] end
-            end
-        end
-    end
-end
-
--- Build UI
-sectionLabel(bd, "Studio Preview")
-makeButton(bd, "Load Preview", loadPreview)
-makeButton(bd, "Unload Preview", function()
-    if workspace:FindFirstChild("Preview") then workspace.Preview:ClearAllChildren() end
-end)
-
-sep(bd)
-sectionLabel(bd, "Fill Blueprints")
-makeToggle(bd, "Lasso Wood Tool",             false, function(v) lassoActive = v end)
-makeToggle(bd, "Include Blueprints in Lasso", false, function(v) includeBPs  = v end)
-makeSlider(bd, "Fill Speed", 1, 10, 3, function(v) fillSpeed = v / 10 end)
-makeFancyDropdown(bd, "Wood Owner", function() return getPlayerNames() end, function(val)
-    buildOwner = val
-end)
-makeButton(bd, "Fill Selected Blueprints", function()
-    task.spawn(fillBlueprints, fillSpeed, buildOwner)
-end)
-makeButton(bd, "Deselect All", deselectAll)
-
-sep(bd)
-sectionLabel(bd, "Blueprints")
-makeButton(bd, "Destroy Selected Blueprints", function()
-    for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-        if v.Name == "Selection" and v.Parent and v.Parent.Name == "BuildDependentWood" then
-            pcall(function() RS.Interaction.DestroyStructure:FireServer(v.Parent.Parent) end)
-            task.wait(1)
-        end
-    end
-end)
-
 -- ════════════════════════════════════════════════════
 -- VEHICLE TAB
 -- ════════════════════════════════════════════════════
 
 local vh = pages["VehicleTab"]
-
--- Fly state
-local VFLY     = false
-local vflyKeyD = nil
-local vflyKeyU = nil
-local vflyConn = nil
-local vflyBV   = nil
-local vflyBG   = nil
-local QEfly    = true
-local flySpeed = 50   -- studs/s, directly set by slider
-
--- Speed override state
-local speedEnabled  = false
-local currentSpeed  = 80
-local DEFAULT_SPEED = 100  -- game default, restored when override is off
-
-local function setVehicleSpeed(val)
-    for _, v in next, workspace.PlayerModels:GetChildren() do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP
-           and v:FindFirstChild("Type") and v.Type.Value == "Vehicle"
-           and v:FindFirstChild("Configuration") then
-            pcall(function() v.Configuration.MaxSpeed.Value = val end)
-        end
-    end
-end
-
-local function stopVFly()
-    VFLY = false
-    if vflyConn then vflyConn:Disconnect(); vflyConn = nil end
-    if vflyKeyD then vflyKeyD:Disconnect(); vflyKeyD = nil end
-    if vflyKeyU then vflyKeyU:Disconnect(); vflyKeyU = nil end
-    if vflyBV and vflyBV.Parent then vflyBV:Destroy() end; vflyBV = nil
-    if vflyBG and vflyBG.Parent then vflyBG:Destroy() end; vflyBG = nil
-    pcall(function()
-        local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if h and not h.Seated then h.PlatformStand = false end
-    end)
-    pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
-end
-
-local function startVFly(vehicleMode)
-    repeat task.wait() until LP and LP.Character
-        and LP.Character:FindFirstChild("HumanoidRootPart")
-        and LP.Character:FindFirstChildOfClass("Humanoid")
-        and Mouse
-
-    stopVFly()
-
-    local T = LP.Character:FindFirstChild("HumanoidRootPart")
-    if not T then return end
-
-    if vehicleMode then
-        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-        if not (hum and hum.Seated) then return end
-        local seat = hum.SeatPart
-        if not (seat and seat.Parent:FindFirstChild("Type")
-                and seat.Parent.Type.Value == "Vehicle") then return end
-    end
-
-    local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-
-    VFLY = true
-
-    vflyBG = Instance.new("BodyGyro")
-    vflyBG.P         = 9e4
-    vflyBG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-    vflyBG.cframe    = T.CFrame
-    vflyBG.Parent    = T
-
-    vflyBV = Instance.new("BodyVelocity")
-    vflyBV.velocity = Vector3.new(0, 0, 0)
-    vflyBV.maxForce = Vector3.new(9e9, 9e9, 9e9)
-    vflyBV.Parent   = T
-
-    vflyConn = RunService.Heartbeat:Connect(function()
-        if not VFLY then return end
-        if not vehicleMode then
-            local h2 = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if h2 then h2.PlatformStand = true end
-        end
-
-        local cam    = workspace.CurrentCamera.CoordinateFrame
-        local moving = (CONTROL.L + CONTROL.R ~= 0)
-                    or (CONTROL.F + CONTROL.B ~= 0)
-                    or (CONTROL.Q + CONTROL.E ~= 0)
-
-        if moving then
-            vflyBV.velocity = (
-                (cam.lookVector * (CONTROL.F + CONTROL.B)) +
-                ((cam * CFrame.new(
-                    CONTROL.L + CONTROL.R,
-                    (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2,
-                    0
-                )).p - cam.p)
-            ) * flySpeed
-        else
-            vflyBV.velocity = Vector3.new(0, 0, 0)
-        end
-
-        vflyBG.cframe = cam
-
-        if vehicleMode then
-            local h2 = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if not (h2 and h2.Seated) then stopVFly() end
-        end
-    end)
-
-    vflyKeyD = Mouse.KeyDown:Connect(function(KEY)
-        KEY = KEY:lower()
-        if     KEY == "w" then CONTROL.F =  1
-        elseif KEY == "s" then CONTROL.B = -1
-        elseif KEY == "a" then CONTROL.L = -1
-        elseif KEY == "d" then CONTROL.R =  1
-        elseif QEfly and KEY == "e" then CONTROL.Q =  1
-        elseif QEfly and KEY == "q" then CONTROL.E = -1
-        end
-        pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Track end)
-    end)
-    vflyKeyU = Mouse.KeyUp:Connect(function(KEY)
-        KEY = KEY:lower()
-        if     KEY == "w" then CONTROL.F = 0
-        elseif KEY == "s" then CONTROL.B = 0
-        elseif KEY == "a" then CONTROL.L = 0
-        elseif KEY == "d" then CONTROL.R = 0
-        elseif KEY == "e" then CONTROL.Q = 0
-        elseif KEY == "q" then CONTROL.E = 0
-        end
-    end)
-end
 
 local abortSpawner = false
 local spawnColor   = nil
@@ -891,54 +389,9 @@ local function vehicleSpawner(color)
 end
 
 -- ════════════════════════════════════════════════════
--- VEHICLE UI  (Speed → Fly → Spawner)
+-- SPAWNER UI
 -- ════════════════════════════════════════════════════
 
-sectionLabel(vh, "Speed")
-
--- Max Speed slider (only applies while Enable Speed is on)
-makeSlider(vh, "Max Speed", 10, 200, 80, function(v)
-    currentSpeed = v
-    if speedEnabled then setVehicleSpeed(v) end
-end)
-
--- Enable Speed toggle — applies override on, restores default off
-makeToggle(vh, "Enable Speed", false, function(v)
-    speedEnabled = v
-    if v then
-        setVehicleSpeed(currentSpeed)
-    else
-        setVehicleSpeed(DEFAULT_SPEED)
-    end
-end)
-
-sep(vh)
-sectionLabel(vh, "Fly")
-
--- Fly Speed slider — value is exact studs/s passed to BodyVelocity
-makeSlider(vh, "Fly Speed", 10, 500, 50, function(v)
-    flySpeed = v
-end)
-
--- Enable Fly toggle
-makeToggle(vh, "Enable Fly", false, function(v)
-    if v then
-        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Seated then
-            local seat = hum.SeatPart
-            if seat and seat.Parent:FindFirstChild("Type")
-               and seat.Parent.Type.Value == "Vehicle" then
-                stopVFly(); task.wait(); startVFly(true)
-                return
-            end
-        end
-        startVFly(false)
-    else
-        stopVFly()
-    end
-end)
-
-sep(vh)
 sectionLabel(vh, "Spawner")
 makeFancyDropdown(vh, "Color", function() return carColors end, function(val)
     spawnColor = val
@@ -951,58 +404,10 @@ makeButton(vh, "Stop Spawner",  function()
 end)
 
 -- ════════════════════════════════════════════════════
--- WOOD PROCESSING HELPERS
--- ════════════════════════════════════════════════════
-
-local MODDED_CLASSES = {
-    Frost = true, Spooky = true, SnowGlow = true, CaveCrawler = true,
-    SpookyNeon = true, Volcano = true, GreenSwampy = true, GoldSwampy = true,
-    LoneCave = true,
-}
-
-local function getModdedWoodOnPlot()
-    local results = {}
-    for _, v in pairs(workspace.PlayerModels:GetChildren()) do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP
-           and v:FindFirstChild("TreeClass") and MODDED_CLASSES[v.TreeClass.Value]
-           and v:FindFirstChild("Main") then
-            table.insert(results, v)
-        end
-    end
-    return results
-end
-_G.VH.getModdedWoodOnPlot = getModdedWoodOnPlot
-
-local SAW_POS_1x1 = Vector3.new(148, 3, -4)
-
-local function cutWood1x1(model)
-    if not (model and model.Parent) then return end
-    local main = model:FindFirstChild("Main"); if not main then return end
-    local char = LP.Character
-    local hrp  = char and char:FindFirstChild("HumanoidRootPart"); if not hrp then return end
-    hrp.CFrame = main.CFrame * CFrame.new(0, 3, 5); task.wait(0.1)
-    local t0 = tick()
-    repeat
-        RS.Interaction.ClientIsDragging:FireServer(model); task.wait()
-    until (main.ReceiveAge == 0) or (tick() - t0 > 4)
-    for _ = 1, 30 do
-        pcall(function()
-            RS.Interaction.ClientIsDragging:FireServer(model)
-            main.CFrame = CFrame.new(SAW_POS_1x1)
-        end)
-        task.wait(0.05)
-    end
-end
-_G.VH.cutWood1x1 = cutWood1x1
-
--- ════════════════════════════════════════════════════
 -- CLEANUP
 -- ════════════════════════════════════════════════════
 table.insert(VH.cleanupTasks, function()
-    stopVFly()
     abortSpawner = true
-    if speedEnabled then setVehicleSpeed(DEFAULT_SPEED) end
-    if lassoSG and lassoSG.Parent then lassoSG:Destroy() end
 end)
 
 print("[VanillaHub] Vanilla7 loaded")
