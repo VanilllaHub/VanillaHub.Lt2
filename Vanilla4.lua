@@ -17,7 +17,7 @@ local pages            = _G.VH.pages
 local RS = game:GetService("ReplicatedStorage")
 
 -- ════════════════════════════════════════════════════
--- THEME
+-- THEME  (Black / Grey / White — mirrors Vanilla1)
 -- ════════════════════════════════════════════════════
 local C = {
     CARD        = Color3.fromRGB(16,  16,  16),
@@ -54,104 +54,53 @@ local AB_stopBtn     = nil
 
 -- ════════════════════════════════════════════════════
 -- STORE COUNTER REGISTRY
--- Each entry stores the counter position (for nearest-counter resolution)
--- and a fireDialog function that uses the exact same pattern as the
--- provided Thom snippet — live workspace NPC reference, no string args,
--- no waits between the six remote calls.
 -- ════════════════════════════════════════════════════
+-- npcPath : table of string keys to walk from workspace to the NPC model
+-- npcName : display name string used for the Name field
+-- id      : dialog ID
 local AB_Counters = {
     {
-        name = "WoodRUs",
-        pos  = Vector3.new(267.90, 5.20, 67.43),
-        fireDialog = function(PC, SCV)
-            local Thom   = workspace.Stores.WoodRUs.Thom
-            local Dialog = Thom.Dialog
-            local args   = {["Character"]=Thom, ["Name"]="Thom", ["ID"]=9, ["Dialog"]=Dialog}
-            PC:InvokeServer(args, "Initiate")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "ConfirmPurchase")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "EndChat")
-            SCV:InvokeServer(0)
-        end,
+        name    = "WoodRUs",
+        pos     = Vector3.new(267.90,   5.20,    67.43),
+        npcPath = {"Stores", "WoodRUs", "Thom"},
+        npcName = "Thom",
+        id      = 9,
     },
     {
-        name = "BobsShack",
-        pos  = Vector3.new(260.36, 10.40, -2551.25),
-        fireDialog = function(PC, SCV)
-            local Bob    = workspace.Stores.BobsShack.Bob
-            local Dialog = Bob.Dialog
-            local args   = {["Character"]=Bob, ["Name"]="Bob", ["ID"]=12, ["Dialog"]=Dialog}
-            PC:InvokeServer(args, "Initiate")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "ConfirmPurchase")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "EndChat")
-            SCV:InvokeServer(0)
-        end,
+        name    = "BobsShack",
+        pos     = Vector3.new(260.36,   10.40, -2551.25),
+        npcPath = {"Stores", "BobsShack", "Bob"},
+        npcName = "Bob",
+        id      = 12,
     },
     {
-        name = "FineArt",
-        pos  = Vector3.new(5237.58, -164.00, 739.66),
-        fireDialog = function(PC, SCV)
-            local Timothy = workspace.Stores.FineArts.Timothy
-            local Dialog  = Timothy.Dialog
-            local args    = {["Character"]=Timothy, ["Name"]="Timothy", ["ID"]=13, ["Dialog"]=Dialog}
-            PC:InvokeServer(args, "Initiate")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "ConfirmPurchase")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "EndChat")
-            SCV:InvokeServer(0)
-        end,
+        name    = "FineArt",
+        pos     = Vector3.new(5237.58, -164.00,  739.66),
+        npcPath = {"Stores", "FineArtShop", "Timothy"},
+        npcName = "Timothy",
+        id      = 13,
     },
     {
-        name = "FancyFurnishings",
-        pos  = Vector3.new(477.62, 5.60, -1721.34),
-        fireDialog = function(PC, SCV)
-            local Corey  = workspace.Stores.FancyFurnishings.Corey
-            local Dialog = Corey.Dialog
-            local args   = {["Character"]=Corey, ["Name"]="Corey", ["ID"]=10, ["Dialog"]=Dialog}
-            PC:InvokeServer(args, "Initiate")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "ConfirmPurchase")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "EndChat")
-            SCV:InvokeServer(0)
-        end,
+        name    = "FancyFurnishings",
+        pos     = Vector3.new(477.62,    5.60, -1721.34),
+        npcPath = {"Stores", "FancyFurnishings", "Corey"},
+        npcName = "Corey",
+        id      = 10,
     },
     {
-        name = "LinksLogic",
-        pos  = Vector3.new(4595.43, 9.40, -785.02),
-        fireDialog = function(PC, SCV)
-            local Lincoln = workspace.Stores.LinksLogic.Lincoln
-            local Dialog  = Lincoln.Dialog
-            local args    = {["Character"]=Lincoln, ["Name"]="Lincoln", ["ID"]=14, ["Dialog"]=Dialog}
-            PC:InvokeServer(args, "Initiate")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "ConfirmPurchase")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "EndChat")
-            SCV:InvokeServer(0)
-        end,
+        name    = "LinksLogic",
+        pos     = Vector3.new(4595.43,   9.40,  -785.02),
+        npcPath = {"Stores", "LinksLogic", "Lincoln"},
+        npcName = "Lincoln",
+        id      = 14,
     },
     {
-        name = "BoxedCars",
-        pos  = Vector3.new(528.04, 5.60, -1460.43),
-        fireDialog = function(PC, SCV)
-            -- BoxedCars requires SetChattingValue(1) before and after
-            local Jenny  = workspace.Stores.BoxedCars.Jenny
-            local Dialog = Jenny.Dialog
-            local args   = {["Character"]=Jenny, ["Name"]="Jenny", ["ID"]=11, ["Dialog"]=Dialog}
-            SCV:InvokeServer(1)
-            PC:InvokeServer(args, "Initiate")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "ConfirmPurchase")
-            SCV:InvokeServer(2)
-            PC:InvokeServer(args, "EndChat")
-            SCV:InvokeServer(0)
-            SCV:InvokeServer(1)
-        end,
+        name    = "BoxedCars",
+        pos     = Vector3.new(528.04,    5.60, -1460.43),
+        npcPath = {"Stores", "BoxedCars", "Jenny"},
+        npcName = "Jenny",
+        id      = 11,
+        preSeq  = true,   -- requires SetChattingValue(1) before Initiate
     },
 }
 
@@ -260,6 +209,43 @@ local function grabBlueprintNames()
 end
 
 -- ════════════════════════════════════════════════════
+-- DIALOG  (instant workspace-reference method for all counters)
+-- ════════════════════════════════════════════════════
+local function fireDialog(c)
+    local PlayerChatted  = RS:FindFirstChild("PlayerChatted",    true)
+    local SetChattingVal = RS:FindFirstChild("SetChattingValue", true)
+    if not (PlayerChatted and SetChattingVal) then return end
+
+    -- Walk the npcPath from workspace to reach the NPC instance
+    local npc = workspace
+    for _, key in ipairs(c.npcPath) do
+        npc = npc:FindFirstChild(key)
+        if not npc then return end
+    end
+
+    local Dialog = npc:FindFirstChild("Dialog")
+    if not Dialog then return end
+
+    local args = { Character=npc, Name=c.npcName, ID=c.id, Dialog=Dialog }
+
+    -- BoxedCars requires an extra SetChattingValue(1) before initiating
+    if c.preSeq then
+        SetChattingVal:InvokeServer(1)
+    end
+
+    PlayerChatted:InvokeServer(args, "Initiate")
+    SetChattingVal:InvokeServer(2)
+    PlayerChatted:InvokeServer(args, "ConfirmPurchase")
+    SetChattingVal:InvokeServer(2)
+    PlayerChatted:InvokeServer(args, "EndChat")
+    SetChattingVal:InvokeServer(0)
+
+    if c.preSeq then
+        SetChattingVal:InvokeServer(1)
+    end
+end
+
+-- ════════════════════════════════════════════════════
 -- OPEN-BOX HELPER
 -- ════════════════════════════════════════════════════
 local function openBoxFor(itemName, teleportDestPos)
@@ -335,9 +321,7 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
         refreshActionButtons()
     end
 
-    local PlayerChatted  = RS:FindFirstChild("PlayerChatted",    true)
-    local SetChattingVal = RS:FindFirstChild("SetChattingValue", true)
-    local Dragging       = RS.Interaction and RS.Interaction:FindFirstChild("ClientIsDragging")
+    local Dragging = RS.Interaction and RS.Interaction:FindFirstChild("ClientIsDragging")
 
     local char = player.Character
     if not (char and char:FindFirstChild("HumanoidRootPart")) then
@@ -422,10 +406,7 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
         hrp.CFrame = counterCF + Vector3.new(5, 0, 5)
         task.wait(0.05)
 
-        -- Fire dialog using the workspace-reference method (no string args, no waits)
-        pcall(function()
-            closest.fireDialog(PlayerChatted, SetChattingVal)
-        end)
+        fireDialog(closest)
 
         -- Return item to origin
         local returnStart = tick()
@@ -628,6 +609,7 @@ local dropIsOpen   = false
 local dropSelected = ""
 local dropItems    = {}
 
+-- Outer collapsible frame
 local dropOuter = Instance.new("Frame", autoBuyPage)
 dropOuter.Size             = UDim2.new(1, -12, 0, HEADER_H)
 dropOuter.BackgroundColor3 = C.BG_ROW
@@ -639,6 +621,7 @@ dropOuterStroke.Color        = C.BORDER
 dropOuterStroke.Thickness    = 1
 dropOuterStroke.Transparency = 0.3
 
+-- Header row
 local dropHeader = Instance.new("Frame", dropOuter)
 dropHeader.Size                   = UDim2.new(1, 0, 0, HEADER_H)
 dropHeader.BackgroundTransparency = 1
@@ -692,6 +675,7 @@ headerBtn.Text               = ""
 headerBtn.AutoButtonColor    = false
 headerBtn.ZIndex             = 5
 
+-- Divider between header and list
 local divider = Instance.new("Frame", dropOuter)
 divider.Size             = UDim2.new(1, -14, 0, 1)
 divider.Position         = UDim2.new(0, 7, 0, HEADER_H)
@@ -699,6 +683,7 @@ divider.BackgroundColor3 = C.BORDER
 divider.BorderSizePixel  = 0
 divider.Visible          = false
 
+-- Scrolling list
 local listScroll = Instance.new("ScrollingFrame", dropOuter)
 listScroll.Position               = UDim2.new(0, 0, 0, HEADER_H + 2)
 listScroll.Size                   = UDim2.new(1, 0, 0, 0)
@@ -721,13 +706,16 @@ listPad.PaddingBottom = UDim.new(0, 3)
 listPad.PaddingLeft   = UDim.new(0, 5)
 listPad.PaddingRight  = UDim.new(0, 5)
 
+-- Selection state
 local function applySelection(entry)
     dropSelected   = entry.name
     AB_item        = entry.name
     AB_isBlueprint = entry.isBlueprint
+
     local priceStr = entry.price > 0 and ("   $" .. entry.price) or ""
     selLbl.Text       = entry.name .. priceStr
     selLbl.TextColor3 = C.TEXT_WHITE
+
     arrowLbl.TextColor3   = C.TEXT_MID
     dropOuterStroke.Color = C.BORDER_FOC
     refreshActionButtons()
@@ -737,8 +725,10 @@ local function clearSelection()
     dropSelected   = ""
     AB_item        = nil
     AB_isBlueprint = false
+
     selLbl.Text       = "Select item..."
     selLbl.TextColor3 = C.TEXT_DIM
+
     arrowLbl.TextColor3   = C.TEXT_DIM
     dropOuterStroke.Color = C.BORDER
     refreshActionButtons()
@@ -756,8 +746,10 @@ local function buildList()
     for _, child in ipairs(listScroll:GetChildren()) do
         if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end
     end
+
     for i, entry in ipairs(dropItems) do
         local isSel = entry.name == dropSelected
+
         local row = Instance.new("Frame", listScroll)
         row.Size             = UDim2.new(1, 0, 0, ITEM_H)
         row.BackgroundColor3 = isSel and Color3.fromRGB(50, 50, 50) or C.BG_ROW
@@ -765,6 +757,7 @@ local function buildList()
         row.LayoutOrder      = i
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
 
+        -- Item name (left-aligned, always white)
         local nameLbl = Instance.new("TextLabel", row)
         nameLbl.Size               = UDim2.new(1, -70, 1, 0)
         nameLbl.Position           = UDim2.new(0, 10, 0, 0)
@@ -776,6 +769,7 @@ local function buildList()
         nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
         nameLbl.TextTruncate       = Enum.TextTruncate.AtEnd
 
+        -- Price (right-aligned, white)
         if entry.price > 0 then
             local priceLbl = Instance.new("TextLabel", row)
             priceLbl.Size               = UDim2.new(0, 60, 1, 0)
@@ -805,7 +799,11 @@ local function buildList()
             end
         end)
         rowBtn.MouseButton1Click:Connect(function()
-            if entry.name == dropSelected then clearSelection() else applySelection(entry) end
+            if entry.name == dropSelected then
+                clearSelection()
+            else
+                applySelection(entry)
+            end
             buildList()
             task.delay(0.04, closeList)
         end)
