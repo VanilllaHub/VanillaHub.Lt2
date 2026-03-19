@@ -55,9 +55,12 @@ local AB_stopBtn     = nil
 -- ════════════════════════════════════════════════════
 -- STORE COUNTER REGISTRY
 -- ════════════════════════════════════════════════════
--- npcPath : table of string keys to walk from workspace to the NPC model
--- npcName : display name string used for the Name field
--- id      : dialog ID
+-- STORE COUNTER REGISTRY
+-- npcPath : exact path walked from workspace to the NPC instance
+-- npcName : Name string sent in dialog args
+-- id      : dialog ID integer
+-- preSeq  : if true, wraps with SetChattingValue(1) (BoxedCars / Jenny only)
+-- ════════════════════════════════════════════════════
 local AB_Counters = {
     {
         name    = "WoodRUs",
@@ -69,14 +72,14 @@ local AB_Counters = {
     {
         name    = "BobsShack",
         pos     = Vector3.new(260.36,   10.40, -2551.25),
-        npcPath = {"Stores", "BobsShack", "Bob"},
+        npcPath = {"Bob's Shack", "Bob"},
         npcName = "Bob",
         id      = 12,
     },
     {
         name    = "FineArt",
         pos     = Vector3.new(5237.58, -164.00,  739.66),
-        npcPath = {"Stores", "FineArtShop", "Timothy"},
+        npcPath = {"Stores", "FineArts", "Timothy"},
         npcName = "Timothy",
         id      = 13,
     },
@@ -90,7 +93,7 @@ local AB_Counters = {
     {
         name    = "LinksLogic",
         pos     = Vector3.new(4595.43,   9.40,  -785.02),
-        npcPath = {"Stores", "LinksLogic", "Lincoln"},
+        npcPath = {"Stores", "Link's Logic", "Lincoln"},
         npcName = "Lincoln",
         id      = 14,
     },
@@ -100,7 +103,7 @@ local AB_Counters = {
         npcPath = {"Stores", "BoxedCars", "Jenny"},
         npcName = "Jenny",
         id      = 11,
-        preSeq  = true,   -- requires SetChattingValue(1) before Initiate
+        preSeq  = true,
     },
 }
 
@@ -214,24 +217,32 @@ end
 local function fireDialog(c)
     local PlayerChatted  = RS:FindFirstChild("PlayerChatted",    true)
     local SetChattingVal = RS:FindFirstChild("SetChattingValue", true)
-    if not (PlayerChatted and SetChattingVal) then return end
+    if not (PlayerChatted and SetChattingVal) then
+        warn("[VanillaHub] fireDialog: remotes not found"); return
+    end
 
-    -- Walk the npcPath from workspace to reach the NPC instance
+    -- Walk the npcPath from workspace to the NPC instance
     local npc = workspace
     for _, key in ipairs(c.npcPath) do
-        npc = npc:FindFirstChild(key)
-        if not npc then return end
+        local next = npc:FindFirstChild(key)
+        if not next then
+            warn("[VanillaHub] fireDialog: could not find '" .. key .. "' inside '" .. npc.Name .. "' for counter " .. c.name)
+            return
+        end
+        npc = next
     end
 
-    local Dialog = npc:FindFirstChild("Dialog")
-    if not Dialog then return end
-
-    local args = { Character=npc, Name=c.npcName, ID=c.id, Dialog=Dialog }
-
-    -- BoxedCars requires an extra SetChattingValue(1) before initiating
-    if c.preSeq then
-        SetChattingVal:InvokeServer(1)
+    -- The Dialog value can be an ObjectValue child OR a StringValue — grab whichever exists.
+    -- The server accepts the actual Dialog instance, same as the Thom snippet.
+    local DialogObj = npc:FindFirstChild("Dialog")
+    if not DialogObj then
+        warn("[VanillaHub] fireDialog: no Dialog child on " .. npc:GetFullName())
+        return
     end
+
+    local args = { Character=npc, Name=c.npcName, ID=c.id, Dialog=DialogObj }
+
+    if c.preSeq then SetChattingVal:InvokeServer(1) end
 
     PlayerChatted:InvokeServer(args, "Initiate")
     SetChattingVal:InvokeServer(2)
@@ -240,9 +251,7 @@ local function fireDialog(c)
     PlayerChatted:InvokeServer(args, "EndChat")
     SetChattingVal:InvokeServer(0)
 
-    if c.preSeq then
-        SetChattingVal:InvokeServer(1)
-    end
+    if c.preSeq then SetChattingVal:InvokeServer(1) end
 end
 
 -- ════════════════════════════════════════════════════
