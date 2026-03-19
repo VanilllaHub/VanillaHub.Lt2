@@ -1003,15 +1003,22 @@ end)
 
 makeButton(sl, "Take Selected Land", function()
     if not landToTake then return end
-    local props = workspace.Properties:GetChildren()
-    if props[landToTake] then
-        local land = props[landToTake]
+    local props    = workspace.Properties:GetChildren()
+    local land     = props[landToTake]
+    if not land then return end
+    local ownerVal = land:FindFirstChild("Owner")
+    local origSq   = land:FindFirstChild("OriginSquare")
+    -- Only attempt purchase on unowned plots, matching freeLand behaviour
+    if ownerVal and ownerVal.Value == nil and origSq then
         pcall(function()
-            RS.PropertyPurchasing.ClientPurchasedProperty:FireServer(land, land.OriginSquare.Position)
-            LP.Character.HumanoidRootPart.CFrame = land.OriginSquare.CFrame + Vector3.new(0,2,0)
+            RS.PropertyPurchasing.ClientPurchasedProperty:FireServer(land, origSq.Position)
         end)
-        if landHL then pcall(function() landHL:Destroy() end); landHL = nil end
+        -- Teleport outside the pcall so it always fires even if the remote errors
+        pcall(function()
+            LP.Character.HumanoidRootPart.CFrame = origSq.CFrame + Vector3.new(0, 2, 0)
+        end)
     end
+    if landHL then pcall(function() landHL:Destroy() end); landHL = nil end
 end)
 
 -- ════════════════════════════════════════════════════
