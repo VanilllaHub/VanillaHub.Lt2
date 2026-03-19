@@ -16,31 +16,31 @@ local RunService = VH.RunService
 local LP         = Players.LocalPlayer
 local Mouse      = LP:GetMouse()
 
-local THEME_TEXT = VH.THEME_TEXT  -- near-white
-local BTN_COLOR  = VH.BTN_COLOR   -- grey
-local BTN_HOVER  = VH.BTN_HOVER   -- lighter grey
+local THEME_TEXT = VH.THEME_TEXT
+local BTN_COLOR  = VH.BTN_COLOR
+local BTN_HOVER  = VH.BTN_HOVER
 local pages      = VH.pages
 
 -- ════════════════════════════════════════════════════
--- THEME  (Black / Grey / White only)
+-- THEME
 -- ════════════════════════════════════════════════════
 local C = {
-    CARD       = Color3.fromRGB(10,  10,  10),   -- black panel
-    ROW        = Color3.fromRGB(16,  16,  16),   -- near-black row
-    INPUT      = Color3.fromRGB(30,  30,  30 ),
-    TRACK      = Color3.fromRGB(38,  38,  38 ),
-    BORDER     = Color3.fromRGB(55,  55,  55 ),
+    CARD       = Color3.fromRGB(10,  10,  10),
+    ROW        = Color3.fromRGB(16,  16,  16),
+    INPUT      = Color3.fromRGB(30,  30,  30),
+    TRACK      = Color3.fromRGB(38,  38,  38),
+    BORDER     = Color3.fromRGB(55,  55,  55),
     TEXT       = Color3.fromRGB(210, 210, 210),
     TEXT_MID   = Color3.fromRGB(150, 150, 150),
-    TEXT_DIM   = Color3.fromRGB(90,  90,  90 ),
-    BTN        = Color3.fromRGB(14,  14,  14),   -- black button bg
-    BTN_HV     = Color3.fromRGB(32,  32,  32),   -- dark grey hover
-    FILL       = Color3.fromRGB(255, 255, 255),   -- white bar
+    TEXT_DIM   = Color3.fromRGB(90,  90,  90),
+    BTN        = Color3.fromRGB(14,  14,  14),
+    BTN_HV     = Color3.fromRGB(32,  32,  32),
+    FILL       = Color3.fromRGB(255, 255, 255),
     SW_ON      = Color3.fromRGB(220, 220, 220),
-    SW_OFF     = Color3.fromRGB(50,  50,  50 ),
-    KNOB_ON    = Color3.fromRGB(30,  30,  30 ),
+    SW_OFF     = Color3.fromRGB(50,  50,  50),
+    KNOB_ON    = Color3.fromRGB(30,  30,  30),
     KNOB_OFF   = Color3.fromRGB(160, 160, 160),
-    DOT_IDLE   = Color3.fromRGB(70,  70,  70 ),
+    DOT_IDLE   = Color3.fromRGB(70,  70,  70),
     DOT_ACT    = Color3.fromRGB(200, 200, 200),
 }
 
@@ -70,7 +70,6 @@ local function sep(page)
     s.BackgroundColor3 = C.BORDER; s.BorderSizePixel = 0
 end
 
--- Grey button
 local function makeButton(page, text, cb)
     local btn = Instance.new("TextButton", page)
     btn.Size             = UDim2.new(1, -12, 0, 34)
@@ -93,7 +92,6 @@ local function makeButton(page, text, cb)
     return btn
 end
 
--- Toggle: dark grey OFF / white ON
 local function makeToggle(page, text, default, cb)
     local frame = Instance.new("Frame", page)
     frame.Size             = UDim2.new(1, -12, 0, 32)
@@ -132,7 +130,6 @@ local function makeToggle(page, text, default, cb)
     return {Set = setState, Get = function() return state end}
 end
 
--- Slider: white bar + white value text
 local function makeSlider(page, text, min, max, default, cb)
     local frame = Instance.new("Frame", page)
     frame.Size             = UDim2.new(1, -12, 0, 52)
@@ -147,7 +144,7 @@ local function makeSlider(page, text, min, max, default, cb)
     local valLbl = Instance.new("TextLabel", frame)
     valLbl.Size = UDim2.new(0.4, 0, 0, 22); valLbl.Position = UDim2.new(0.6, -8, 0, 6)
     valLbl.BackgroundTransparency = 1; valLbl.Font = Enum.Font.GothamBold; valLbl.TextSize = 13
-    valLbl.TextColor3 = C.FILL                                              -- white text
+    valLbl.TextColor3 = C.FILL
     valLbl.TextXAlignment = Enum.TextXAlignment.Right; valLbl.Text = tostring(default)
 
     local track = Instance.new("Frame", frame)
@@ -156,7 +153,7 @@ local function makeSlider(page, text, min, max, default, cb)
 
     local fill = Instance.new("Frame", track)
     fill.Size             = UDim2.new((default-min)/(max-min), 0, 1, 0)
-    fill.BackgroundColor3 = C.FILL                                          -- white bar
+    fill.BackgroundColor3 = C.FILL
     fill.BorderSizePixel  = 0; corner(fill, 3)
 
     local knob = Instance.new("TextButton", track)
@@ -187,7 +184,6 @@ local function makeSlider(page, text, min, max, default, cb)
     end)
 end
 
--- Dropdown (grey palette)
 local function makeFancyDropdown(page, labelText, getOptions, cb)
     local selected = ""
     local isOpen   = false
@@ -320,7 +316,6 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
     }
 end
 
--- Status bar (grey dot)
 local function makeStatus(page, initText)
     local f = Instance.new("Frame", page)
     f.Size             = UDim2.new(1, -12, 0, 28)
@@ -397,13 +392,13 @@ local function setupLasso()
     lassoSG.Parent        = game.CoreGui
 
     lassoRect                     = Instance.new("Frame", lassoSG)
-    lassoRect.BackgroundColor3    = Color3.fromRGB(100, 100, 100)  -- grey lasso fill
+    lassoRect.BackgroundColor3    = Color3.fromRGB(100, 100, 100)
     lassoRect.BackgroundTransparency = 0.85
     lassoRect.BorderSizePixel     = 0
     lassoRect.Visible             = false
     lassoRect.ZIndex              = 20
     local stroke = Instance.new("UIStroke", lassoRect)
-    stroke.Color     = Color3.fromRGB(180, 180, 180)               -- grey lasso border
+    stroke.Color     = Color3.fromRGB(180, 180, 180)
     stroke.Thickness = 1.5
 
     table.insert(VH.cleanupTasks, function()
@@ -439,7 +434,7 @@ UIS.InputBegan:Connect(function(input)
                             sb.Adornee             = main
                             sb.SurfaceTransparency = 0.6
                             sb.LineThickness       = 0.08
-                            sb.Color3              = Color3.fromRGB(180, 180, 180)  -- grey selection
+                            sb.Color3              = Color3.fromRGB(180, 180, 180)
                         end
                     end
                 end
@@ -725,9 +720,9 @@ local carColors = {
 }
 
 local function vehicleSpawner(color)
-    if not color then spawnStat.SetActive(false, "Select a color first!"); return end
+    if not color then spawnStat.SetActive(false, "Select a color first"); return end
     abortSpawner = false
-    spawnStat.SetActive(true, "Click your vehicle spawn pad...")
+    spawnStat.SetActive(true, "Click your vehicle spawn pad")
     local spawnedPartColor = nil
 
     local carAddedConn = workspace.PlayerModels.ChildAdded:Connect(function(v)
@@ -750,11 +745,11 @@ local function vehicleSpawner(color)
         if not (car:FindFirstChild("Owner") and car.Owner.Value == LP
             and car:FindFirstChild("Type") and car.Type.Value == "Vehicle Spot") then return end
         padConn:Disconnect()
-        spawnStat.SetActive(true, "Spawning... waiting for color: " .. color)
+        spawnStat.SetActive(true, "Spawning — waiting for " .. color)
         task.spawn(function()
             repeat
                 if abortSpawner then
-                    carAddedConn:Disconnect(); spawnStat.SetActive(false, "Aborted."); return
+                    carAddedConn:Disconnect(); spawnStat.SetActive(false, "Stopped"); return
                 end
                 spawnedPartColor = nil
                 pcall(function() RS.Interaction.RemoteProxy:FireServer(car.ButtonRemote_SpawnButton) end)
@@ -762,8 +757,8 @@ local function vehicleSpawner(color)
                 repeat task.wait(0.05) until spawnedPartColor ~= nil or (tick()-waitStart > 0.6) or abortSpawner
             until spawnedPartColor == color or abortSpawner
             carAddedConn:Disconnect()
-            if abortSpawner then spawnStat.SetActive(false, "Aborted.")
-            else spawnStat.SetActive(false, "Car spawned! Color: " .. color) end
+            if abortSpawner then spawnStat.SetActive(false, "Stopped")
+            else spawnStat.SetActive(false, "Spawned  ·  " .. color) end
         end)
     end)
 end
@@ -778,11 +773,14 @@ local function setVehicleSpeed(val)
     end
 end
 
--- Vehicle UI
-sectionLabel(vh, "Vehicle Controls")
+-- ── Vehicle UI ──────────────────────────────────────
+
+sectionLabel(vh, "Speed")
 makeSlider(vh, "Max Speed", 1, 200, 80, function(v) setVehicleSpeed(v) end)
 
-makeToggle(vh, "Vehicle Fly (W/A/S/D  E=Up  Q=Down)", false, function(v)
+sep(vh)
+sectionLabel(vh, "Fly")
+makeToggle(vh, "Enable Fly", false, function(v)
     vFlyEnabled = v
     if v then
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -799,14 +797,12 @@ makeToggle(vh, "Vehicle Fly (W/A/S/D  E=Up  Q=Down)", false, function(v)
         stopVFly()
     end
 end)
-
-makeSlider(vh, "Vehicle Fly Speed", 16, 250, 16, function(v)
+makeSlider(vh, "Fly Speed", 16, 250, 16, function(v)
     iyflyspeed = v; vehicleflyspeed = v
 end)
 
 sep(vh)
-sectionLabel(vh, "Vehicle Teleport")
-
+sectionLabel(vh, "Teleport")
 makeFancyDropdown(vh, "To Player", getPlayerNames, function(val)
     for _, p in next, Players:GetPlayers() do
         if p.Name == val and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
@@ -814,7 +810,6 @@ makeFancyDropdown(vh, "To Player", getPlayerNames, function(val)
         end
     end
 end)
-
 makeFancyDropdown(vh, "To Plot", getPlayerNames, function(val)
     for _, v in next, workspace.Properties:GetChildren() do
         if v:FindFirstChild("Owner") and tostring(v.Owner.Value) == val then
@@ -822,24 +817,20 @@ makeFancyDropdown(vh, "To Plot", getPlayerNames, function(val)
         end
     end
 end)
-
-makeButton(vh, "Teleport Vehicle to My Position", function()
+makeButton(vh, "Teleport to Me", function()
     carTP(LP.Character and LP.Character.HumanoidRootPart and LP.Character.HumanoidRootPart.CFrame
           or CFrame.new(0, 0, 0))
 end)
 
 sep(vh)
-sectionLabel(vh, "Vehicle Spawner")
-
-makeFancyDropdown(vh, "Car Color", function() return carColors end, function(val)
+sectionLabel(vh, "Spawner")
+makeFancyDropdown(vh, "Color", function() return carColors end, function(val)
     spawnColor = val
 end)
-
-spawnStat = makeStatus(vh, "Select a color, then click Start")
-
-makeButton(vh, "Start Vehicle Spawner", function() task.spawn(vehicleSpawner, spawnColor) end)
-makeButton(vh, "Abort Spawner", function()
-    abortSpawner = true; spawnStat.SetActive(false, "Aborted.")
+spawnStat = makeStatus(vh, "Pick a color, then start")
+makeButton(vh, "Start Spawner", function() task.spawn(vehicleSpawner, spawnColor) end)
+makeButton(vh, "Stop Spawner",  function()
+    abortSpawner = true; spawnStat.SetActive(false, "Stopped")
 end)
 
 -- ════════════════════════════════════════════════════
@@ -898,4 +889,4 @@ table.insert(VH.cleanupTasks, function()
     if lassoSG and lassoSG.Parent then lassoSG:Destroy() end
 end)
 
-print("[VanillaHub] Vanilla7 loaded — black/grey/white theme")
+print("[VanillaHub] Vanilla7 loaded")
