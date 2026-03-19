@@ -1,6 +1,7 @@
 -- ════════════════════════════════════════════════════
 -- VANILLA4 — AutoBuy Tab
 -- Execute AFTER Vanilla1, Vanilla2, Vanilla3
+-- Dialog & counter logic sourced from Butterhub leaked src
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -9,7 +10,6 @@ if not _G.VH then
 end
 
 local TweenService     = _G.VH.TweenService
-local UserInputService = _G.VH.UserInputService
 local player           = _G.VH.player
 local cleanupTasks     = _G.VH.cleanupTasks
 local pages            = _G.VH.pages
@@ -17,7 +17,7 @@ local pages            = _G.VH.pages
 local RS = game:GetService("ReplicatedStorage")
 
 -- ════════════════════════════════════════════════════
--- THEME  (Black / Grey / White — mirrors Vanilla1)
+-- THEME
 -- ════════════════════════════════════════════════════
 local C = {
     CARD        = Color3.fromRGB(16,  16,  16),
@@ -53,18 +53,15 @@ local AB_startBtn    = nil
 local AB_stopBtn     = nil
 
 -- ════════════════════════════════════════════════════
--- STORE COUNTER REGISTRY
+-- SHOP ID MAP  (from Butterhub source — counter parent name → dialog ID)
 -- ════════════════════════════════════════════════════
--- Each entry drives the dialog sequence for its store.
--- WoodRUs uses the direct workspace reference method (matches provided snippet).
--- All others use the generic {char, id} approach.
-local AB_Counters = {
-    { name="WoodRUs",          pos=Vector3.new(267.90,   5.20,    67.43),  useWorkspaceRef=true                                         },
-    { name="BobsShack",        pos=Vector3.new(260.36,   10.40, -2551.25), char="Bob",          id=12, preSeq=nil                        },
-    { name="FineArt",          pos=Vector3.new(5237.58, -164.00,  739.66), char="Timothy",      id=13, preSeq=nil                        },
-    { name="FancyFurnishings", pos=Vector3.new(477.62,    5.60, -1721.34), char="Corey",        id=10, preSeq=nil                        },
-    { name="LinksLogic",       pos=Vector3.new(4595.43,   9.40,  -785.02), char="Lincoln",      id=14, preSeq=nil                        },
-    { name="BoxedCars",        pos=Vector3.new(528.04,    5.60, -1460.43), char="Jenny",        id=11, preSeq="SetChattingValue1"         },
+local ShopIDS = {
+    ["WoodRUs"]       = 7,
+    ["FurnitureStore"] = 8,
+    ["FineArt"]       = 11,
+    ["CarStore"]      = 9,
+    ["LogicStore"]    = 12,
+    ["ShackShop"]     = 10,
 }
 
 local AB_Services = {
@@ -74,7 +71,7 @@ local AB_Services = {
 }
 
 -- ════════════════════════════════════════════════════
--- HELPERS
+-- CORE HELPERS  (from Butterhub)
 -- ════════════════════════════════════════════════════
 local function tw(obj, props, t)
     TweenService:Create(obj, TweenInfo.new(t or 0.18, Enum.EasingStyle.Quint), props):Play()
@@ -113,6 +110,81 @@ end
 local function isnetworkowner(part)
     local ok, res = pcall(function() return part.ReceiveAge end)
     return ok and res == 0
+end
+
+-- Rename shop items so WaitForChild works correctly (Butterhub: UpdateNames)
+local function updateNames()
+    pcall(function()
+        for _, store in next, workspace.Stores:GetChildren() do
+            if store.Name == "ShopItems" then
+                store.ChildAdded:Connect(function(child)
+                    pcall(function()
+                        child.Name = child:WaitForChild("BoxItemName", 5).Value
+                    end)
+                end)
+                for _, item in next, store:GetChildren() do
+                    pcall(function()
+                        local own = item:FindFirstChild("Owner")
+                        local bin = item:FindFirstChild("BoxItemName")
+                        if own and own.Value == nil and bin then
+                            item.Name = bin.Value
+                        end
+                    end)
+                end
+            end
+        end
+    end)
+end
+updateNames()
+
+-- Find the ShopItems folder that contains a given item name (Butterhub: ItemPath)
+local function itemPath(itemName)
+    for _, store in next, workspace.Stores:GetChildren() do
+        if store.Name == "ShopItems" then
+            for _, item in next, store:GetChildren() do
+                local own = item:FindFirstChild("Owner")
+                local bin = item:FindFirstChild("BoxItemName")
+                if own and own.Value == nil and bin and bin.Value == itemName then
+                    return store   -- return the ShopItems folder
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Find nearest counter part to an item's Main (Butterhub: GetCounter, 200-stud radius)
+local function getCounter(mainPart)
+    local best, bestDist = nil, math.huge
+    for _, store in next, workspace.Stores:GetChildren() do
+        if store.Name:lower() ~= "shopitems" then
+            for _, child in next, store:GetChildren() do
+                if child.Name:lower() == "counter" and child:IsA("BasePart") then
+                    local d = (mainPart.CFrame.p - child.CFrame.p).Magnitude
+                    if d <= 200 and d < bestDist then
+                        bestDist = d
+                        best     = child
+                    end
+                end
+            end
+        end
+    end
+    return best
+end
+
+-- Fire the purchase dialog (Butterhub: Pay — uses NPCDialog.PlayerChatted, not PlayerChatted)
+-- counterParentName is the store folder name (e.g. "WoodRUs", "ShackShop")
+local function pay(counterParentName)
+    local id = ShopIDS[counterParentName]
+    if not id then return end
+    local NPCDialog = RS:FindFirstChild("NPCDialog")
+    if not NPCDialog then return end
+    local PC = NPCDialog:FindFirstChild("PlayerChatted")
+    if not PC then return end
+    PC:InvokeServer(
+        { ["ID"]=id, ["Character"]="name", ["Name"]="name", ["Dialog"]="Dialog" },
+        "ConfirmPurchase"
+    )
 end
 
 -- ════════════════════════════════════════════════════
@@ -172,111 +244,17 @@ local function grabBlueprintNames()
 end
 
 -- ════════════════════════════════════════════════════
--- DIALOG  (per-counter)
+-- OPEN BOX HELPER
 -- ════════════════════════════════════════════════════
-local function fireDialog(c)
-    local PlayerChatted  = RS:FindFirstChild("PlayerChatted",    true)
-    local SetChattingVal = RS:FindFirstChild("SetChattingValue", true)
-    if not (PlayerChatted and SetChattingVal) then return end
-
-    if c.useWorkspaceRef then
-        -- Direct workspace reference method (WoodRUs / Thom)
-        local Thom   = workspace.Stores.WoodRUs.Thom
-        local Dialog = Thom.Dialog
-        local args   = { Character=Thom, Name="Thom", ID=9, Dialog=Dialog }
-        PlayerChatted:InvokeServer(args, "Initiate")
-        SetChattingVal:InvokeServer(2)
-        PlayerChatted:InvokeServer(args, "ConfirmPurchase")
-        SetChattingVal:InvokeServer(2)
-        PlayerChatted:InvokeServer(args, "EndChat")
-        SetChattingVal:InvokeServer(0)
-    else
-        -- Generic method for all other counters
-        local args = { Character=c.char, Name=c.char, ID=c.id, Dialog="Dialog" }
-        if c.preSeq == "SetChattingValue1" then
-            SetChattingVal:InvokeServer(1); task.wait(0.05)
-        end
-        PlayerChatted:InvokeServer(args, "Initiate")
-        task.wait(0.05); SetChattingVal:InvokeServer(2)
-        task.wait(0.85)
-        PlayerChatted:InvokeServer(args, "ConfirmPurchase")
-        task.wait(0.05); SetChattingVal:InvokeServer(2)
-        task.wait(0.45)
-        PlayerChatted:InvokeServer(args, "EndChat")
-        task.wait(0.05); SetChattingVal:InvokeServer(0)
-        if c.preSeq == "SetChattingValue1" then
-            task.wait(0.05); SetChattingVal:InvokeServer(1)
-        end
-    end
-end
-
--- ════════════════════════════════════════════════════
--- OPEN-BOX HELPER
--- ════════════════════════════════════════════════════
-local function openBoxFor(itemName, teleportDestPos)
-    local ClientInteracted   = RS:FindFirstChild("ClientInteracted",         true)
-    local ClientGetUserPerms = RS:FindFirstChild("ClientGetUserPermissions", true)
-    local Dragging           = RS.Interaction and RS.Interaction:FindFirstChild("ClientIsDragging")
-    local playerName         = player.Name
-
-    local box = RS:FindFirstChild("Box Purchased by " .. playerName, true)
-             or workspace:FindFirstChild("Box Purchased by " .. playerName, true)
-    if not box then
-        for _, v in next, workspace:GetDescendants() do
-            local iv    = v:FindFirstChild("ItemName")
-            local owner = v:FindFirstChild("Owner")
-            if iv and iv.Value == itemName and owner and owner.Value == player then
-                box = v; break
-            end
-        end
-    end
-    if not box then return end
-
-    local uid = tostring(player.UserId)
-    if ClientGetUserPerms then
-        ClientGetUserPerms:InvokeServer(uid, "Interact")
-        ClientGetUserPerms:InvokeServer(uid, "MoveStructure")
-        ClientGetUserPerms:InvokeServer(uid, "Destroy")
-        task.wait(0.017)
-        ClientGetUserPerms:InvokeServer(uid, "Grab")
-    end
-    task.wait(0.004)
-    if ClientInteracted then ClientInteracted:FireServer(box, "Open box") end
-    task.wait(0.3)
-
-    if not teleportDestPos then return end
-    local found, deadline = nil, tick() + 10
-    repeat
-        task.wait(0.05)
-        for _, v in next, workspace:GetDescendants() do
-            local iv    = v:FindFirstChild("ItemName")
-            local owner = v:FindFirstChild("Owner")
-            if iv and iv.Value == itemName and owner and owner.Value == player then
-                found = v; break
-            end
-        end
-    until found or tick() > deadline
-    if not found then return end
-
-    local m = found:FindFirstChild("Main")
-    if not m then return end
-    local h = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if h then h.CFrame = CFrame.new(m.CFrame.p) + Vector3.new(5, 0, 0) end
-    task.wait(0.1)
+local function openBoxFor(item)
+    -- item is the Model in ShopItems
     pcall(function()
-        if not found.PrimaryPart then found.PrimaryPart = m end
-        local t = 0
-        while not isnetworkowner(m) and t < 3 do
-            if Dragging then Dragging:FireServer(found) end
-            task.wait(0.05); t += 0.05
-        end
-        if Dragging then Dragging:FireServer(found) end
-        m:PivotTo(CFrame.new(teleportDestPos)); task.wait(0.05)
+        RS.Interaction.ClientInteracted:FireServer(item, "Open box")
     end)
 end
 
 -- ════════════════════════════════════════════════════
--- BUY LOOP
+-- BUY LOOP  (logic from Butterhub AutoBuy)
 -- ════════════════════════════════════════════════════
 local function AB_buy(itemName, amount, isBlueprint, isBatch)
     if not itemName then setStatus("No item selected.", false); return end
@@ -293,115 +271,117 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
         if not isBatch then AB_buying = false; refreshActionButtons() end
         return
     end
-    local origin = char.HumanoidRootPart.CFrame
+    local OldPos = char.HumanoidRootPart.CFrame
 
-    local function findShopItem()
-        for _, store in next, workspace.Stores:GetChildren() do
-            if store.Name ~= "ShopItems" then continue end
-            for _, v in next, store:GetChildren() do
-                local box   = v:FindFirstChild("BoxItemName")
-                local owner = v:FindFirstChild("Owner")
-                if box and box.Value == itemName then
-                    if not owner or owner.Value == nil or owner.Value == "" then
-                        return v
-                    end
-                end
-            end
-        end
-        return nil
-    end
-
-    local function waitForShopItem(timeout)
-        local deadline = tick() + (timeout or 20)
-        local found    = findShopItem()
-        while not found and tick() < deadline do
-            if AB_aborted then return nil end
-            task.wait(0.07)
-            found = findShopItem()
-        end
-        return found
+    -- find which ShopItems folder holds this item
+    local path = itemPath(itemName)
+    if not path then
+        setStatus("Item not found in any store.", false)
+        if not isBatch then AB_buying = false; refreshActionButtons() end
+        return
     end
 
     for i = 1, amount do
         if AB_aborted then break end
 
         setStatus("Waiting for " .. itemName .. "...", true)
-        local item = waitForShopItem(20)
-        if not item then setStatus("'" .. itemName .. "' not found - timed out.", false); break end
+
+        -- WaitForChild with timeout (Butterhub uses WaitForChild on the ShopItems folder)
+        local item = nil
+        local deadline = tick() + 20
+        repeat
+            if AB_aborted then break end
+            pcall(function() item = path:FindFirstChild(itemName) end)
+            if not item then task.wait(0.1) end
+        until item or tick() > deadline
+
+        if not item then
+            setStatus("'" .. itemName .. "' not found - timed out.", false); break
+        end
         if AB_aborted then break end
 
         local main = item:FindFirstChild("Main")
         if not main then setStatus("Missing Main part.", false); break end
 
-        -- Resolve nearest counter
-        local counterPart = item.Parent:FindFirstChild("counter")
-        if not counterPart then
-            local bestDist = math.huge
-            for _, store in next, workspace.Stores:GetChildren() do
-                for _, child in next, store:GetChildren() do
-                    if child.Name:lower() == "counter" and child:IsA("BasePart") then
-                        local d = (child.Position - main.Position).Magnitude
-                        if d < bestDist then bestDist = d; counterPart = child end
-                    end
-                end
-            end
-        end
+        local counter = getCounter(main)
+        if not counter then setStatus("No counter found near item.", false); break end
 
-        local refPos = counterPart and counterPart.Position or main.Position
-        local closest, closestDist = nil, math.huge
-        for _, c in ipairs(AB_Counters) do
-            local d = (refPos - c.pos).Magnitude
-            if d < closestDist then closestDist = d; closest = c end
-        end
-        if not closest then setStatus("No counter found.", false); break end
+        local counterParentName = counter.Parent.Name
 
-        local counterCF = counterPart and counterPart.CFrame or CFrame.new(closest.pos)
-
+        -- Step 1: TP to item, grab it (Butterhub: TP + drag until owner set)
         setStatus("Buying " .. itemName .. "...", true)
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if not hrp then break end
 
         hrp.CFrame = main.CFrame + Vector3.new(5, 0, 5)
-        task.wait(0.05)
-        for _ = 1, 12 do
-            if Dragging then Dragging:FireServer(item) end
-            main.CFrame = counterCF + Vector3.new(0, main.Size.Y, 0.5)
-            task.wait(0.016)
-        end
-        hrp.CFrame = counterCF + Vector3.new(5, 0, 5)
-        task.wait(0.05)
 
-        fireDialog(closest)
-
-        -- Return item to origin
-        local returnStart = tick()
-        local returned    = false
+        -- Wait until we own it
+        local ownDeadline = tick() + 8
         repeat
-            if tick() - returnStart > 6 then task.wait(0.2); break end
-            pcall(function()
-                local h2 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                if not h2 then return end
-                h2.CFrame = main.CFrame + Vector3.new(5, 0, 5)
+            if AB_aborted then break end
+            pcall(function() if Dragging then Dragging:FireServer(item) end end)
+            task.wait(0.016)
+        until (item:FindFirstChild("Owner") and item.Owner.Value ~= nil) or tick() > ownDeadline
+
+        if AB_aborted then break end
+        if item:FindFirstChild("Owner") and item.Owner.Value ~= player then break end
+
+        -- Wait for network ownership
+        local netDeadline = tick() + 8
+        repeat
+            if AB_aborted then break end
+            pcall(function() if Dragging then Dragging:FireServer(item) end end)
+            task.wait(0.016)
+        until isnetworkowner(main) or tick() > netDeadline
+
+        -- Step 2: Move item to counter
+        pcall(function()
+            if Dragging then Dragging:FireServer(item) end
+            main.CFrame = counter.CFrame + Vector3.new(0, main.Size.Y, 0.5)
+        end)
+        task.wait(0.05)
+
+        -- Step 3: TP player to counter
+        hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = counter.CFrame + Vector3.new(5, 0, 5)
+        end
+        task.wait(0.05)
+
+        -- Step 4: Pay loop until item leaves ShopItems (Butterhub pattern)
+        local payDeadline = tick() + 10
+        repeat
+            if AB_aborted then break end
+            pcall(function() if Dragging then Dragging:FireServer(item) end end)
+            pay(counterParentName)
+            task.wait(0.016)
+        until item.Parent ~= path or tick() > payDeadline
+
+        if AB_aborted then break end
+
+        -- Step 5: Reclaim item, move to OldPos
+        pcall(function()
+            local reclaimDeadline = tick() + 6
+            repeat
                 if Dragging then Dragging:FireServer(item) end
                 task.wait(0.016)
-                if isnetworkowner(main) then
-                    if Dragging then Dragging:FireServer(item) end
-                    main.CFrame = origin
-                    returned    = true
-                end
-            end)
-            task.wait(0.05)
-        until returned
+            until isnetworkowner(main) or tick() > reclaimDeadline
+            if Dragging then Dragging:FireServer(item) end
+            main.CFrame = OldPos
+        end)
+        task.wait(0.05)
 
-        local h3 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if h3 then h3.CFrame = origin + Vector3.new(5, 1, 0) end
+        -- Step 6: Return player
+        hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame = OldPos + Vector3.new(5, 1, 0) end
 
+        -- Step 7: Open box for blueprints
         if isBlueprint then
-            task.wait(0.3)
-            openBoxFor(itemName, nil)
+            task.wait(0.2)
+            pcall(function() openBoxFor(item) end)
         end
 
-        task.wait(0.2)
+        task.wait(0.1)
 
         if not isBatch then
             setProgress(i, amount)
@@ -418,7 +398,7 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
 end
 
 -- ════════════════════════════════════════════════════
--- UI WIDGET HELPERS
+-- UI HELPERS
 -- ════════════════════════════════════════════════════
 local function mkLabel(text)
     local lbl = Instance.new("TextLabel", autoBuyPage)
@@ -574,7 +554,6 @@ local dropIsOpen   = false
 local dropSelected = ""
 local dropItems    = {}
 
--- Outer collapsible frame
 local dropOuter = Instance.new("Frame", autoBuyPage)
 dropOuter.Size             = UDim2.new(1, -12, 0, HEADER_H)
 dropOuter.BackgroundColor3 = C.BG_ROW
@@ -586,7 +565,6 @@ dropOuterStroke.Color        = C.BORDER
 dropOuterStroke.Thickness    = 1
 dropOuterStroke.Transparency = 0.3
 
--- Header row
 local dropHeader = Instance.new("Frame", dropOuter)
 dropHeader.Size                   = UDim2.new(1, 0, 0, HEADER_H)
 dropHeader.BackgroundTransparency = 1
@@ -640,7 +618,6 @@ headerBtn.Text               = ""
 headerBtn.AutoButtonColor    = false
 headerBtn.ZIndex             = 5
 
--- Divider between header and list
 local divider = Instance.new("Frame", dropOuter)
 divider.Size             = UDim2.new(1, -14, 0, 1)
 divider.Position         = UDim2.new(0, 7, 0, HEADER_H)
@@ -648,7 +625,6 @@ divider.BackgroundColor3 = C.BORDER
 divider.BorderSizePixel  = 0
 divider.Visible          = false
 
--- Scrolling list
 local listScroll = Instance.new("ScrollingFrame", dropOuter)
 listScroll.Position               = UDim2.new(0, 0, 0, HEADER_H + 2)
 listScroll.Size                   = UDim2.new(1, 0, 0, 0)
@@ -671,16 +647,13 @@ listPad.PaddingBottom = UDim.new(0, 3)
 listPad.PaddingLeft   = UDim.new(0, 5)
 listPad.PaddingRight  = UDim.new(0, 5)
 
--- Selection state
 local function applySelection(entry)
     dropSelected   = entry.name
     AB_item        = entry.name
     AB_isBlueprint = entry.isBlueprint
-
     local priceStr = entry.price > 0 and ("   $" .. entry.price) or ""
     selLbl.Text       = entry.name .. priceStr
     selLbl.TextColor3 = C.TEXT_WHITE
-
     arrowLbl.TextColor3   = C.TEXT_MID
     dropOuterStroke.Color = C.BORDER_FOC
     refreshActionButtons()
@@ -690,10 +663,8 @@ local function clearSelection()
     dropSelected   = ""
     AB_item        = nil
     AB_isBlueprint = false
-
     selLbl.Text       = "Select item..."
     selLbl.TextColor3 = C.TEXT_DIM
-
     arrowLbl.TextColor3   = C.TEXT_DIM
     dropOuterStroke.Color = C.BORDER
     refreshActionButtons()
@@ -711,10 +682,8 @@ local function buildList()
     for _, child in ipairs(listScroll:GetChildren()) do
         if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end
     end
-
     for i, entry in ipairs(dropItems) do
         local isSel = entry.name == dropSelected
-
         local row = Instance.new("Frame", listScroll)
         row.Size             = UDim2.new(1, 0, 0, ITEM_H)
         row.BackgroundColor3 = isSel and Color3.fromRGB(50, 50, 50) or C.BG_ROW
@@ -722,7 +691,6 @@ local function buildList()
         row.LayoutOrder      = i
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
 
-        -- Item name (left-aligned, always white)
         local nameLbl = Instance.new("TextLabel", row)
         nameLbl.Size               = UDim2.new(1, -70, 1, 0)
         nameLbl.Position           = UDim2.new(0, 10, 0, 0)
@@ -734,7 +702,6 @@ local function buildList()
         nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
         nameLbl.TextTruncate       = Enum.TextTruncate.AtEnd
 
-        -- Price (right-aligned, white)
         if entry.price > 0 then
             local priceLbl = Instance.new("TextLabel", row)
             priceLbl.Size               = UDim2.new(0, 60, 1, 0)
@@ -764,11 +731,7 @@ local function buildList()
             end
         end)
         rowBtn.MouseButton1Click:Connect(function()
-            if entry.name == dropSelected then
-                clearSelection()
-            else
-                applySelection(entry)
-            end
+            if entry.name == dropSelected then clearSelection() else applySelection(entry) end
             buildList()
             task.delay(0.04, closeList)
         end)
@@ -886,10 +849,6 @@ mkBtn("Buy All Blueprints", function()
             if AB_aborted then break end
             setStatus("[" .. i .. "/" .. #bps .. "]  " .. bp, true)
             AB_buy(bp, 1, true, true)
-            if not AB_aborted then
-                task.wait(0.3)
-                openBoxFor(bp, nil)
-            end
         end
         AB_buying = false
         setProgress(nil)
@@ -910,9 +869,23 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
         local origin = hrp.CFrame
 
         local Dragging = RS.Interaction and RS.Interaction:FindFirstChild("ClientIsDragging")
+        local ClientInteracted = RS:FindFirstChild("ClientInteracted", true)
+        local ClientGetUserPerms = RS:FindFirstChild("ClientGetUserPermissions", true)
 
         local function openThenTeleport(itemName, destPos)
-            openBoxFor(itemName, nil)
+            local item = nil
+            pcall(function()
+                for _, store in next, workspace.Stores:GetChildren() do
+                    if store.Name == "ShopItems" then
+                        local found = store:FindFirstChild(itemName)
+                        if found then item = found break end
+                    end
+                end
+            end)
+            if not item then return end
+            pcall(function() openBoxFor(item) end)
+            task.wait(0.3)
+            if not destPos then return end
             local found, deadline = nil, tick() + 10
             repeat
                 task.wait(0.05)
@@ -931,7 +904,6 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
             if h then h.CFrame = CFrame.new(m.CFrame.p) + Vector3.new(5, 0, 0) end
             task.wait(0.1)
             pcall(function()
-                if not found.PrimaryPart then found.PrimaryPart = m end
                 local t = 0
                 while not isnetworkowner(m) and t < 3 do
                     if Dragging then Dragging:FireServer(found) end
@@ -944,10 +916,8 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
 
         setStatus("Buying LightBulb...",  true); AB_buy("LightBulb",  1, false, true)
         openThenTeleport("LightBulb",  Vector3.new(322.39, 45.96, 1916.45))
-
         setStatus("Buying BagOfSand...",  true); AB_buy("BagOfSand",  1, false, true)
         openThenTeleport("BagOfSand",  Vector3.new(319.48, 45.96, 1914.38))
-
         setStatus("Buying CanOfWorms...", true); AB_buy("CanOfWorms", 1, false, true)
         openThenTeleport("CanOfWorms", Vector3.new(317.21, 45.92, 1918.07))
 
@@ -956,9 +926,7 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
         for _, v in next, workspace:GetDescendants() do
             if v:IsA("Model") then
                 local iv = v:FindFirstChild("ItemName"); local tn = v:FindFirstChild("ToolName")
-                if (iv and iv.Value == "Rukiryaxe") or (tn and tn.Value == "Rukiryaxe") then
-                    axe = v; break
-                end
+                if (iv and iv.Value == "Rukiryaxe") or (tn and tn.Value == "Rukiryaxe") then axe = v; break end
             end
         end
         if not axe then
@@ -973,16 +941,12 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
                     axe = model; conn:Disconnect(); sig:Fire()
                 end
             end)
-            task.delay(30, function()
-                if conn.Connected then conn:Disconnect() end; sig:Fire()
-            end)
+            task.delay(30, function() if conn.Connected then conn:Disconnect() end; sig:Fire() end)
             sig.Event:Wait(); sig:Destroy()
         end
 
         if axe then
             setStatus("Picking up RukiryAxe...", true)
-            local ClientInteracted   = RS:FindFirstChild("ClientInteracted",         true)
-            local ClientGetUserPerms = RS:FindFirstChild("ClientGetUserPermissions", true)
             local axeMain = axe:FindFirstChild("Main")
             if axeMain then
                 local h = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -999,17 +963,13 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
             task.wait(0.608)
             if ClientInteracted then
                 ClientInteracted:FireServer(
-                    RS:FindFirstChild("Model", true) or workspace:FindFirstChild("Model", true),
-                    "Pick up tool"
-                )
+                    RS:FindFirstChild("Model", true) or workspace:FindFirstChild("Model", true), "Pick up tool")
             end
             task.wait(0.211)
             local ConfirmIdentity = RS:FindFirstChild("ConfirmIdentity", true)
             if ConfirmIdentity then
                 ConfirmIdentity:InvokeServer(
-                    RS:FindFirstChild("Tool", true) or workspace:FindFirstChild("Tool", true),
-                    "Rukiryaxe"
-                )
+                    RS:FindFirstChild("Tool", true) or workspace:FindFirstChild("Tool", true), "Rukiryaxe")
             end
             task.wait(0.243)
             local TestPing = RS:FindFirstChild("TestPing", true)
@@ -1038,8 +998,10 @@ for _, svc in ipairs(AB_Services) do
     btn.TextColor3 = C.TEXT_MID
     btn.MouseButton1Click:Connect(function()
         task.spawn(function()
-            local PC  = RS:FindFirstChild("PlayerChatted",    true)
-            local SCV = RS:FindFirstChild("SetChattingValue", true)
+            local NPCDialog = RS:FindFirstChild("NPCDialog")
+            if not NPCDialog then return end
+            local PC  = NPCDialog:FindFirstChild("PlayerChatted")
+            local SCV = NPCDialog:FindFirstChild("SetChattingValue")
             if not (PC and SCV) then return end
             local args = { Character=svc.char, Name=svc.char, ID=svc.id, Dialog="Dialog" }
             PC:InvokeServer(args, "Initiate")
