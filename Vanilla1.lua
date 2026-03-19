@@ -407,7 +407,7 @@ end
 
 -- TAB ICONS
 local tabIcons = {
-    ["Home"]      = "rbxassetid://97128823316544",
+    ["Home"]      = "rbxassetid://134105482136716",
     ["Player"]    = "rbxassetid://107966908673726",
     ["World"]     = "rbxassetid://101214534117376",
     ["Teleport"]  = "rbxassetid://92649354349672",
@@ -416,7 +416,7 @@ local tabIcons = {
     ["Dupe"]      = "rbxassetid://76204407522607",
     ["Item"]      = "rbxassetid://107729874528981",
     ["Sorter"]    = "rbxassetid://124649482379122",
-    ["AutoBuy"]   = "rbxassetid://137940915333645",
+    ["AutoBuy"]   = "rbxassetid://134105482136716",
     ["Pixel Art"] = "rbxassetid://139483926634191",
     ["Build"]     = "rbxassetid://140309668216577",
     ["Vehicle"]   = "rbxassetid://72268059112855",
