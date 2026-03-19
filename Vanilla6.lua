@@ -669,23 +669,42 @@ local expandActive = false
 local slotModels   = {}
 local propsConn    = nil
 
--- posKey: rounds to nearest 10 studs so minor float drift doesn't break matching
+-- pendingKeys: slots the player has already clicked this session.
+-- These are marked taken immediately on click and survive all refreshes.
+-- Only cleared when the toggle is turned off.
+local pendingKeys  = {}
+
+-- posKey: rounds to nearest 10 studs so minor float drift never breaks matching
 local function posKey(v3)
     return math.round(v3.X / 10) .. "_" .. math.round(v3.Z / 10)
 end
 
--- buildTakenSet: returns a set of posKeys for ALL plots that have any owner
--- (owned by LP, owned by others, or otherwise occupied). Called fresh each refresh.
+-- buildTakenSet: collects all slot positions that are already occupied.
+--
+-- Two sources:
+--   1. workspace.Properties entries whose Owner is non-nil (base plots, other players)
+--   2. pendingKeys — slots this session's player has already clicked/purchased,
+--      which the server may not have replicated yet on the next refresh.
+--
+-- NOTE: Expanded tiles are NOT separate Property objects in workspace.Properties —
+-- they extend the origin plot. That's why we rely on pendingKeys for them.
 local function buildTakenSet()
     local taken = {}
+
+    -- Source 1: any property with a real owner (origin squares only)
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         local ownerVal = v:FindFirstChild("Owner")
         local origSq   = v:FindFirstChild("OriginSquare")
         if ownerVal and origSq and ownerVal.Value ~= nil then
-            -- any non-nil owner means the plot is taken
             taken[posKey(origSq.Position)] = true
         end
     end
+
+    -- Source 2: slots already clicked this session
+    for k in pairs(pendingKeys) do
+        taken[k] = true
+    end
+
     return taken
 end
 
@@ -719,8 +738,9 @@ local function clearSlots()
     slotModels = {}
 end
 
-local function removeSlotByKey(key, localTaken)
-    if localTaken then localTaken[key] = true end
+local function removeSlotByKey(key)
+    -- Mark taken permanently in pendingKeys so refreshes don't re-spawn it
+    pendingKeys[key] = true
     for i, entry in ipairs(slotModels) do
         if entry.key == key then
             destroyEntry(entry)
@@ -851,13 +871,15 @@ refreshSlots = function()
 
         cd.MouseClick:Connect(function()
             if not expandActive then return end
+            -- Mark taken immediately — don't wait for server replication
+            pendingKeys[cap_key] = true
+            removeSlotByKey(cap_key)
             pcall(function()
                 RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
                     cap_origin,
                     CFrame.new(cap_wpos)
                 )
             end)
-            removeSlotByKey(cap_key)
         end)
 
         table.insert(slotModels, {
@@ -876,6 +898,7 @@ local function cleanupExpand()
     expandActive = false
     if propsConn then pcall(function() propsConn:Disconnect() end); propsConn = nil end
     clearSlots()
+    pendingKeys = {}   -- reset so a fresh toggle re-scans everything correctly
 end
 
 local function hookPropertyWatcher()
@@ -921,7 +944,36 @@ makeToggle(sl, "Click To Expand Land", false, function(on)
                 if getOriginPlot() then break end
                 tries = tries + 1; task.wait(0.5)
             end
-            if expandActive then refreshSlots() end
+            if not expandActive then return end
+
+            -- Seed pendingKeys with every grid slot LP already owns.
+            -- Expanded tiles aren't separate Property objects so we fire
+            -- ClientExpandedProperty and check what the server accepts —
+            -- instead we just pre-mark every slot that currently has any
+            -- owner so refreshSlots never draws a tile there.
+            -- (buildTakenSet already handles base plots via workspace.Properties;
+            --  this seeds the *expanded* slots LP bought in previous sessions
+            --  by doing a one-time scan of all Property objects for any owner.)
+            local seeded = {}
+            for _, v in ipairs(workspace.Properties:GetChildren()) do
+                local ownerVal = v:FindFirstChild("Owner")
+                local origSq   = v:FindFirstChild("OriginSquare")
+                if ownerVal and origSq and ownerVal.Value ~= nil then
+                    seeded[posKey(origSq.Position)] = true
+                end
+            end
+            -- Also mark the grid offsets that match LP's existing origin
+            local op = getOriginPlot()
+            if op then
+                local originPos = op.OriginSquare.Position
+                seeded[posKey(originPos)] = true
+                -- Fold seeded into pendingKeys
+                for k in pairs(seeded) do
+                    pendingKeys[k] = true
+                end
+            end
+
+            refreshSlots()
         end)
     else
         cleanupExpand()
