@@ -25,23 +25,23 @@ local pages      = VH.pages
 -- THEME
 -- ════════════════════════════════════════════════════
 local C = {
-    CARD       = Color3.fromRGB(10,  10,  10),
-    ROW        = Color3.fromRGB(16,  16,  16),
-    INPUT      = Color3.fromRGB(30,  30,  30),
-    TRACK      = Color3.fromRGB(38,  38,  38),
-    BORDER     = Color3.fromRGB(55,  55,  55),
-    TEXT       = Color3.fromRGB(210, 210, 210),
-    TEXT_MID   = Color3.fromRGB(150, 150, 150),
-    TEXT_DIM   = Color3.fromRGB(90,  90,  90),
-    BTN        = Color3.fromRGB(14,  14,  14),
-    BTN_HV     = Color3.fromRGB(32,  32,  32),
-    FILL       = Color3.fromRGB(255, 255, 255),
-    SW_ON      = Color3.fromRGB(220, 220, 220),
-    SW_OFF     = Color3.fromRGB(50,  50,  50),
-    KNOB_ON    = Color3.fromRGB(30,  30,  30),
-    KNOB_OFF   = Color3.fromRGB(160, 160, 160),
-    DOT_IDLE   = Color3.fromRGB(70,  70,  70),
-    DOT_ACT    = Color3.fromRGB(200, 200, 200),
+    CARD     = Color3.fromRGB(10,  10,  10),
+    ROW      = Color3.fromRGB(16,  16,  16),
+    INPUT    = Color3.fromRGB(30,  30,  30),
+    TRACK    = Color3.fromRGB(38,  38,  38),
+    BORDER   = Color3.fromRGB(55,  55,  55),
+    TEXT     = Color3.fromRGB(210, 210, 210),
+    TEXT_MID = Color3.fromRGB(150, 150, 150),
+    TEXT_DIM = Color3.fromRGB(90,  90,  90),
+    BTN      = Color3.fromRGB(14,  14,  14),
+    BTN_HV   = Color3.fromRGB(32,  32,  32),
+    FILL     = Color3.fromRGB(255, 255, 255),
+    SW_ON    = Color3.fromRGB(220, 220, 220),
+    SW_OFF   = Color3.fromRGB(50,  50,  50),
+    KNOB_ON  = Color3.fromRGB(30,  30,  30),
+    KNOB_OFF = Color3.fromRGB(160, 160, 160),
+    DOT_IDLE = Color3.fromRGB(70,  70,  70),
+    DOT_ACT  = Color3.fromRGB(200, 200, 200),
 }
 
 -- ════════════════════════════════════════════════════
@@ -133,7 +133,9 @@ local function makeToggle(page, text, default, cb)
     local state = default
     local function setState(v)
         state = v
-        TS:Create(tb,   TweenInfo.new(0.2, Enum.EasingStyle.Quint), {BackgroundColor3 = v and C.SW_ON or C.SW_OFF}):Play()
+        TS:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = v and C.SW_ON or C.SW_OFF,
+        }):Play()
         TS:Create(knob, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
             Position         = UDim2.new(0, v and 18 or 2, 0.5, -7),
             BackgroundColor3 = v and C.KNOB_ON or C.KNOB_OFF,
@@ -409,7 +411,7 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
     }
 end
 
--- Status bar — dot goes active while running, auto-resets after 3s when done
+-- Status bar — auto-resets to idle text 3 s after going inactive
 local function makeStatus(page, initText)
     local f = Instance.new("Frame", page)
     f.Size             = UDim2.new(1, -12, 0, 28)
@@ -439,7 +441,6 @@ local function makeStatus(page, initText)
     lb.Text               = initText
 
     local resetThread = nil
-
     local function scheduleReset()
         if resetThread then task.cancel(resetThread); resetThread = nil end
         resetThread = task.delay(3, function()
@@ -451,8 +452,6 @@ local function makeStatus(page, initText)
     end
 
     return {
-        -- on=true  → dot lights up, message shown, no auto-reset (still running)
-        -- on=false → dot dims, message shown, resets to idle after 3 s
         SetActive = function(on, msg)
             if resetThread then task.cancel(resetThread); resetThread = nil end
             TS:Create(dot, TweenInfo.new(0.2), {BackgroundColor3 = on and C.DOT_ACT or C.DOT_IDLE}):Play()
@@ -703,6 +702,7 @@ end)
 
 local vh = pages["VehicleTab"]
 
+-- Fly state
 local VFLY     = false
 local vflyKeyD = nil
 local vflyKeyU = nil
@@ -710,7 +710,22 @@ local vflyConn = nil
 local vflyBV   = nil
 local vflyBG   = nil
 local QEfly    = true
-local flySpeed = 50   -- studs/s, set directly by slider
+local flySpeed = 50   -- studs/s, directly set by slider
+
+-- Speed override state
+local speedEnabled  = false
+local currentSpeed  = 80
+local DEFAULT_SPEED = 100  -- game default, restored when override is off
+
+local function setVehicleSpeed(val)
+    for _, v in next, workspace.PlayerModels:GetChildren() do
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP
+           and v:FindFirstChild("Type") and v.Type.Value == "Vehicle"
+           and v:FindFirstChild("Configuration") then
+            pcall(function() v.Configuration.MaxSpeed.Value = val end)
+        end
+    end
+end
 
 local function stopVFly()
     VFLY = false
@@ -745,8 +760,7 @@ local function startVFly(vehicleMode)
                 and seat.Parent.Type.Value == "Vehicle") then return end
     end
 
-    local CONTROL  = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
-    local lCONTROL = {F = 0, B = 0, L = 0, R = 0}
+    local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
 
     VFLY = true
 
@@ -782,7 +796,6 @@ local function startVFly(vehicleMode)
                     0
                 )).p - cam.p)
             ) * flySpeed
-            lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
         else
             vflyBV.velocity = Vector3.new(0, 0, 0)
         end
@@ -816,16 +829,6 @@ local function startVFly(vehicleMode)
         elseif KEY == "q" then CONTROL.E = 0
         end
     end)
-end
-
-local function setVehicleSpeed(val)
-    for _, v in next, workspace.PlayerModels:GetChildren() do
-        if v:FindFirstChild("Owner") and v.Owner.Value == LP
-           and v:FindFirstChild("Type") and v.Type.Value == "Vehicle"
-           and v:FindFirstChild("Configuration") then
-            pcall(function() v.Configuration.MaxSpeed.Value = val end)
-        end
-    end
 end
 
 local abortSpawner = false
@@ -881,22 +884,43 @@ local function vehicleSpawner(color)
             if abortSpawner then
                 spawnStat.SetActive(false, "Stopped")
             else
-                -- show success then auto-reset after 3 s
                 spawnStat.SetActive(false, "Spawned  ·  " .. color)
             end
         end)
     end)
 end
 
--- ── Vehicle UI ──────────────────────────────────────
+-- ════════════════════════════════════════════════════
+-- VEHICLE UI  (Speed → Fly → Spawner)
+-- ════════════════════════════════════════════════════
 
 sectionLabel(vh, "Speed")
+
+-- Max Speed slider (only applies while Enable Speed is on)
 makeSlider(vh, "Max Speed", 10, 200, 80, function(v)
-    setVehicleSpeed(v)
+    currentSpeed = v
+    if speedEnabled then setVehicleSpeed(v) end
+end)
+
+-- Enable Speed toggle — applies override on, restores default off
+makeToggle(vh, "Enable Speed", false, function(v)
+    speedEnabled = v
+    if v then
+        setVehicleSpeed(currentSpeed)
+    else
+        setVehicleSpeed(DEFAULT_SPEED)
+    end
 end)
 
 sep(vh)
 sectionLabel(vh, "Fly")
+
+-- Fly Speed slider — value is exact studs/s passed to BodyVelocity
+makeSlider(vh, "Fly Speed", 10, 500, 50, function(v)
+    flySpeed = v
+end)
+
+-- Enable Fly toggle
 makeToggle(vh, "Enable Fly", false, function(v)
     if v then
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -912,10 +936,6 @@ makeToggle(vh, "Enable Fly", false, function(v)
     else
         stopVFly()
     end
-end)
--- Fly Speed slider: value shown IS the actual studs/s used in BodyVelocity
-makeSlider(vh, "Fly Speed", 10, 500, 50, function(v)
-    flySpeed = v
 end)
 
 sep(vh)
@@ -981,6 +1001,7 @@ _G.VH.cutWood1x1 = cutWood1x1
 table.insert(VH.cleanupTasks, function()
     stopVFly()
     abortSpawner = true
+    if speedEnabled then setVehicleSpeed(DEFAULT_SPEED) end
     if lassoSG and lassoSG.Parent then lassoSG:Destroy() end
 end)
 
