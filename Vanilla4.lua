@@ -23,12 +23,10 @@ local C = {
     CARD        = Color3.fromRGB(16,  16,  16),
     BTN         = Color3.fromRGB(14,  14,  14),
     BTN_HV      = Color3.fromRGB(32,  32,  32),
-    -- dropdown palette (Doc 4, mapped to monochrome)
     BG_ROW      = Color3.fromRGB(22,  22,  22),
     BG_INPUT    = Color3.fromRGB(32,  32,  32),
     BORDER      = Color3.fromRGB(55,  55,  55),
     BORDER_FOC  = Color3.fromRGB(100, 100, 100),
-    -- text
     TEXT        = Color3.fromRGB(210, 210, 210),
     TEXT_MID    = Color3.fromRGB(155, 155, 155),
     TEXT_DIM    = Color3.fromRGB(90,  90,  90),
@@ -47,7 +45,7 @@ end
 local AB_aborted     = false
 local AB_buying      = false
 local AB_amount      = 10
-local AB_item        = nil    -- raw item name string or nil
+local AB_item        = nil
 local AB_isBlueprint = false
 local AB_statusLbl   = nil
 local AB_progLbl     = nil
@@ -57,13 +55,16 @@ local AB_stopBtn     = nil
 -- ════════════════════════════════════════════════════
 -- STORE COUNTER REGISTRY
 -- ════════════════════════════════════════════════════
+-- Each entry drives the dialog sequence for its store.
+-- WoodRUs uses the direct workspace reference method (matches provided snippet).
+-- All others use the generic {char, id} approach.
 local AB_Counters = {
-    { name="WoodRUs",          pos=Vector3.new(267.90,   5.20,    67.43),  char="Thom",        id=9,  preSeq=nil                },
-    { name="BobsShack",        pos=Vector3.new(260.36,   10.40, -2551.25), char="Bob",          id=12, preSeq=nil                },
-    { name="FineArt",          pos=Vector3.new(5237.58, -164.00,  739.66), char="Timothy",      id=13, preSeq=nil                },
-    { name="FancyFurnishings", pos=Vector3.new(477.62,    5.60, -1721.34), char="Corey",        id=10, preSeq=nil                },
-    { name="LinksLogic",       pos=Vector3.new(4595.43,   9.40,  -785.02), char="Lincoln",      id=14, preSeq=nil                },
-    { name="BoxedCars",        pos=Vector3.new(528.04,    5.60, -1460.43), char="Jenny",        id=11, preSeq="SetChattingValue1" },
+    { name="WoodRUs",          pos=Vector3.new(267.90,   5.20,    67.43),  useWorkspaceRef=true                                         },
+    { name="BobsShack",        pos=Vector3.new(260.36,   10.40, -2551.25), char="Bob",          id=12, preSeq=nil                        },
+    { name="FineArt",          pos=Vector3.new(5237.58, -164.00,  739.66), char="Timothy",      id=13, preSeq=nil                        },
+    { name="FancyFurnishings", pos=Vector3.new(477.62,    5.60, -1721.34), char="Corey",        id=10, preSeq=nil                        },
+    { name="LinksLogic",       pos=Vector3.new(4595.43,   9.40,  -785.02), char="Lincoln",      id=14, preSeq=nil                        },
+    { name="BoxedCars",        pos=Vector3.new(528.04,    5.60, -1460.43), char="Jenny",        id=11, preSeq="SetChattingValue1"         },
 }
 
 local AB_Services = {
@@ -100,12 +101,12 @@ end
 local function refreshActionButtons()
     if AB_startBtn and AB_startBtn.Parent then
         local canStart = AB_item ~= nil and not AB_buying
-        AB_startBtn.TextColor3       = canStart and C.TEXT    or C.TEXT_DIM
-        AB_startBtn.BackgroundColor3 = canStart and C.BTN_HV  or C.BTN
+        AB_startBtn.TextColor3       = canStart and C.TEXT   or C.TEXT_DIM
+        AB_startBtn.BackgroundColor3 = canStart and C.BTN_HV or C.BTN
     end
     if AB_stopBtn and AB_stopBtn.Parent then
-        AB_stopBtn.TextColor3       = AB_buying and C.TEXT    or C.TEXT_DIM
-        AB_stopBtn.BackgroundColor3 = AB_buying and C.BG_ROW  or C.BTN
+        AB_stopBtn.TextColor3       = AB_buying and C.TEXT   or C.TEXT_DIM
+        AB_stopBtn.BackgroundColor3 = AB_buying and C.BG_ROW or C.BTN
     end
 end
 
@@ -129,7 +130,6 @@ local function getPrice(itemName)
     return price
 end
 
--- Returns sorted list of {name, price, isBlueprint}
 local function grabAllItems()
     local list, seen = {}, {}
     pcall(function()
@@ -172,7 +172,46 @@ local function grabBlueprintNames()
 end
 
 -- ════════════════════════════════════════════════════
--- OPEN-BOX HELPER  (blueprints + RukiryAxe sub-items)
+-- DIALOG  (per-counter)
+-- ════════════════════════════════════════════════════
+local function fireDialog(c)
+    local PlayerChatted  = RS:FindFirstChild("PlayerChatted",    true)
+    local SetChattingVal = RS:FindFirstChild("SetChattingValue", true)
+    if not (PlayerChatted and SetChattingVal) then return end
+
+    if c.useWorkspaceRef then
+        -- Direct workspace reference method (WoodRUs / Thom)
+        local Thom   = workspace.Stores.WoodRUs.Thom
+        local Dialog = Thom.Dialog
+        local args   = { Character=Thom, Name="Thom", ID=9, Dialog=Dialog }
+        PlayerChatted:InvokeServer(args, "Initiate")
+        SetChattingVal:InvokeServer(2)
+        PlayerChatted:InvokeServer(args, "ConfirmPurchase")
+        SetChattingVal:InvokeServer(2)
+        PlayerChatted:InvokeServer(args, "EndChat")
+        SetChattingVal:InvokeServer(0)
+    else
+        -- Generic method for all other counters
+        local args = { Character=c.char, Name=c.char, ID=c.id, Dialog="Dialog" }
+        if c.preSeq == "SetChattingValue1" then
+            SetChattingVal:InvokeServer(1); task.wait(0.05)
+        end
+        PlayerChatted:InvokeServer(args, "Initiate")
+        task.wait(0.05); SetChattingVal:InvokeServer(2)
+        task.wait(0.85)
+        PlayerChatted:InvokeServer(args, "ConfirmPurchase")
+        task.wait(0.05); SetChattingVal:InvokeServer(2)
+        task.wait(0.45)
+        PlayerChatted:InvokeServer(args, "EndChat")
+        task.wait(0.05); SetChattingVal:InvokeServer(0)
+        if c.preSeq == "SetChattingValue1" then
+            task.wait(0.05); SetChattingVal:InvokeServer(1)
+        end
+    end
+end
+
+-- ════════════════════════════════════════════════════
+-- OPEN-BOX HELPER
 -- ════════════════════════════════════════════════════
 local function openBoxFor(itemName, teleportDestPos)
     local ClientInteracted   = RS:FindFirstChild("ClientInteracted",         true)
@@ -180,7 +219,6 @@ local function openBoxFor(itemName, teleportDestPos)
     local Dragging           = RS.Interaction and RS.Interaction:FindFirstChild("ClientIsDragging")
     local playerName         = player.Name
 
-    -- find the box
     local box = RS:FindFirstChild("Box Purchased by " .. playerName, true)
              or workspace:FindFirstChild("Box Purchased by " .. playerName, true)
     if not box then
@@ -206,7 +244,6 @@ local function openBoxFor(itemName, teleportDestPos)
     if ClientInteracted then ClientInteracted:FireServer(box, "Open box") end
     task.wait(0.3)
 
-    -- optional: wait for item to spawn and teleport it
     if not teleportDestPos then return end
     local found, deadline = nil, tick() + 10
     repeat
@@ -249,9 +286,7 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
         refreshActionButtons()
     end
 
-    local PlayerChatted  = RS:FindFirstChild("PlayerChatted",    true)
-    local SetChattingVal = RS:FindFirstChild("SetChattingValue", true)
-    local Dragging       = RS.Interaction and RS.Interaction:FindFirstChild("ClientIsDragging")
+    local Dragging = RS.Interaction and RS.Interaction:FindFirstChild("ClientIsDragging")
 
     local char = player.Character
     if not (char and char:FindFirstChild("HumanoidRootPart")) then
@@ -290,9 +325,9 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
     for i = 1, amount do
         if AB_aborted then break end
 
-        setStatus("Waiting for " .. itemName .. "…", true)
+        setStatus("Waiting for " .. itemName .. "...", true)
         local item = waitForShopItem(20)
-        if not item then setStatus("'" .. itemName .. "' not found — timed out.", false); break end
+        if not item then setStatus("'" .. itemName .. "' not found - timed out.", false); break end
         if AB_aborted then break end
 
         local main = item:FindFirstChild("Main")
@@ -322,7 +357,7 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
 
         local counterCF = counterPart and counterPart.CFrame or CFrame.new(closest.pos)
 
-        setStatus("Buying " .. itemName .. "…", true)
+        setStatus("Buying " .. itemName .. "...", true)
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if not hrp then break end
 
@@ -336,24 +371,9 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
         hrp.CFrame = counterCF + Vector3.new(5, 0, 5)
         task.wait(0.05)
 
-        local c    = closest
-        local args = { Character=c.char, Name=c.char, ID=c.id, Dialog="Dialog" }
-        if c.preSeq == "SetChattingValue1" then
-            SetChattingVal:InvokeServer(1); task.wait(0.05)
-        end
-        PlayerChatted:InvokeServer(args, "Initiate")
-        task.wait(0.05); SetChattingVal:InvokeServer(2)
-        task.wait(0.85)
-        PlayerChatted:InvokeServer(args, "ConfirmPurchase")
-        task.wait(0.05); SetChattingVal:InvokeServer(2)
-        task.wait(0.45)
-        PlayerChatted:InvokeServer(args, "EndChat")
-        task.wait(0.05); SetChattingVal:InvokeServer(0)
-        if c.preSeq == "SetChattingValue1" then
-            task.wait(0.05); SetChattingVal:InvokeServer(1)
-        end
+        fireDialog(closest)
 
-        -- return item to origin
+        -- Return item to origin
         local returnStart = tick()
         local returned    = false
         repeat
@@ -376,7 +396,6 @@ local function AB_buy(itemName, amount, isBlueprint, isBatch)
         local h3 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if h3 then h3.CFrame = origin + Vector3.new(5, 1, 0) end
 
-        -- Blueprints: auto-open after purchase
         if isBlueprint then
             task.wait(0.3)
             openBoxFor(itemName, nil)
@@ -475,7 +494,7 @@ local function mkNumberInput(text, minV, maxV, defV, cb)
         return b
     end
 
-    local minusBtn = makeArrow(-122, "−")
+    local minusBtn = makeArrow(-122, "-")
     local plusBtn  = makeArrow(-30,  "+")
 
     local box = Instance.new("TextBox", fr)
@@ -509,7 +528,7 @@ local function mkNumberInput(text, minV, maxV, defV, cb)
 end
 
 -- ════════════════════════════════════════════════════
--- STATUS BAR  (placed first in the page layout)
+-- STATUS BAR
 -- ════════════════════════════════════════════════════
 local statusCard = Instance.new("Frame", autoBuyPage)
 statusCard.Size             = UDim2.new(1, -12, 0, 38)
@@ -542,7 +561,7 @@ progLbl.Visible            = false
 AB_progLbl                 = progLbl
 
 -- ════════════════════════════════════════════════════
--- ITEM DROPDOWN  (styled after Document 4 player picker)
+-- ITEM DROPDOWN
 -- ════════════════════════════════════════════════════
 mkSep()
 mkLabel("Item")
@@ -551,9 +570,9 @@ local ITEM_H   = 30
 local MAX_SHOW = 6
 local HEADER_H = 38
 
-local dropIsOpen  = false
-local dropSelected = ""    -- currently selected item name
-local dropItems   = {}     -- cached {name, price, isBlueprint}
+local dropIsOpen   = false
+local dropSelected = ""
+local dropItems    = {}
 
 -- Outer collapsible frame
 local dropOuter = Instance.new("Frame", autoBuyPage)
@@ -567,7 +586,7 @@ dropOuterStroke.Color        = C.BORDER
 dropOuterStroke.Thickness    = 1
 dropOuterStroke.Transparency = 0.3
 
--- Header
+-- Header row
 local dropHeader = Instance.new("Frame", dropOuter)
 dropHeader.Size                   = UDim2.new(1, 0, 0, HEADER_H)
 dropHeader.BackgroundTransparency = 1
@@ -593,28 +612,11 @@ selStroke.Color        = C.BORDER
 selStroke.Thickness    = 1
 selStroke.Transparency = 0.3
 
--- Small "BP" badge shown when a blueprint is selected
-local bpBadge = Instance.new("Frame", selFrame)
-bpBadge.Size             = UDim2.new(0, 24, 0, 16)
-bpBadge.Position         = UDim2.new(0, 5, 0.5, -8)
-bpBadge.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-bpBadge.BorderSizePixel  = 0
-bpBadge.Visible          = false
-Instance.new("UICorner", bpBadge).CornerRadius = UDim.new(0, 4)
-local bpBadgeLbl = Instance.new("TextLabel", bpBadge)
-bpBadgeLbl.Size               = UDim2.new(1, 0, 1, 0)
-bpBadgeLbl.BackgroundTransparency = 1
-bpBadgeLbl.Text               = "BP"
-bpBadgeLbl.Font               = Enum.Font.GothamBold
-bpBadgeLbl.TextSize           = 9
-bpBadgeLbl.TextColor3         = C.TEXT_MID
-bpBadgeLbl.TextXAlignment     = Enum.TextXAlignment.Center
-
 local selLbl = Instance.new("TextLabel", selFrame)
-selLbl.Size               = UDim2.new(1, -46, 1, 0)
+selLbl.Size               = UDim2.new(1, -30, 1, 0)
 selLbl.Position           = UDim2.new(0, 8, 0, 0)
 selLbl.BackgroundTransparency = 1
-selLbl.Text               = "Select item…"
+selLbl.Text               = "Select item..."
 selLbl.Font               = Enum.Font.GothamSemibold
 selLbl.TextSize           = 11
 selLbl.TextColor3         = C.TEXT_DIM
@@ -625,9 +627,9 @@ local arrowLbl = Instance.new("TextLabel", selFrame)
 arrowLbl.Size               = UDim2.new(0, 20, 1, 0)
 arrowLbl.Position           = UDim2.new(1, -22, 0, 0)
 arrowLbl.BackgroundTransparency = 1
-arrowLbl.Text               = "▾"
+arrowLbl.Text               = "v"
 arrowLbl.Font               = Enum.Font.GothamBold
-arrowLbl.TextSize           = 13
+arrowLbl.TextSize           = 11
 arrowLbl.TextColor3         = C.TEXT_DIM
 arrowLbl.TextXAlignment     = Enum.TextXAlignment.Center
 
@@ -638,7 +640,7 @@ headerBtn.Text               = ""
 headerBtn.AutoButtonColor    = false
 headerBtn.ZIndex             = 5
 
--- Divider
+-- Divider between header and list
 local divider = Instance.new("Frame", dropOuter)
 divider.Size             = UDim2.new(1, -14, 0, 1)
 divider.Position         = UDim2.new(0, 7, 0, HEADER_H)
@@ -646,7 +648,7 @@ divider.BackgroundColor3 = C.BORDER
 divider.BorderSizePixel  = 0
 divider.Visible          = false
 
--- Scroll list
+-- Scrolling list
 local listScroll = Instance.new("ScrollingFrame", dropOuter)
 listScroll.Position               = UDim2.new(0, 0, 0, HEADER_H + 2)
 listScroll.Size                   = UDim2.new(1, 0, 0, 0)
@@ -669,37 +671,30 @@ listPad.PaddingBottom = UDim.new(0, 3)
 listPad.PaddingLeft   = UDim.new(0, 5)
 listPad.PaddingRight  = UDim.new(0, 5)
 
--- ── Selection state helpers ───────────────────────────
+-- Selection state
 local function applySelection(entry)
-    dropSelected    = entry.name
-    AB_item         = entry.name
-    AB_isBlueprint  = entry.isBlueprint
+    dropSelected   = entry.name
+    AB_item        = entry.name
+    AB_isBlueprint = entry.isBlueprint
 
-    if entry.isBlueprint then
-        selLbl.Text     = entry.name
-        selLbl.Position = UDim2.new(0, 36, 0, 0)
-        bpBadge.Visible = true
-    else
-        local suffix    = entry.price > 0 and ("  —  $" .. entry.price) or ""
-        selLbl.Text     = entry.name .. suffix
-        selLbl.Position = UDim2.new(0, 8, 0, 0)
-        bpBadge.Visible = false
-    end
-    selLbl.TextColor3     = C.TEXT
+    local priceStr = entry.price > 0 and ("   $" .. entry.price) or ""
+    selLbl.Text       = entry.name .. priceStr
+    selLbl.TextColor3 = C.TEXT_WHITE
+
     arrowLbl.TextColor3   = C.TEXT_MID
     dropOuterStroke.Color = C.BORDER_FOC
     refreshActionButtons()
 end
 
 local function clearSelection()
-    dropSelected    = ""
-    AB_item         = nil
-    AB_isBlueprint  = false
-    selLbl.Text     = "Select item…"
-    selLbl.TextColor3   = C.TEXT_DIM
-    selLbl.Position     = UDim2.new(0, 8, 0, 0)
-    bpBadge.Visible     = false
-    arrowLbl.TextColor3 = C.TEXT_DIM
+    dropSelected   = ""
+    AB_item        = nil
+    AB_isBlueprint = false
+
+    selLbl.Text       = "Select item..."
+    selLbl.TextColor3 = C.TEXT_DIM
+
+    arrowLbl.TextColor3   = C.TEXT_DIM
     dropOuterStroke.Color = C.BORDER
     refreshActionButtons()
 end
@@ -713,8 +708,8 @@ local function closeList()
 end
 
 local function buildList()
-    for _, c in ipairs(listScroll:GetChildren()) do
-        if c:IsA("Frame") or c:IsA("TextButton") then c:Destroy() end
+    for _, child in ipairs(listScroll:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end
     end
 
     for i, entry in ipairs(dropItems) do
@@ -722,63 +717,34 @@ local function buildList()
 
         local row = Instance.new("Frame", listScroll)
         row.Size             = UDim2.new(1, 0, 0, ITEM_H)
-        row.BackgroundColor3 = isSel and Color3.fromRGB(55, 55, 55) or C.BG_ROW
+        row.BackgroundColor3 = isSel and Color3.fromRGB(50, 50, 50) or C.BG_ROW
         row.BorderSizePixel  = 0
         row.LayoutOrder      = i
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
 
-        -- BP badge in row
-        if entry.isBlueprint then
-            local badge = Instance.new("Frame", row)
-            badge.Size             = UDim2.new(0, 22, 0, 14)
-            badge.Position         = UDim2.new(0, 6, 0.5, -7)
-            badge.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-            badge.BorderSizePixel  = 0
-            Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 3)
-            local bl = Instance.new("TextLabel", badge)
-            bl.Size               = UDim2.new(1, 0, 1, 0)
-            bl.BackgroundTransparency = 1
-            bl.Text               = "BP"
-            bl.Font               = Enum.Font.GothamBold
-            bl.TextSize           = 8
-            bl.TextColor3         = C.TEXT_DIM
-            bl.TextXAlignment     = Enum.TextXAlignment.Center
-        end
-
-        local nameX = entry.isBlueprint and 34 or 8
+        -- Item name (left-aligned, always white)
         local nameLbl = Instance.new("TextLabel", row)
-        nameLbl.Size               = UDim2.new(1, -(nameX + 34), 1, 0)
-        nameLbl.Position           = UDim2.new(0, nameX, 0, 0)
+        nameLbl.Size               = UDim2.new(1, -70, 1, 0)
+        nameLbl.Position           = UDim2.new(0, 10, 0, 0)
         nameLbl.BackgroundTransparency = 1
         nameLbl.Text               = entry.name
         nameLbl.Font               = Enum.Font.GothamSemibold
         nameLbl.TextSize           = 11
-        nameLbl.TextColor3         = isSel and C.TEXT or C.TEXT_MID
+        nameLbl.TextColor3         = C.TEXT_WHITE
         nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
         nameLbl.TextTruncate       = Enum.TextTruncate.AtEnd
 
+        -- Price (right-aligned, white)
         if entry.price > 0 then
             local priceLbl = Instance.new("TextLabel", row)
-            priceLbl.Size               = UDim2.new(0, 64, 1, 0)
-            priceLbl.Position           = UDim2.new(1, -68, 0, 0)
+            priceLbl.Size               = UDim2.new(0, 60, 1, 0)
+            priceLbl.Position           = UDim2.new(1, -64, 0, 0)
             priceLbl.BackgroundTransparency = 1
             priceLbl.Text               = "$" .. entry.price
             priceLbl.Font               = Enum.Font.Gotham
-            priceLbl.TextSize           = 10
-            priceLbl.TextColor3         = isSel and C.TEXT_MID or C.TEXT_DIM
+            priceLbl.TextSize           = 11
+            priceLbl.TextColor3         = C.TEXT_WHITE
             priceLbl.TextXAlignment     = Enum.TextXAlignment.Right
-        end
-
-        if isSel then
-            local check = Instance.new("TextLabel", row)
-            check.Size               = UDim2.new(0, 18, 1, 0)
-            check.Position           = UDim2.new(1, -20, 0, 0)
-            check.BackgroundTransparency = 1
-            check.Text               = "✓"
-            check.Font               = Enum.Font.GothamBold
-            check.TextSize           = 12
-            check.TextColor3         = C.TEXT_WHITE
-            check.TextXAlignment     = Enum.TextXAlignment.Center
         end
 
         local rowBtn = Instance.new("TextButton", row)
@@ -798,7 +764,11 @@ local function buildList()
             end
         end)
         rowBtn.MouseButton1Click:Connect(function()
-            if entry.name == dropSelected then clearSelection() else applySelection(entry) end
+            if entry.name == dropSelected then
+                clearSelection()
+            else
+                applySelection(entry)
+            end
             buildList()
             task.delay(0.04, closeList)
         end)
@@ -807,8 +777,7 @@ end
 
 local function openList()
     dropIsOpen = true
-    -- refresh item list every time the dropdown opens
-    dropItems = grabAllItems()
+    dropItems  = grabAllItems()
     buildList()
     local count  = #dropItems
     local listH  = math.min(count, MAX_SHOW) * (ITEM_H + 2) + 8
@@ -829,7 +798,6 @@ headerBtn.MouseLeave:Connect(function()
     tw(selFrame, { BackgroundColor3 = C.BG_INPUT })
 end)
 
--- Initial populate (async — stores load after the script)
 task.spawn(function()
     task.wait(0.8)
     dropItems = grabAllItems()
@@ -843,7 +811,7 @@ mkLabel("Options")
 mkNumberInput("Amount to buy", 1, 9999, AB_amount, function(v) AB_amount = v end)
 
 -- ════════════════════════════════════════════════════
--- START / STOP BUTTONS
+-- START / STOP
 -- ════════════════════════════════════════════════════
 mkSep()
 mkLabel("Actions")
@@ -856,27 +824,29 @@ local startBtn = Instance.new("TextButton", actionRow)
 startBtn.Size             = UDim2.new(0.5, -4, 1, 0)
 startBtn.Position         = UDim2.new(0, 0, 0, 0)
 startBtn.BackgroundColor3 = C.BTN
-startBtn.Text             = "▶  Start"
+startBtn.Text             = "Start"
 startBtn.Font             = Enum.Font.GothamBold
 startBtn.TextSize         = 13
 startBtn.TextColor3       = C.TEXT_DIM
 startBtn.BorderSizePixel  = 0
 startBtn.AutoButtonColor  = false
 Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 6)
-Instance.new("UIStroke", startBtn).Color        = C.BORDER
+local startStroke = Instance.new("UIStroke", startBtn)
+startStroke.Color = C.BORDER; startStroke.Thickness = 1; startStroke.Transparency = 0
 
 local stopBtn = Instance.new("TextButton", actionRow)
 stopBtn.Size             = UDim2.new(0.5, -4, 1, 0)
 stopBtn.Position         = UDim2.new(0.5, 4, 0, 0)
 stopBtn.BackgroundColor3 = C.BTN
-stopBtn.Text             = "⏹  Stop"
+stopBtn.Text             = "Stop"
 stopBtn.Font             = Enum.Font.GothamBold
 stopBtn.TextSize         = 13
 stopBtn.TextColor3       = C.TEXT_DIM
 stopBtn.BorderSizePixel  = 0
 stopBtn.AutoButtonColor  = false
 Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 6)
-Instance.new("UIStroke", stopBtn).Color        = C.BORDER
+local stopStroke = Instance.new("UIStroke", stopBtn)
+stopStroke.Color = C.BORDER; stopStroke.Thickness = 1; stopStroke.Transparency = 0
 
 AB_startBtn = startBtn
 AB_stopBtn  = stopBtn
@@ -892,7 +862,7 @@ end)
 stopBtn.MouseButton1Click:Connect(function()
     if not AB_buying then return end
     AB_aborted = true
-    setStatus("Stopping…", true)
+    setStatus("Stopping...", true)
 end)
 
 -- ════════════════════════════════════════════════════
@@ -918,12 +888,12 @@ mkBtn("Buy All Blueprints", function()
             AB_buy(bp, 1, true, true)
             if not AB_aborted then
                 task.wait(0.3)
-                openBoxFor(bp, nil)   -- auto-open each blueprint
+                openBoxFor(bp, nil)
             end
         end
         AB_buying = false
         setProgress(nil)
-        setStatus(AB_aborted and "Stopped." or ("Done — " .. #bps .. " blueprints"), false)
+        setStatus(AB_aborted and "Stopped." or ("Done - " .. #bps .. " blueprints"), false)
         refreshActionButtons()
     end)
 end)
@@ -972,26 +942,27 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
             end)
         end
 
-        setStatus("Buying LightBulb…",  true); AB_buy("LightBulb",  1, false, true)
+        setStatus("Buying LightBulb...",  true); AB_buy("LightBulb",  1, false, true)
         openThenTeleport("LightBulb",  Vector3.new(322.39, 45.96, 1916.45))
 
-        setStatus("Buying BagOfSand…",  true); AB_buy("BagOfSand",  1, false, true)
+        setStatus("Buying BagOfSand...",  true); AB_buy("BagOfSand",  1, false, true)
         openThenTeleport("BagOfSand",  Vector3.new(319.48, 45.96, 1914.38))
 
-        setStatus("Buying CanOfWorms…", true); AB_buy("CanOfWorms", 1, false, true)
+        setStatus("Buying CanOfWorms...", true); AB_buy("CanOfWorms", 1, false, true)
         openThenTeleport("CanOfWorms", Vector3.new(317.21, 45.92, 1918.07))
 
-        -- wait for axe
-        setStatus("Waiting for RukiryAxe…", true)
+        setStatus("Waiting for RukiryAxe...", true)
         local axe = nil
         for _, v in next, workspace:GetDescendants() do
             if v:IsA("Model") then
                 local iv = v:FindFirstChild("ItemName"); local tn = v:FindFirstChild("ToolName")
-                if (iv and iv.Value == "Rukiryaxe") or (tn and tn.Value == "Rukiryaxe") then axe = v; break end
+                if (iv and iv.Value == "Rukiryaxe") or (tn and tn.Value == "Rukiryaxe") then
+                    axe = v; break
+                end
             end
         end
         if not axe then
-            local sig = Instance.new("BindableEvent")
+            local sig  = Instance.new("BindableEvent")
             local conn
             conn = workspace.DescendantAdded:Connect(function(v)
                 if axe then conn:Disconnect(); return end
@@ -1002,12 +973,14 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
                     axe = model; conn:Disconnect(); sig:Fire()
                 end
             end)
-            task.delay(30, function() if conn.Connected then conn:Disconnect() end; sig:Fire() end)
+            task.delay(30, function()
+                if conn.Connected then conn:Disconnect() end; sig:Fire()
+            end)
             sig.Event:Wait(); sig:Destroy()
         end
 
         if axe then
-            setStatus("Picking up RukiryAxe…", true)
+            setStatus("Picking up RukiryAxe...", true)
             local ClientInteracted   = RS:FindFirstChild("ClientInteracted",         true)
             local ClientGetUserPerms = RS:FindFirstChild("ClientGetUserPermissions", true)
             local axeMain = axe:FindFirstChild("Main")
@@ -1026,13 +999,17 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
             task.wait(0.608)
             if ClientInteracted then
                 ClientInteracted:FireServer(
-                    RS:FindFirstChild("Model", true) or workspace:FindFirstChild("Model", true), "Pick up tool")
+                    RS:FindFirstChild("Model", true) or workspace:FindFirstChild("Model", true),
+                    "Pick up tool"
+                )
             end
             task.wait(0.211)
             local ConfirmIdentity = RS:FindFirstChild("ConfirmIdentity", true)
             if ConfirmIdentity then
                 ConfirmIdentity:InvokeServer(
-                    RS:FindFirstChild("Tool", true) or workspace:FindFirstChild("Tool", true), "Rukiryaxe")
+                    RS:FindFirstChild("Tool", true) or workspace:FindFirstChild("Tool", true),
+                    "Rukiryaxe"
+                )
             end
             task.wait(0.243)
             local TestPing = RS:FindFirstChild("TestPing", true)
@@ -1040,9 +1017,9 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
             task.wait(0.5)
             local h2 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             if h2 then h2.CFrame = origin end
-            setStatus("RukiryAxe obtained!", false)
+            setStatus("RukiryAxe obtained.", false)
         else
-            setStatus("RukiryAxe didn't appear in time.", false)
+            setStatus("RukiryAxe did not appear in time.", false)
         end
 
         AB_buying = false
@@ -1051,7 +1028,7 @@ mkBtn("Buy RukiryAxe  ($7,400)", function()
 end)
 
 -- ════════════════════════════════════════════════════
--- SERVICES  (pay-at-counter)
+-- SERVICES
 -- ════════════════════════════════════════════════════
 mkSep()
 mkLabel("Services  (pay at counter)")
@@ -1087,4 +1064,4 @@ table.insert(cleanupTasks, function()
     AB_buying  = false
 end)
 
-print("[VanillaHub] Vanilla4 (AutoBuy) loaded — black/grey/white theme")
+print("[VanillaHub] Vanilla4 (AutoBuy) loaded.")
