@@ -388,18 +388,41 @@ local activeTabButton = nil
 local function switchTab(targetName)
     for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
-        local oldLbl = activeTabButton:FindFirstChild("TabLabel")
+        local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
+        local oldIcon = activeTabButton:FindFirstChild("TabIcon")
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
-        if oldLbl then TweenService:Create(oldLbl, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
+        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3  = Color3.fromRGB(110, 110, 110)}):Play() end
+        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
     end
     local frame = side:FindFirstChild(targetName:gsub("Tab",""))
     if frame then
         activeTabButton = frame
-        local newLbl = frame:FindFirstChild("TabLabel")
+        local newLbl  = frame:FindFirstChild("TabLabel")
+        local newIcon = frame:FindFirstChild("TabIcon")
         TweenService:Create(frame, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
-        if newLbl then TweenService:Create(newLbl, TweenInfo.new(0.22), {TextColor3 = THEME_TEXT}):Play() end
+        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3  = THEME_TEXT}):Play() end
+        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {ImageColor3 = THEME_TEXT}):Play() end
     end
 end
+
+-- TAB ICONS
+local tabIcons = {
+    ["Home"]      = "rbxassetid://77194384448338",
+    ["Player"]    = "rbxassetid://107966908673726",
+    ["World"]     = "rbxassetid://101214534117376",
+    ["Teleport"]  = "rbxassetid://92649354349672",
+    ["Wood"]      = "rbxassetid://106031824976362",
+    ["Slot"]      = "rbxassetid://136244861596002",
+    ["Dupe"]      = "rbxassetid://76204407522607",
+    ["Item"]      = "rbxassetid://107729874528981",
+    ["Sorter"]    = "rbxassetid://124649482379122",
+    ["AutoBuy"]   = "rbxassetid://75551187041542",
+    ["Pixel Art"] = "rbxassetid://139483926634191",
+    ["Build"]     = "rbxassetid://140309668216577",
+    ["Vehicle"]   = "rbxassetid://72268059112855",
+    ["Search"]    = "rbxassetid://80981469875695",
+    ["Settings"]  = "rbxassetid://93566900770353",
+}
 
 for _, name in ipairs(tabs) do
     local frame = Instance.new("Frame", side)
@@ -409,10 +432,20 @@ for _, name in ipairs(tabs) do
     frame.BorderSizePixel  = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
+    local icon = Instance.new("ImageLabel", frame)
+    icon.Name                   = "TabIcon"
+    icon.Size                   = UDim2.new(0, 16, 0, 16)
+    icon.Position               = UDim2.new(0, 10, 0.5, -8)
+    icon.BackgroundTransparency = 1
+    icon.BorderSizePixel        = 0
+    icon.ScaleType              = Enum.ScaleType.Fit
+    icon.Image                  = tabIcons[name] or ""
+    icon.ImageColor3            = Color3.fromRGB(110, 110, 110)
+
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name               = "TabLabel"
-    nameLbl.Size               = UDim2.new(1, -14, 1, 0)
-    nameLbl.Position           = UDim2.new(0, 10, 0, 0)
+    nameLbl.Size               = UDim2.new(1, -34, 1, 0)
+    nameLbl.Position           = UDim2.new(0, 32, 0, 0)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Font               = Enum.Font.GothamSemibold
     nameLbl.TextSize           = 13
@@ -432,12 +465,14 @@ for _, name in ipairs(tabs) do
         if activeTabButton ~= frame then
             TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
+            TweenService:Create(icon,    TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(180, 180, 180)}):Play()
         end
     end)
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= frame then
             TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
             TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
+            TweenService:Create(icon,    TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(110, 110, 110)}):Play()
         end
     end)
     btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
