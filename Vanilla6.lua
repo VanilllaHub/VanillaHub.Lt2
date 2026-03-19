@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════
--- VANILLA6 — FULL REWRITE (Aggressive Bypass Edition)
+-- VANILLA6 — FULL REWRITE
 -- AutoBuy + Slot Tab
 -- ════════════════════════════════════════════════════
 
@@ -634,17 +634,21 @@ end
 -- ════════════════════════════════════════════════════
 -- LAND ART  —  Click To Expand Land
 --
--- Each slot gets:
---   border  — solid black slab (42 × 0.1 × 42), sits just below the tile,
---             uniform 1-stud black margin on every side of the 40-stud tile.
---   tile    — pure white (255,255,255) SmoothPlastic at Transparency 0.45,
---             clean bright white, no grey tint.
---   NO SelectionBox — removed entirely for a cleaner look.
+-- Visual design:
+--   frame  — 4 thin neon-white strips forming a complete outline around
+--             each available slot. Each strip is BORDER_T studs wide.
+--   tile   — Neon white SmoothPlastic fill, Transparency 0.55 (bright glow).
+--
+-- Ownership check:
+--   Rebuilds the taken-key set fresh on every refresh.
+--   Skips any slot whose position matches ANY property that has an owner
+--   (including other players) — you can only expand onto truly empty plots.
 -- ════════════════════════════════════════════════════
 
-local TILE_SIZE   = 40   -- actual land slot size in studs
-local BORDER_PAD  = 1    -- extra studs on each side for the black border
-local BORDER_SIZE = TILE_SIZE + BORDER_PAD * 2   -- = 42
+local TILE_SIZE = 40    -- land slot size in studs
+local BORDER_T  = 0.35  -- outline strip thickness (thin & clean)
+local TILE_Y    = 0.15  -- Y height of the tile slab above ground
+local FRAME_Y   = 0.18  -- Y height of the border strips (slightly above tile)
 
 local GRID_SLOTS = {
     {off=Vector3.new(-80,0,-80),n= 1}, {off=Vector3.new(-40,0,-80),n= 2},
@@ -661,24 +665,28 @@ local GRID_SLOTS = {
     {off=Vector3.new( 40,0, 80),n=23}, {off=Vector3.new( 80,0, 80),n=24},
 }
 
-local expandActive  = false
-local slotModels    = {}
-local propsConn     = nil
-local purchasedKeys = {}
+local expandActive = false
+local slotModels   = {}
+local propsConn    = nil
 
+-- posKey: rounds to nearest 10 studs so minor float drift doesn't break matching
 local function posKey(v3)
     return math.round(v3.X / 10) .. "_" .. math.round(v3.Z / 10)
 end
 
-local function buildOwnedSet()
+-- buildTakenSet: returns a set of posKeys for ALL plots that have any owner
+-- (owned by LP, owned by others, or otherwise occupied). Called fresh each refresh.
+local function buildTakenSet()
+    local taken = {}
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         local ownerVal = v:FindFirstChild("Owner")
         local origSq   = v:FindFirstChild("OriginSquare")
-        if ownerVal and origSq and ownerVal.Value == LP then
-            local k = posKey(origSq.Position)
-            purchasedKeys[k] = true
+        if ownerVal and origSq and ownerVal.Value ~= nil then
+            -- any non-nil owner means the plot is taken
+            taken[posKey(origSq.Position)] = true
         end
     end
+    return taken
 end
 
 local function getOriginPlot()
@@ -711,8 +719,8 @@ local function clearSlots()
     slotModels = {}
 end
 
-local function removeSlotByKey(key)
-    purchasedKeys[key] = true
+local function removeSlotByKey(key, localTaken)
+    if localTaken then localTaken[key] = true end
     for i, entry in ipairs(slotModels) do
         if entry.key == key then
             destroyEntry(entry)
@@ -720,6 +728,22 @@ local function removeSlotByKey(key)
             return
         end
     end
+end
+
+-- ── makeBorderStrip: one thin neon white flat Part ─────────────────────────
+local function makeBorderStrip(parent, cx, cz, sx, sz, baseY)
+    local p = Instance.new("Part")
+    p.Name         = "BorderStrip"
+    p.Size         = Vector3.new(sx, 0.1, sz)
+    p.CFrame       = CFrame.new(cx, baseY, cz)
+    p.Anchored     = true
+    p.CanCollide   = false
+    p.Material     = Enum.Material.Neon
+    p.Color        = Color3.fromRGB(255, 255, 255)
+    p.Transparency = 0.05    -- nearly solid neon white — very bright outline
+    p.CastShadow   = false
+    p.Parent       = parent
+    return p
 end
 
 local refreshSlots
@@ -732,57 +756,59 @@ refreshSlots = function()
     if not originPlot then return end
 
     local originPos = originPlot.OriginSquare.Position
-    buildOwnedSet()
+    local taken     = buildTakenSet()   -- fresh set every call
+
+    -- also mark the origin plot itself as taken
+    taken[posKey(originPos)] = true
 
     for _, slot in ipairs(GRID_SLOTS) do
         local worldPos = originPos + slot.off
         local key      = posKey(worldPos)
 
-        if purchasedKeys[key] then
-            -- skip already-owned/purchased slots
+        if taken[key] then
+            -- slot is owned by LP, another player, or otherwise taken — skip it
         else
 
-        -- ── Container ────────────────────────────────────────────
+        -- ── Container ────────────────────────────────────────────────────────
         local model  = Instance.new("Model")
         model.Name   = "VH_SlotModel_" .. slot.n
         model.Parent = workspace
 
-        -- ── BORDER — uniform solid black, same size for every slot ──
-        -- Size: BORDER_SIZE × 0.1 × BORDER_SIZE (42 × 0.1 × 42)
-        -- Placed 0.05 studs below the tile so it peeks out on all edges.
-        local border = Instance.new("Part")
-        border.Name         = "Border"
-        border.Size         = Vector3.new(BORDER_SIZE, 0.1, BORDER_SIZE)
-        border.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.1, 0))
-        border.Anchored     = true
-        border.CanCollide   = false
-        border.Material     = Enum.Material.SmoothPlastic
-        border.Color        = Color3.fromRGB(0, 0, 0)
-        border.Transparency = 0
-        border.CastShadow   = false
-        border.Parent       = model
+        local wx, wz = worldPos.X, worldPos.Z
+        local hy     = worldPos.Y + TILE_Y
+        local fy     = worldPos.Y + FRAME_Y
+        local half   = TILE_SIZE / 2
+        local bt     = BORDER_T
 
-        -- ── TILE — clean bright white, no grey ───────────────────
-        -- Size: TILE_SIZE × 0.1 × TILE_SIZE (40 × 0.1 × 40)
-        -- Transparency 0.45 → clearly visible white overlay.
+        -- ── TILE — Neon white fill, semi-transparent glow ────────────────────
         local tile = Instance.new("Part")
         tile.Name         = "Tile"
         tile.Size         = Vector3.new(TILE_SIZE, 0.1, TILE_SIZE)
-        tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.2, 0))
+        tile.CFrame       = CFrame.new(wx, hy, wz)
         tile.Anchored     = true
         tile.CanCollide   = false
-        tile.Material     = Enum.Material.SmoothPlastic
+        tile.Material     = Enum.Material.Neon
         tile.Color        = Color3.fromRGB(255, 255, 255)
-        tile.Transparency = 0.45
+        tile.Transparency = 0.6   -- bright white glow visible through it
         tile.CastShadow   = false
         tile.Parent       = model
 
-        -- ClickDetector — infinite range
+        -- ── BORDER FRAME — 4 thin neon strips, all the way around ────────────
+        -- Top strip    (north edge, -Z side)
+        makeBorderStrip(model, wx,         wz - half - bt/2, TILE_SIZE + bt*2, bt, fy)
+        -- Bottom strip (south edge, +Z side)
+        makeBorderStrip(model, wx,         wz + half + bt/2, TILE_SIZE + bt*2, bt, fy)
+        -- Left strip   (west edge,  -X side)
+        makeBorderStrip(model, wx - half - bt/2, wz,         bt, TILE_SIZE,        fy)
+        -- Right strip  (east edge,  +X side)
+        makeBorderStrip(model, wx + half + bt/2, wz,         bt, TILE_SIZE,        fy)
+
+        -- ClickDetector — infinite range on the tile
         local cd = Instance.new("ClickDetector")
         cd.MaxActivationDistance = 9999
         cd.Parent = tile
 
-        -- ── Per-slot ownership watch ──────────────────────────────
+        -- ── Per-slot ownership watcher ────────────────────────────────────────
         local ownerConns = {}
         local cap_key    = key
 
@@ -791,7 +817,7 @@ refreshSlots = function()
             local oSq  = propChild:FindFirstChild("OriginSquare")
             local oVal = propChild:FindFirstChild("Owner")
             if not (oSq and oVal) then return end
-            if posKey(oSq.Position) == cap_key and oVal.Value == LP then
+            if posKey(oSq.Position) == cap_key and oVal.Value ~= nil then
                 removeSlotByKey(cap_key)
             end
         end
@@ -819,13 +845,12 @@ refreshSlots = function()
         end)
         table.insert(ownerConns, newChildConn)
 
-        -- ── Click to buy ──────────────────────────────────────────
+        -- ── Click to expand ───────────────────────────────────────────────────
         local cap_origin = originPlot
         local cap_wpos   = worldPos
 
         cd.MouseClick:Connect(function()
             if not expandActive then return end
-            purchasedKeys[cap_key] = true
             pcall(function()
                 RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
                     cap_origin,
@@ -843,7 +868,7 @@ refreshSlots = function()
             ownerConns = ownerConns,
         })
 
-        end -- end if not purchasedKeys
+        end -- end if not taken
     end
 end
 
@@ -857,7 +882,7 @@ local function hookPropertyWatcher()
     if propsConn then pcall(function() propsConn:Disconnect() end) end
     propsConn = workspace.Properties.ChildAdded:Connect(function()
         if not expandActive then return end
-        task.delay(0.4, function()
+        task.delay(0.5, function()
             if expandActive then refreshSlots() end
         end)
     end)
@@ -940,4 +965,4 @@ table.insert(VH.cleanupTasks, function()
     cleanupExpand()
 end)
 
-print("[VanillaHub] Vanilla6 loaded — clean black/white land art")
+print("[VanillaHub] Vanilla6 loaded — neon frame land art + fixed ownership check")
