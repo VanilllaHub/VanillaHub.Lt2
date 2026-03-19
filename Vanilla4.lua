@@ -55,53 +55,16 @@ local AB_stopBtn     = nil
 -- ════════════════════════════════════════════════════
 -- STORE COUNTER REGISTRY
 -- ════════════════════════════════════════════════════
--- npcPath : table of string keys to walk from workspace to the NPC model
--- npcName : display name string used for the Name field
--- id      : dialog ID
+-- Each entry drives the dialog sequence for its store.
+-- WoodRUs uses the direct workspace reference method (matches provided snippet).
+-- All others use the generic {char, id} approach.
 local AB_Counters = {
-    {
-        name    = "WoodRUs",
-        pos     = Vector3.new(267.90,   5.20,    67.43),
-        npcPath = {"Stores", "WoodRUs", "Thom"},
-        npcName = "Thom",
-        id      = 9,
-    },
-    {
-        name    = "BobsShack",
-        pos     = Vector3.new(260.36,   10.40, -2551.25),
-        npcPath = {"Stores", "BobsShack", "Bob"},
-        npcName = "Bob",
-        id      = 12,
-    },
-    {
-        name    = "FineArt",
-        pos     = Vector3.new(5237.58, -164.00,  739.66),
-        npcPath = {"Stores", "FineArtShop", "Timothy"},
-        npcName = "Timothy",
-        id      = 13,
-    },
-    {
-        name    = "FancyFurnishings",
-        pos     = Vector3.new(477.62,    5.60, -1721.34),
-        npcPath = {"Stores", "FancyFurnishings", "Corey"},
-        npcName = "Corey",
-        id      = 10,
-    },
-    {
-        name    = "LinksLogic",
-        pos     = Vector3.new(4595.43,   9.40,  -785.02),
-        npcPath = {"Stores", "LinksLogic", "Lincoln"},
-        npcName = "Lincoln",
-        id      = 14,
-    },
-    {
-        name    = "BoxedCars",
-        pos     = Vector3.new(528.04,    5.60, -1460.43),
-        npcPath = {"Stores", "BoxedCars", "Jenny"},
-        npcName = "Jenny",
-        id      = 11,
-        preSeq  = true,   -- requires SetChattingValue(1) before Initiate
-    },
+    { name="WoodRUs",          pos=Vector3.new(267.90,   5.20,    67.43),  useWorkspaceRef=true                                         },
+    { name="BobsShack",        pos=Vector3.new(260.36,   10.40, -2551.25), char="Bob",          id=12, preSeq=nil                        },
+    { name="FineArt",          pos=Vector3.new(5237.58, -164.00,  739.66), char="Timothy",      id=13, preSeq=nil                        },
+    { name="FancyFurnishings", pos=Vector3.new(477.62,    5.60, -1721.34), char="Corey",        id=10, preSeq=nil                        },
+    { name="LinksLogic",       pos=Vector3.new(4595.43,   9.40,  -785.02), char="Lincoln",      id=14, preSeq=nil                        },
+    { name="BoxedCars",        pos=Vector3.new(528.04,    5.60, -1460.43), char="Jenny",        id=11, preSeq="SetChattingValue1"         },
 }
 
 local AB_Services = {
@@ -209,39 +172,41 @@ local function grabBlueprintNames()
 end
 
 -- ════════════════════════════════════════════════════
--- DIALOG  (instant workspace-reference method for all counters)
+-- DIALOG  (per-counter)
 -- ════════════════════════════════════════════════════
 local function fireDialog(c)
     local PlayerChatted  = RS:FindFirstChild("PlayerChatted",    true)
     local SetChattingVal = RS:FindFirstChild("SetChattingValue", true)
     if not (PlayerChatted and SetChattingVal) then return end
 
-    -- Walk the npcPath from workspace to reach the NPC instance
-    local npc = workspace
-    for _, key in ipairs(c.npcPath) do
-        npc = npc:FindFirstChild(key)
-        if not npc then return end
-    end
-
-    local Dialog = npc:FindFirstChild("Dialog")
-    if not Dialog then return end
-
-    local args = { Character=npc, Name=c.npcName, ID=c.id, Dialog=Dialog }
-
-    -- BoxedCars requires an extra SetChattingValue(1) before initiating
-    if c.preSeq then
-        SetChattingVal:InvokeServer(1)
-    end
-
-    PlayerChatted:InvokeServer(args, "Initiate")
-    SetChattingVal:InvokeServer(2)
-    PlayerChatted:InvokeServer(args, "ConfirmPurchase")
-    SetChattingVal:InvokeServer(2)
-    PlayerChatted:InvokeServer(args, "EndChat")
-    SetChattingVal:InvokeServer(0)
-
-    if c.preSeq then
-        SetChattingVal:InvokeServer(1)
+    if c.useWorkspaceRef then
+        -- Direct workspace reference method (WoodRUs / Thom)
+        local Thom   = workspace.Stores.WoodRUs.Thom
+        local Dialog = Thom.Dialog
+        local args   = { Character=Thom, Name="Thom", ID=9, Dialog=Dialog }
+        PlayerChatted:InvokeServer(args, "Initiate")
+        SetChattingVal:InvokeServer(2)
+        PlayerChatted:InvokeServer(args, "ConfirmPurchase")
+        SetChattingVal:InvokeServer(2)
+        PlayerChatted:InvokeServer(args, "EndChat")
+        SetChattingVal:InvokeServer(0)
+    else
+        -- Generic method for all other counters
+        local args = { Character=c.char, Name=c.char, ID=c.id, Dialog="Dialog" }
+        if c.preSeq == "SetChattingValue1" then
+            SetChattingVal:InvokeServer(1); task.wait(0.05)
+        end
+        PlayerChatted:InvokeServer(args, "Initiate")
+        task.wait(0.05); SetChattingVal:InvokeServer(2)
+        task.wait(0.85)
+        PlayerChatted:InvokeServer(args, "ConfirmPurchase")
+        task.wait(0.05); SetChattingVal:InvokeServer(2)
+        task.wait(0.45)
+        PlayerChatted:InvokeServer(args, "EndChat")
+        task.wait(0.05); SetChattingVal:InvokeServer(0)
+        if c.preSeq == "SetChattingValue1" then
+            task.wait(0.05); SetChattingVal:InvokeServer(1)
+        end
     end
 end
 
