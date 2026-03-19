@@ -988,8 +988,8 @@ end)
 
 sectionLabel(sl, "Fast Load")
 makeSlider(sl, "Slot Number", 1, 6, 1, function(v) slotNum = v end)
-makeButton(sl, "Force Save", function() task.spawn(forceSave) end)
 makeButton(sl, "Load Base",  function() loadSlot(slotNum) end)
+makeButton(sl, "Force Save", function() task.spawn(forceSave) end)
 
 sep(sl)
 sectionLabel(sl, "Land Management")
