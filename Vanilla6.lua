@@ -614,6 +614,80 @@ local function loadSlot(slot)
     end)
 end
 
+local function forceSave()
+    local slot = LP:FindFirstChild("CurrentSaveSlot") and LP.CurrentSaveSlot.Value
+    if not slot or slot == -1 then print("[VH] No slot currently loaded!"); return end
+    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then print("[VH] No character found!"); return end
+    local originCF = hrp.CFrame
+    local plotCF   = nil
+    for _, v in ipairs(workspace.Properties:GetChildren()) do
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP and v:FindFirstChild("OriginSquare") then
+            plotCF = v.OriginSquare.CFrame; break
+        end
+    end
+    if not plotCF then
+        pcall(function() RS.LoadSaveRequests.RequestSave:InvokeServer(slot, LP) end)
+        return
+    end
+    local vehicleOriginalCFrames = {}
+    for _, v in ipairs(workspace.PlayerModels:GetChildren()) do
+        if v:FindFirstChild("Owner") and v.Owner.Value == LP then
+            local typeVal = v:FindFirstChild("Type")
+            if typeVal and typeVal.Value == "Vehicle" then
+                local root = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+                if root then
+                    vehicleOriginalCFrames[v] = root.CFrame
+                    hrp.CFrame = root.CFrame * CFrame.new(5, 1, 0); task.wait(0.1)
+                    local t = tick()
+                    repeat
+                        pcall(function()
+                            RS.Interaction.ClientIsDragging:FireServer(v)
+                            RS.Interaction.ClientIsDragging:FireServer(v)
+                            RS.Interaction.ClientIsDragging:FireServer(v)
+                        end)
+                        task.wait(0.03)
+                    until (tick() - t > 2) or (root.ReceiveAge == 0)
+                    local idx = 0
+                    for _ in pairs(vehicleOriginalCFrames) do idx = idx + 1 end
+                    local offset = Vector3.new((idx - 1) * 8, 2, 0)
+                    pcall(function()
+                        RS.Interaction.ClientIsDragging:FireServer(v)
+                        if v.PrimaryPart then v:SetPrimaryPartCFrame(plotCF + offset)
+                        else root.CFrame = plotCF + offset end
+                    end)
+                    for _ = 1, 10 do
+                        pcall(function()
+                            RS.Interaction.ClientIsDragging:FireServer(v)
+                            if v.PrimaryPart then v:SetPrimaryPartCFrame(plotCF + offset)
+                            else root.CFrame = plotCF + offset end
+                        end)
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+    end
+    hrp.CFrame = plotCF + Vector3.new(0, 3, 0); task.wait(0.2)
+    pcall(function() RS.LoadSaveRequests.RequestSave:InvokeServer(slot, LP) end)
+    task.wait(0.5)
+    pcall(function() RS.LoadSaveRequests.RequestSave:InvokeServer(slot, LP) end)
+    task.wait(0.3)
+    for v, originalCF in pairs(vehicleOriginalCFrames) do
+        local root = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+        if root and v.Parent then
+            pcall(function()
+                RS.Interaction.ClientIsDragging:FireServer(v)
+                if v.PrimaryPart then v:SetPrimaryPartCFrame(originalCF)
+                else root.CFrame = originalCF end
+            end)
+            task.wait(0.05)
+        end
+    end
+    hrp.CFrame = originCF
+    print("[VH] Force saved slot " .. tostring(slot))
+end
+
 local function sellSoldSign()
     for _, v in ipairs(workspace.PlayerModels:GetChildren()) do
         if v:FindFirstChild("Owner") and v.Owner.Value == LP
@@ -914,7 +988,8 @@ end)
 
 sectionLabel(sl, "Fast Load")
 makeSlider(sl, "Slot Number", 1, 6, 1, function(v) slotNum = v end)
-makeButton(sl, "Load Base", function() loadSlot(slotNum) end)
+makeButton(sl, "Force Save", function() task.spawn(forceSave) end)
+makeButton(sl, "Load Base",  function() loadSlot(slotNum) end)
 
 sep(sl)
 sectionLabel(sl, "Land Management")
