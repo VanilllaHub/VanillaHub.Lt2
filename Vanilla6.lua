@@ -632,24 +632,34 @@ local function sellSoldSign()
 end
 
 -- ════════════════════════════════════════════════════
--- LAND ART  —  Click To Expand Land
---
--- Visual design:
---   border  — solid black slab (43 × 0.12 × 43), 1.5 studs wider per side
---             = thick, clearly visible individual per-slot black outline.
---   tile    — pure white SmoothPlastic (40 × 0.18 × 40) at Transparency 0.55
---             = bright white glow, not grey.
---   SelectionBox on the tile — LineThickness 0.18, black, crisp edge outline.
---
--- Ownership — permanent exclusion:
---   purchasedKeys  — a persistent set that is NEVER cleared between refreshes.
---                    Once a key is added (owned at load OR confirmed bought)
---                    it stays forever so the tile can never reappear.
---   buildOwnedSet  — seeds purchasedKeys on every scan.
---   removeSlotN    — also adds the key to purchasedKeys before destroying.
---   refreshSlots   — skips any key already in purchasedKeys, regardless of
---                    the live ownership scan result.
 -- ════════════════════════════════════════════════════
+-- LAND ART — Click To Expand Land
+-- ════════════════════════════════════════════════════
+--
+-- Every unowned slot renders two parts stacked at the same
+-- absolute Y offsets, using shared constants so all 24 tiles
+-- are pixel-perfect identical — no per-slot variation.
+--
+--   SLOT_BORDER_SIZE  = 44  studs  (black, 2-stud margin each side)
+--   SLOT_TILE_SIZE    = 40  studs  (white, the actual land square)
+--   SLOT_BORDER_Y     = 0.14 offset  (black slab sits just below tile)
+--   SLOT_TILE_Y       = 0.26 offset  (white tile on top)
+--
+-- Ownership is permanently tracked in purchasedKeys.
+-- Once a key is in that table it is NEVER removed, so no
+-- purchased slot can ever re-render a tile or outline.
+-- ════════════════════════════════════════════════════
+
+-- Shared visual constants — change once, affects every slot equally
+local SLOT_TILE_SIZE   = 40
+local SLOT_BORDER_SIZE = 44     -- 2-stud black margin on all four edges
+local SLOT_TILE_THICK  = 0.18
+local SLOT_BORDER_THICK= 0.12
+local SLOT_BORDER_Y    = 0.14
+local SLOT_TILE_Y      = 0.26
+local SLOT_TILE_TRANSP = 0.55   -- white tile transparency
+local SLOT_WHITE       = Color3.fromRGB(255, 255, 255)
+local SLOT_BLACK       = Color3.fromRGB(0,   0,   0)
 
 local GRID_SLOTS = {
     {off=Vector3.new(-80,0,-80),n= 1}, {off=Vector3.new(-40,0,-80),n= 2},
@@ -666,31 +676,26 @@ local GRID_SLOTS = {
     {off=Vector3.new( 40,0, 80),n=23}, {off=Vector3.new( 80,0, 80),n=24},
 }
 
-local expandActive    = false
-local slotModels      = {}   -- { model, slotN, worldPos, key, ownerConns }
-local propsConn       = nil
--- Permanent set — keys added here are NEVER removed for the lifetime of the script.
--- This prevents any purchased slot from ever getting a tile again.
-local purchasedKeys   = {}
+local expandActive  = false
+local slotModels    = {}  -- { model, slotN, key, ownerConns }
+local propsConn     = nil
+local purchasedKeys = {}  -- permanent: never cleared, never re-shows a tile
 
 local function posKey(v3)
     return math.round(v3.X / 10) .. "_" .. math.round(v3.Z / 10)
 end
 
--- Walk all workspace.Properties, mark every LP-owned tile as purchased.
--- This seeds purchasedKeys so already-owned land is excluded from the start.
-local function buildOwnedSet()
-    local set = {}
+-- Seeds purchasedKeys with every tile the player currently owns.
+-- Called before each refresh so already-owned slots are excluded
+-- before a single part is created.
+local function seedOwned()
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         local ownerVal = v:FindFirstChild("Owner")
         local origSq   = v:FindFirstChild("OriginSquare")
         if ownerVal and origSq and ownerVal.Value == LP then
-            local k = posKey(origSq.Position)
-            set[k]           = true
-            purchasedKeys[k] = true   -- permanently mark
+            purchasedKeys[posKey(origSq.Position)] = true
         end
     end
-    return set
 end
 
 local function getOriginPlot()
@@ -704,10 +709,8 @@ local function getOriginPlot()
 end
 
 local function destroyEntry(entry)
-    if entry.ownerConns then
-        for _, conn in ipairs(entry.ownerConns) do
-            pcall(function() conn:Disconnect() end)
-        end
+    for _, conn in ipairs(entry.ownerConns or {}) do
+        pcall(function() conn:Disconnect() end)
     end
     pcall(function()
         if entry.model and entry.model.Parent then
@@ -717,27 +720,12 @@ local function destroyEntry(entry)
 end
 
 local function clearSlots()
-    for _, entry in ipairs(slotModels) do
-        destroyEntry(entry)
-    end
+    for _, entry in ipairs(slotModels) do destroyEntry(entry) end
     slotModels = {}
 end
 
--- Remove by slot number AND permanently ban the key so it never reappears.
-local function removeSlotN(n)
-    for i, entry in ipairs(slotModels) do
-        if entry.slotN == n then
-            purchasedKeys[entry.key] = true   -- permanent ban
-            destroyEntry(entry)
-            table.remove(slotModels, i)
-            return
-        end
-    end
-end
-
--- Same as removeSlotN but keyed by posKey string directly
 local function removeSlotByKey(key)
-    purchasedKeys[key] = true   -- permanent ban first
+    purchasedKeys[key] = true  -- permanent ban — must happen first
     for i, entry in ipairs(slotModels) do
         if entry.key == key then
             destroyEntry(entry)
@@ -747,7 +735,22 @@ local function removeSlotByKey(key)
     end
 end
 
-local refreshSlots -- forward-declare
+-- Helper: build one part using the shared slot constants
+local function makeSlotPart(name, worldPos, yOffset, size, thick, color, transparency)
+    local p = Instance.new("Part")
+    p.Name         = name
+    p.Size         = Vector3.new(size, thick, size)
+    p.CFrame       = CFrame.new(worldPos + Vector3.new(0, yOffset, 0))
+    p.Anchored     = true
+    p.CanCollide   = false
+    p.Material     = Enum.Material.SmoothPlastic
+    p.Color        = color
+    p.Transparency = transparency
+    p.CastShadow   = false
+    return p
+end
+
+local refreshSlots  -- forward-declare
 
 refreshSlots = function()
     clearSlots()
@@ -758,117 +761,92 @@ refreshSlots = function()
 
     local originPos = originPlot.OriginSquare.Position
 
-    -- Seed purchasedKeys with current ownership before spawning any tile
-    buildOwnedSet()
+    -- Always seed before spawning — owned tiles are excluded from
+    -- this point forward and can never receive a new tile model
+    seedOwned()
 
     for _, slot in ipairs(GRID_SLOTS) do
         local worldPos = originPos + slot.off
         local key      = posKey(worldPos)
 
-        -- Skip if owned now OR ever purchased during this session
         if purchasedKeys[key] then continue end
 
-        -- ── Container model ──────────────────────────────────────
         local model  = Instance.new("Model")
-        model.Name   = "VH_SlotModel_" .. slot.n
+        model.Name   = "VH_Slot_" .. slot.n
         model.Parent = workspace
 
-        -- ── BLACK BORDER — thick individual per-slot outline ─────
-        -- 43 studs wide = 1.5-stud black margin on every edge of the
-        -- 40-stud tile. Transparent = 0 so it is fully solid black.
-        local border = Instance.new("Part")
-        border.Name         = "Border"
-        border.Size         = Vector3.new(43, 0.12, 43)
-        border.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.14, 0))
-        border.Anchored     = true
-        border.CanCollide   = false
-        border.Material     = Enum.Material.SmoothPlastic
-        border.Color        = Color3.fromRGB(0, 0, 0)
-        border.Transparency = 0
-        border.CastShadow   = false
-        border.Parent       = model
+        -- Black border — same size for every slot, no exceptions
+        local border = makeSlotPart(
+            "Border", worldPos,
+            SLOT_BORDER_Y, SLOT_BORDER_SIZE, SLOT_BORDER_THICK,
+            SLOT_BLACK, 0
+        )
+        border.Parent = model
 
-        -- ── WHITE GLOW TILE ───────────────────────────────────────
-        -- Pure white (255,255,255) at Transparency 0.55 — noticeably
-        -- brighter white glow, not grey.
-        local tile = Instance.new("Part")
-        tile.Name         = "Tile"
-        tile.Size         = Vector3.new(40, 0.18, 40)
-        tile.CFrame       = CFrame.new(worldPos + Vector3.new(0, 0.26, 0))
-        tile.Anchored     = true
-        tile.CanCollide   = false
-        tile.Material     = Enum.Material.SmoothPlastic
-        tile.Color        = Color3.fromRGB(255, 255, 255)
-        tile.Transparency = 0.55
-        tile.CastShadow   = false
-        tile.Parent       = model
+        -- White tile on top
+        local tile = makeSlotPart(
+            "Tile", worldPos,
+            SLOT_TILE_Y, SLOT_TILE_SIZE, SLOT_TILE_THICK,
+            SLOT_WHITE, SLOT_TILE_TRANSP
+        )
+        tile.Parent = model
 
-        -- SelectionBox — thicker black outline on each tile edge
-        local sb = Instance.new("SelectionBox")
-        sb.Adornee             = tile
-        sb.Color3              = Color3.fromRGB(0, 0, 0)
-        sb.LineThickness       = 0.18
-        sb.SurfaceColor3       = Color3.fromRGB(255, 255, 255)
-        sb.SurfaceTransparency = 1
-        sb.Parent              = model
-
-        -- ClickDetector — infinite range
+        -- ClickDetector on the tile, infinite range
         local cd = Instance.new("ClickDetector")
         cd.MaxActivationDistance = 9999
         cd.Parent = tile
 
-        -- ── Per-slot ownership watch ──────────────────────────────
+        -- Per-slot ownership watch —————————————————————————————
+        -- Fires the moment the server confirms ownership, removes
+        -- the tile immediately without waiting for the next rescan.
         local ownerConns = {}
-        local cap_slotN  = slot.n
         local cap_key    = key
 
         local function checkAndRemove(propChild)
             if not (propChild and propChild.Parent) then return end
             local oSq  = propChild:FindFirstChild("OriginSquare")
             local oVal = propChild:FindFirstChild("Owner")
-            if not (oSq and oVal) then return end
-            if posKey(oSq.Position) == cap_key and oVal.Value == LP then
+            if oSq and oVal and posKey(oSq.Position) == cap_key and oVal.Value == LP then
                 removeSlotByKey(cap_key)
             end
         end
 
-        -- Hook all existing property children
         for _, propChild in ipairs(workspace.Properties:GetChildren()) do
             local oVal = propChild:FindFirstChild("Owner")
             if oVal then
-                local conn = oVal:GetPropertyChangedSignal("Value"):Connect(function()
-                    checkAndRemove(propChild)
-                end)
-                table.insert(ownerConns, conn)
+                table.insert(ownerConns,
+                    oVal:GetPropertyChangedSignal("Value"):Connect(function()
+                        checkAndRemove(propChild)
+                    end)
+                )
             end
         end
 
-        -- Hook future property children (expanded tiles added by server)
-        local newChildConn = workspace.Properties.ChildAdded:Connect(function(propChild)
-            task.wait()  -- let Owner/OriginSquare replicate
-            local oVal = propChild:FindFirstChild("Owner")
-            if oVal then
-                local conn = oVal:GetPropertyChangedSignal("Value"):Connect(function()
+        table.insert(ownerConns,
+            workspace.Properties.ChildAdded:Connect(function(propChild)
+                task.wait()  -- wait for Owner/OriginSquare to replicate
+                local oVal = propChild:FindFirstChild("Owner")
+                if oVal then
+                    table.insert(ownerConns,
+                        oVal:GetPropertyChangedSignal("Value"):Connect(function()
+                            checkAndRemove(propChild)
+                        end)
+                    )
                     checkAndRemove(propChild)
-                end)
-                table.insert(ownerConns, conn)
-                checkAndRemove(propChild)
-            end
-        end)
-        table.insert(ownerConns, newChildConn)
+                end
+            end)
+        )
 
-        -- ── Click to buy ──────────────────────────────────────────
+        -- Click to purchase —————————————————————————————————————
         local cap_origin = originPlot
         local cap_wpos   = worldPos
 
         cd.MouseClick:Connect(function()
             if not expandActive then return end
-            -- Mark as purchased immediately — before the server replies
-            purchasedKeys[cap_key] = true
+            purchasedKeys[cap_key] = true  -- ban immediately, before remote
             pcall(function()
                 RS.PropertyPurchasing.ClientExpandedProperty:FireServer(
-                    cap_origin,
-                    CFrame.new(cap_wpos)
+                    cap_origin, CFrame.new(cap_wpos)
                 )
             end)
             removeSlotByKey(cap_key)
@@ -877,7 +855,6 @@ refreshSlots = function()
         table.insert(slotModels, {
             model      = model,
             slotN      = slot.n,
-            worldPos   = worldPos,
             key        = key,
             ownerConns = ownerConns,
         })
@@ -953,9 +930,11 @@ makeFancyDropdown(sl, "Plot", function() return landPlotOptions end, function(va
     local props = workspace.Properties:GetChildren()
     if props[landToTake] and props[landToTake]:FindFirstChild("OriginSquare") then
         landHL = Instance.new("Highlight")
-        landHL.FillColor        = Color3.fromRGB(180, 180, 180)
-        landHL.FillTransparency = 0.5
-        landHL.Parent           = props[landToTake].OriginSquare
+        landHL.FillColor           = Color3.fromRGB(255, 255, 255)
+        landHL.OutlineColor        = Color3.fromRGB(255, 255, 255)
+        landHL.FillTransparency    = 0.5
+        landHL.OutlineTransparency = 0
+        landHL.Parent              = props[landToTake].OriginSquare
     end
 end)
 
