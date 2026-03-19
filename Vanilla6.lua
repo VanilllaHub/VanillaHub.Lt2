@@ -921,9 +921,6 @@ sectionLabel(sl, "Land Management")
 makeButton(sl, "Free Land", freeLand)
 makeButton(sl, "Max Land",  maxLand)
 makeButton(sl, "Sell Sign", sellSoldSign)
-
-sep(sl)
-sectionLabel(sl, "Land Art")
 makeToggle(sl, "Click To Expand Land", false, function(on)
     expandActive = on
     if on then
