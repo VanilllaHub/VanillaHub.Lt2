@@ -400,7 +400,6 @@ local function switchTab(targetName)
     for _, page in pairs(pages) do
         page.Visible = (page.Name == targetName)
     end
-
     if activeTabButton then
         local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
         local oldIcon = activeTabButton:FindFirstChild("TabIcon")
@@ -418,7 +417,6 @@ local function switchTab(targetName)
             }):Play()
         end
     end
-
     local frame = side:FindFirstChild(targetName:gsub("Tab",""))
     if frame then
         activeTabButton = frame
@@ -626,46 +624,39 @@ bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Le
 -- QUICK STATS GRID
 -- ════════════════════════════════════════════════════
 local statsContainer = Instance.new("Frame", homePage)
-statsContainer.Size=UDim2.new(1,0,0,80); statsContainer.BackgroundTransparency=1
+statsContainer.Size = UDim2.new(1, 0, 0, 80)
+statsContainer.BackgroundTransparency = 1
 statsContainer.LayoutOrder = 2
-local gridLayout=Instance.new("UIGridLayout",statsContainer)
-gridLayout.CellSize=UDim2.new(0,148,0,36); gridLayout.CellPadding=UDim2.new(0,8,0,8)
-gridLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center; gridLayout.SortOrder=Enum.SortOrder.LayoutOrder
+local gridLayout = Instance.new("UIGridLayout", statsContainer)
+gridLayout.CellSize = UDim2.new(0, 148, 0, 36)
+gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local function createStatusBox(text, color)
-    local box=Instance.new("Frame",statsContainer)
-    box.BackgroundColor3=Color3.fromRGB(20,20,20); box.BorderSizePixel=0
-    Instance.new("UICorner",box).CornerRadius=UDim.new(0,7)
+    local box = Instance.new("Frame", statsContainer)
+    box.BackgroundColor3 = Color3.fromRGB(20, 20, 20); box.BorderSizePixel = 0
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 7)
     local stroke = Instance.new("UIStroke", box)
     stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.4
-    local lbl=Instance.new("TextLabel",box)
-    lbl.Size=UDim2.new(1,-10,1,-4); lbl.Position=UDim2.new(0,5,0,2)
-    lbl.BackgroundTransparency=1; lbl.Font=Enum.Font.Gotham; lbl.TextSize=12
-    lbl.TextColor3=color or THEME_TEXT; lbl.Text=text; lbl.TextWrapped=true
-    lbl.TextXAlignment=Enum.TextXAlignment.Center; lbl.TextTruncate=Enum.TextTruncate.AtEnd
+    local lbl = Instance.new("TextLabel", box)
+    lbl.Size = UDim2.new(1, -10, 1, -4); lbl.Position = UDim2.new(0, 5, 0, 2)
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.Gotham; lbl.TextSize = 12
+    lbl.TextColor3 = color or THEME_TEXT; lbl.Text = text; lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Center; lbl.TextTruncate = Enum.TextTruncate.AtEnd
     return lbl
 end
 
-local pingLabel    = createStatusBox("Ping: ...", PB_TEXT)
-local lagLabel     = createStatusBox("Lag: ...", Color3.fromRGB(180, 180, 180))
-createStatusBox("Acc Age: "..player.AccountAge.."d")
-local execLabel    = createStatusBox("Exec: detecting...", Color3.fromRGB(200, 200, 200))
-
-local rejoinBtn=Instance.new("TextButton",statsContainer)
-rejoinBtn.Size=UDim2.new(0,148,0,36); rejoinBtn.BackgroundColor3=BTN_COLOR; rejoinBtn.BorderSizePixel=0
-rejoinBtn.Font=Enum.Font.Gotham; rejoinBtn.TextSize=13; rejoinBtn.TextColor3=THEME_TEXT; rejoinBtn.Text="Rejoin"
-Instance.new("UICorner",rejoinBtn).CornerRadius=UDim.new(0,7)
-local rjStroke = Instance.new("UIStroke", rejoinBtn)
-rjStroke.Color = SEP_COLOR; rjStroke.Thickness = 1; rjStroke.Transparency = 0.4
-rejoinBtn.MouseEnter:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=BTN_HOVER}):Play() end)
-rejoinBtn.MouseLeave:Connect(function() TweenService:Create(rejoinBtn,TweenInfo.new(0.18),{BackgroundColor3=BTN_COLOR}):Play() end)
-rejoinBtn.MouseButton1Click:Connect(function() pcall(function() TeleportService:Teleport(game.PlaceId,player) end) end)
+local pingLabel  = createStatusBox("Ping: ...", PB_TEXT)
+local lagLabel   = createStatusBox("Lag: ...", Color3.fromRGB(180, 180, 180))
+createStatusBox("Acc Age: " .. player.AccountAge .. "d")
+local execLabel  = createStatusBox("Exec: detecting...", Color3.fromRGB(200, 200, 200))
 
 local pingConn = RunService.Heartbeat:Connect(function()
     local ok, ping = pcall(function() return math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-    pingLabel.Text = ok and ("Ping: "..ping.." ms") or "Ping: N/A"
+    pingLabel.Text = ok and ("Ping: " .. ping .. " ms") or "Ping: N/A"
 end)
-table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
+table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn = nil end end)
 
 task.delay(1, function()
     local execName = detectExecutor()
@@ -745,23 +736,79 @@ local function createServerInfoBox(text, color)
     return lbl
 end
 
-local siUptimeLabel    = createServerInfoBox("Uptime: 00:00:00", Color3.fromRGB(210, 210, 210))
-local siPlayersLabel   = createServerInfoBox("Players: ...", Color3.fromRGB(200, 200, 200))
-local siJobIdLabel     = createServerInfoBox("Job ID: ...", Color3.fromRGB(180, 180, 180))
-local siRegionLabel    = createServerInfoBox("Region: ...", Color3.fromRGB(180, 180, 180))
+local siUptimeLabel  = createServerInfoBox("Uptime: 00:00:00", Color3.fromRGB(210, 210, 210))
+local siPlayersLabel = createServerInfoBox("Players: ...", Color3.fromRGB(200, 200, 200))
 
--- Truncate Job ID for display
-task.delay(0.1, function()
-    local jobId = game.JobId
-    if jobId and #jobId > 0 then
-        siJobIdLabel.Text = "Job: " .. string.sub(jobId, 1, 8) .. "..."
-    else
-        siJobIdLabel.Text = "Job: Studio"
-    end
+-- Rejoin button in server info grid
+local rejoinBtn = Instance.new("TextButton", serverInfoGrid)
+rejoinBtn.BackgroundColor3 = BTN_COLOR
+rejoinBtn.BorderSizePixel = 0
+rejoinBtn.Font = Enum.Font.GothamSemibold
+rejoinBtn.TextSize = 12
+rejoinBtn.TextColor3 = THEME_TEXT
+rejoinBtn.Text = "Rejoin"
+Instance.new("UICorner", rejoinBtn).CornerRadius = UDim.new(0, 7)
+local rjStroke = Instance.new("UIStroke", rejoinBtn)
+rjStroke.Color = SEP_COLOR; rjStroke.Thickness = 1; rjStroke.Transparency = 0.4
+rejoinBtn.MouseEnter:Connect(function()
+    TweenService:Create(rejoinBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_HOVER}):Play()
+end)
+rejoinBtn.MouseLeave:Connect(function()
+    TweenService:Create(rejoinBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_COLOR}):Play()
+end)
+rejoinBtn.MouseButton1Click:Connect(function()
+    pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
 end)
 
--- Region via PlaceId (approximation using server location hint)
-siRegionLabel.Text = "Region: N/A"
+-- Server Hop button in server info grid
+local serverHopBtn = Instance.new("TextButton", serverInfoGrid)
+serverHopBtn.BackgroundColor3 = BTN_COLOR
+serverHopBtn.BorderSizePixel = 0
+serverHopBtn.Font = Enum.Font.GothamSemibold
+serverHopBtn.TextSize = 12
+serverHopBtn.TextColor3 = THEME_TEXT
+serverHopBtn.Text = "Server Hop"
+Instance.new("UICorner", serverHopBtn).CornerRadius = UDim.new(0, 7)
+local shStroke = Instance.new("UIStroke", serverHopBtn)
+shStroke.Color = SEP_COLOR; shStroke.Thickness = 1; shStroke.Transparency = 0.4
+serverHopBtn.MouseEnter:Connect(function()
+    TweenService:Create(serverHopBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_HOVER}):Play()
+end)
+serverHopBtn.MouseLeave:Connect(function()
+    TweenService:Create(serverHopBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_COLOR}):Play()
+end)
+serverHopBtn.MouseButton1Click:Connect(function()
+    serverHopBtn.Text = "Searching..."
+    task.spawn(function()
+        local success = false
+        pcall(function()
+            local HttpService = game:GetService("HttpService")
+            local currentJobId = game.JobId
+            local placeId = game.PlaceId
+            local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
+            local response = HttpService:JSONDecode(game:HttpGet(url))
+            if response and response.data then
+                for _, server in ipairs(response.data) do
+                    if server.id ~= currentJobId and server.playing < server.maxPlayers then
+                        TeleportService:TeleportToPlaceInstance(placeId, server.id, player)
+                        success = true
+                        break
+                    end
+                end
+            end
+        end)
+        if not success then
+            if serverHopBtn and serverHopBtn.Parent then
+                serverHopBtn.Text = "No Server Found"
+                task.delay(2.5, function()
+                    if serverHopBtn and serverHopBtn.Parent then
+                        serverHopBtn.Text = "Server Hop"
+                    end
+                end)
+            end
+        end
+    end)
+end)
 
 local _serverStartTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
 
