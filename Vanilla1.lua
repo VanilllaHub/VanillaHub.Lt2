@@ -360,7 +360,7 @@ task.spawn(function()
 end)
 
 -- ════════════════════════════════════════════════════
--- TABS (FULL FIX: ICONS + ZINDEX + ASSET SUPPORT)
+-- TABS
 -- ════════════════════════════════════════════════════
 local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
 local pages = {}
@@ -404,17 +404,14 @@ local function switchTab(targetName)
     if activeTabButton then
         local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
         local oldIcon = activeTabButton:FindFirstChild("TabIcon")
-
         TweenService:Create(activeTabButton, TweenInfo.new(0.22), {
             BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         }):Play()
-
         if oldLbl then
             TweenService:Create(oldLbl, TweenInfo.new(0.22), {
                 TextColor3 = Color3.fromRGB(110, 110, 110)
             }):Play()
         end
-
         if oldIcon then
             TweenService:Create(oldIcon, TweenInfo.new(0.22), {
                 ImageColor3 = Color3.fromRGB(110, 110, 110)
@@ -425,20 +422,16 @@ local function switchTab(targetName)
     local frame = side:FindFirstChild(targetName:gsub("Tab",""))
     if frame then
         activeTabButton = frame
-
         local newLbl  = frame:FindFirstChild("TabLabel")
         local newIcon = frame:FindFirstChild("TabIcon")
-
         TweenService:Create(frame, TweenInfo.new(0.22), {
             BackgroundColor3 = Color3.fromRGB(38, 38, 38)
         }):Play()
-
         if newLbl then
             TweenService:Create(newLbl, TweenInfo.new(0.22), {
                 TextColor3 = THEME_TEXT
             }):Play()
         end
-
         if newIcon then
             TweenService:Create(newIcon, TweenInfo.new(0.22), {
                 ImageColor3 = THEME_TEXT
@@ -447,7 +440,6 @@ local function switchTab(targetName)
     end
 end
 
--- TAB ICONS (YOUR IDS WORK NOW)
 local tabIcons = {
     ["Home"]      = "103808960525817",
     ["Player"]    = "124010641391821",
@@ -466,7 +458,6 @@ local tabIcons = {
     ["Settings"]  = "116984423831131",
 }
 
--- FUNCTION TO FORCE LOAD ANY ASSET TYPE
 local function getIcon(id)
     return "rbxthumb://type=Asset&id=" .. id .. "&w=150&h=150"
 end
@@ -480,7 +471,6 @@ for _, name in ipairs(tabs) do
     frame.ZIndex = 1
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
-    -- ICON
     local icon = Instance.new("ImageLabel", frame)
     icon.Name = "TabIcon"
     icon.Size = UDim2.new(0, 16, 0, 16)
@@ -492,7 +482,6 @@ for _, name in ipairs(tabs) do
     icon.ImageColor3 = Color3.fromRGB(110, 110, 110)
     icon.ZIndex = 3
 
-    -- LABEL
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name = "TabLabel"
     nameLbl.Size = UDim2.new(1, -34, 1, 0)
@@ -505,7 +494,6 @@ for _, name in ipairs(tabs) do
     nameLbl.Text = name
     nameLbl.ZIndex = 3
 
-    -- BUTTON
     local btn = Instance.new("TextButton", frame)
     btn.Name = name .. "_Btn"
     btn.Size = UDim2.new(1, 0, 1, 0)
@@ -634,9 +622,11 @@ bubbleMsg.TextColor3=Color3.fromRGB(160,160,160); bubbleMsg.TextXAlignment=Enum.
 bubbleMsg.TextYAlignment=Enum.TextYAlignment.Top; bubbleMsg.TextWrapped=true
 bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Let's get to it."; bubbleMsg.ZIndex=3
 
--- STATS GRID
+-- ════════════════════════════════════════════════════
+-- QUICK STATS GRID
+-- ════════════════════════════════════════════════════
 local statsContainer = Instance.new("Frame", homePage)
-statsContainer.Size=UDim2.new(1,0,0,160); statsContainer.BackgroundTransparency=1
+statsContainer.Size=UDim2.new(1,0,0,80); statsContainer.BackgroundTransparency=1
 statsContainer.LayoutOrder = 2
 local gridLayout=Instance.new("UIGridLayout",statsContainer)
 gridLayout.CellSize=UDim2.new(0,148,0,36); gridLayout.CellPadding=UDim2.new(0,8,0,8)
@@ -656,11 +646,10 @@ local function createStatusBox(text, color)
     return lbl
 end
 
-local pingLabel   = createStatusBox("Ping: ...", PB_TEXT)
-local lagLabel    = createStatusBox("Lag: ...", Color3.fromRGB(180, 180, 180))
+local pingLabel    = createStatusBox("Ping: ...", PB_TEXT)
+local lagLabel     = createStatusBox("Lag: ...", Color3.fromRGB(180, 180, 180))
 createStatusBox("Acc Age: "..player.AccountAge.."d")
-local execLabel   = createStatusBox("Exec: detecting...", Color3.fromRGB(200, 200, 200))
-local uptimeLabel = createStatusBox("Uptime: ...", Color3.fromRGB(210, 210, 210))
+local execLabel    = createStatusBox("Exec: detecting...", Color3.fromRGB(200, 200, 200))
 
 local rejoinBtn=Instance.new("TextButton",statsContainer)
 rejoinBtn.Size=UDim2.new(0,148,0,36); rejoinBtn.BackgroundColor3=BTN_COLOR; rejoinBtn.BorderSizePixel=0
@@ -677,32 +666,6 @@ local pingConn = RunService.Heartbeat:Connect(function()
     pingLabel.Text = ok and ("Ping: "..ping.." ms") or "Ping: N/A"
 end)
 table.insert(cleanupTasks, function() if pingConn then pingConn:Disconnect(); pingConn=nil end end)
-
-local _serverAgeSnapshot = 0
-local _loadClock = os.clock()
-pcall(function() _serverAgeSnapshot = workspace.DistributedGameTime end)
-
-local uptimeThread
-uptimeThread = task.spawn(function()
-    while gui and gui.Parent do
-        pcall(function()
-            local elapsed = os.clock() - _loadClock
-            local secs = math.floor(_serverAgeSnapshot + elapsed)
-            local h = math.floor(secs / 3600)
-            local m = math.floor((secs % 3600) / 60)
-            local s = secs % 60
-            local upStr
-            if h > 0 then upStr = string.format("%dh %02dm", h, m)
-            elseif m > 0 then upStr = string.format("%dm %02ds", m, s)
-            else upStr = string.format("%ds", s) end
-            if uptimeLabel and uptimeLabel.Parent then uptimeLabel.Text = "Server: " .. upStr end
-        end)
-        task.wait(1)
-    end
-end)
-table.insert(cleanupTasks, function()
-    if uptimeThread then pcall(task.cancel, uptimeThread); uptimeThread = nil end
-end)
 
 task.delay(1, function()
     local execName = detectExecutor()
@@ -733,12 +696,103 @@ table.insert(cleanupTasks, function()
     if lagThread then pcall(task.cancel, lagThread); lagThread = nil end
 end)
 
+-- ════════════════════════════════════════════════════
+-- SERVER INFO SECTION
+-- ════════════════════════════════════════════════════
+local serverInfoHeader = Instance.new("Frame", homePage)
+serverInfoHeader.Size = UDim2.new(1, 0, 0, 22)
+serverInfoHeader.BackgroundTransparency = 1
+serverInfoHeader.LayoutOrder = 3
+local serverInfoHeaderLbl = Instance.new("TextLabel", serverInfoHeader)
+serverInfoHeaderLbl.Size = UDim2.new(1, -4, 1, 0)
+serverInfoHeaderLbl.Position = UDim2.new(0, 4, 0, 0)
+serverInfoHeaderLbl.BackgroundTransparency = 1
+serverInfoHeaderLbl.Font = Enum.Font.GothamBold
+serverInfoHeaderLbl.TextSize = 10
+serverInfoHeaderLbl.TextColor3 = SECTION_TEXT
+serverInfoHeaderLbl.TextXAlignment = Enum.TextXAlignment.Left
+serverInfoHeaderLbl.Text = "  SERVER INFO"
+
+local serverInfoGrid = Instance.new("Frame", homePage)
+serverInfoGrid.Size = UDim2.new(1, 0, 0, 80)
+serverInfoGrid.BackgroundTransparency = 1
+serverInfoGrid.LayoutOrder = 4
+
+local siGridLayout = Instance.new("UIGridLayout", serverInfoGrid)
+siGridLayout.CellSize = UDim2.new(0, 148, 0, 36)
+siGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+siGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+siGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local function createServerInfoBox(text, color)
+    local box = Instance.new("Frame", serverInfoGrid)
+    box.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    box.BorderSizePixel = 0
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 7)
+    local stroke = Instance.new("UIStroke", box)
+    stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.4
+    local lbl = Instance.new("TextLabel", box)
+    lbl.Size = UDim2.new(1, -10, 1, -4)
+    lbl.Position = UDim2.new(0, 5, 0, 2)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 12
+    lbl.TextColor3 = color or THEME_TEXT
+    lbl.Text = text
+    lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Center
+    lbl.TextTruncate = Enum.TextTruncate.AtEnd
+    return lbl
+end
+
+local siUptimeLabel    = createServerInfoBox("Uptime: 00:00:00", Color3.fromRGB(210, 210, 210))
+local siPlayersLabel   = createServerInfoBox("Players: ...", Color3.fromRGB(200, 200, 200))
+local siJobIdLabel     = createServerInfoBox("Job ID: ...", Color3.fromRGB(180, 180, 180))
+local siRegionLabel    = createServerInfoBox("Region: ...", Color3.fromRGB(180, 180, 180))
+
+-- Truncate Job ID for display
+task.delay(0.1, function()
+    local jobId = game.JobId
+    if jobId and #jobId > 0 then
+        siJobIdLabel.Text = "Job: " .. string.sub(jobId, 1, 8) .. "..."
+    else
+        siJobIdLabel.Text = "Job: Studio"
+    end
+end)
+
+-- Region via PlaceId (approximation using server location hint)
+siRegionLabel.Text = "Region: N/A"
+
+local _serverStartTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
+
+local function formatServerUptime(seconds)
+    local h = math.floor(seconds / 3600)
+    local m = math.floor((seconds % 3600) / 60)
+    local s = math.floor(seconds % 60)
+    return string.format("%02d:%02d:%02d", h, m, s)
+end
+
+local uptimeConn
+uptimeConn = RunService.Heartbeat:Connect(function()
+    if not (siUptimeLabel and siUptimeLabel.Parent) then return end
+    local uptime = workspace:GetServerTimeNow() - _serverStartTime
+    siUptimeLabel.Text = "Uptime: " .. formatServerUptime(uptime)
+    if siPlayersLabel and siPlayersLabel.Parent then
+        siPlayersLabel.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
+    end
+end)
+table.insert(cleanupTasks, function()
+    if uptimeConn then uptimeConn:Disconnect(); uptimeConn = nil end
+end)
+
+-- ════════════════════════════════════════════════════
 -- DISCORD ROW
+-- ════════════════════════════════════════════════════
 local discordFrame = Instance.new("Frame", homePage)
 discordFrame.Size = UDim2.new(1, 0, 0, 44)
 discordFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 discordFrame.BorderSizePixel = 0
-discordFrame.LayoutOrder = 3
+discordFrame.LayoutOrder = 5
 Instance.new("UICorner", discordFrame).CornerRadius = UDim.new(0, 8)
 local discordStroke = Instance.new("UIStroke", discordFrame)
 discordStroke.Color = SEP_COLOR; discordStroke.Thickness = 1; discordStroke.Transparency = 0.4
@@ -1136,7 +1190,7 @@ local function tryGroupSelect(target)
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
         if v:FindFirstChild("Owner") then
             local viv = v:FindFirstChild("ItemName")
-            local vName = viv and viv.Value or v.Name
+            local vName = viv and iv.Value or v.Name
             if vName == groupName then
                 if v:FindFirstChild("Main") then selectPart(v.Main) end
                 if v:FindFirstChild("WoodSection") then selectPart(v.WoodSection) end
@@ -1222,7 +1276,6 @@ iSep()
 iSectionLabel("Teleport")
 iSlider("Delay", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
 
--- Sort mode row
 local itemModeRow = Instance.new("Frame", itemPage)
 itemModeRow.Size = UDim2.new(1, 0, 0, 30); itemModeRow.BackgroundTransparency = 1
 
@@ -1255,7 +1308,6 @@ for i, mName in ipairs(itemModeNames) do
 end
 updateItemModeButtons("Group")
 
--- Custom destination row (hidden until toggle is ON)
 local tpDestRow = Instance.new("Frame", itemPage)
 tpDestRow.Size = UDim2.new(1, 0, 0, 30)
 tpDestRow.BackgroundTransparency = 1
