@@ -736,10 +736,11 @@ local function createServerInfoBox(text, color)
     return lbl
 end
 
+-- Grid order: Uptime | Players | Rejoin | Server Hop
 local siUptimeLabel  = createServerInfoBox("Uptime: 00:00:00", Color3.fromRGB(210, 210, 210))
 local siPlayersLabel = createServerInfoBox("Players: ...", Color3.fromRGB(200, 200, 200))
 
--- Rejoin button in server info grid
+-- Rejoin (slot 3)
 local rejoinBtn = Instance.new("TextButton", serverInfoGrid)
 rejoinBtn.BackgroundColor3 = BTN_COLOR
 rejoinBtn.BorderSizePixel = 0
@@ -760,7 +761,7 @@ rejoinBtn.MouseButton1Click:Connect(function()
     pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
 end)
 
--- Server Hop button in server info grid
+-- Server Hop (slot 4)
 local serverHopBtn = Instance.new("TextButton", serverInfoGrid)
 serverHopBtn.BackgroundColor3 = BTN_COLOR
 serverHopBtn.BorderSizePixel = 0
