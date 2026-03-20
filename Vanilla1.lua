@@ -360,186 +360,125 @@ task.spawn(function()
 end)
 
 -- ════════════════════════════════════════════════════
--- TABS (FIXED ICONS)
+-- TABS
 -- ════════════════════════════════════════════════════
 local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
 local pages = {}
 
 for _, name in ipairs(tabs) do
     local page = Instance.new("ScrollingFrame", content)
-    page.Name = name .. "Tab"
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.BorderSizePixel = 0
-    page.ScrollBarThickness = 4
-    page.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
-    page.Visible = false
-    page.CanvasSize = UDim2.new(0, 0, 0, 0)
-
+    page.Name = name .. "Tab"; page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1; page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4; page.ScrollBarImageColor3 = Color3.fromRGB(90, 90, 90)
+    page.Visible = false; page.CanvasSize = UDim2.new(0, 0, 0, 0)
     local list = Instance.new("UIListLayout", page)
-    list.Padding = UDim.new(0, 10)
-    list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    list.Padding = UDim.new(0, 10); list.HorizontalAlignment = Enum.HorizontalAlignment.Center
     list.SortOrder = Enum.SortOrder.LayoutOrder
-
     local pad = Instance.new("UIPadding", page)
-    pad.PaddingTop = UDim.new(0, 14)
-    pad.PaddingBottom = UDim.new(0, 14)
-    pad.PaddingLeft = UDim.new(0, 12)
-    pad.PaddingRight = UDim.new(0, 12)
-
+    pad.PaddingTop = UDim.new(0, 14); pad.PaddingBottom = UDim.new(0, 14)
+    pad.PaddingLeft = UDim.new(0, 12); pad.PaddingRight = UDim.new(0, 12)
     list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         page.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 32)
     end)
-
     pages[name .. "Tab"] = page
 end
 
 -- TAB SWITCHING
 local activeTabButton = nil
 local function switchTab(targetName)
-    for _, page in pairs(pages) do
-        page.Visible = (page.Name == targetName)
-    end
-
+    for _, page in pairs(pages) do page.Visible = (page.Name == targetName) end
     if activeTabButton then
         local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
         local oldIcon = activeTabButton:FindFirstChild("TabIcon")
-
-        TweenService:Create(activeTabButton, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        }):Play()
-
-        if oldLbl then
-            TweenService:Create(oldLbl, TweenInfo.new(0.22), {
-                TextColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
-        end
-
-        if oldIcon then
-            TweenService:Create(oldIcon, TweenInfo.new(0.22), {
-                ImageColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
-        end
+        TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
+        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {TextColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
     end
-
     local frame = side:FindFirstChild(targetName:gsub("Tab",""))
     if frame then
         activeTabButton = frame
-
         local newLbl  = frame:FindFirstChild("TabLabel")
         local newIcon = frame:FindFirstChild("TabIcon")
-
-        TweenService:Create(frame, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        }):Play()
-
-        if newLbl then
-            TweenService:Create(newLbl, TweenInfo.new(0.22), {
-                TextColor3 = THEME_TEXT
-            }):Play()
-        end
-
-        if newIcon then
-            TweenService:Create(newIcon, TweenInfo.new(0.22), {
-                ImageColor3 = THEME_TEXT
-            }):Play()
-        end
+        TweenService:Create(frame, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
+        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3 = THEME_TEXT}):Play() end
+        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {TextColor3 = THEME_TEXT}):Play() end
     end
 end
 
--- TAB ICONS
+-- TAB ICONS (Unicode symbols — always visible, no asset loading required)
 local tabIcons = {
-    ["Home"]      = "rbxassetid://103808960525817",
-    ["Player"]    = "rbxassetid://124010641391821",
-    ["World"]     = "rbxassetid://126582208494394",
-    ["Teleport"]  = "rbxassetid://126517940797776",
-    ["Wood"]      = "rbxassetid://84914860062890",
-    ["Slot"]      = "rbxassetid://91125189715601",
-    ["Dupe"]      = "rbxassetid://84061260593530",
-    ["Item"]      = "rbxassetid://77054718226216",
-    ["Sorter"]    = "rbxassetid://104900927627815",
-    ["AutoBuy"]   = "rbxassetid://76236698231155",
-    ["Pixel Art"] = "rbxassetid://112117095344788",
-    ["Build"]     = "rbxassetid://97668717322455",
-    ["Vehicle"]   = "rbxassetid://131533481576470",
-    ["Search"]    = "rbxassetid://75885588738364",
-    ["Settings"]  = "rbxassetid://116984423831131",
+    ["Home"]      = "⌂",
+    ["Player"]    = "♟",
+    ["World"]     = "◉",
+    ["Teleport"]  = "➤",
+    ["Wood"]      = "▲",
+    ["Slot"]      = "▣",
+    ["Dupe"]      = "⧉",
+    ["Item"]      = "✦",
+    ["Sorter"]    = "≡",
+    ["AutoBuy"]   = "◈",
+    ["Pixel Art"] = "▦",
+    ["Build"]     = "⬡",
+    ["Vehicle"]   = "◇",
+    ["Search"]    = "⌕",
+    ["Settings"]  = "⚙",
 }
 
 for _, name in ipairs(tabs) do
     local frame = Instance.new("Frame", side)
-    frame.Name = name
-    frame.Size = UDim2.new(1, 0, 0, 34)
+    frame.Name             = name
+    frame.Size             = UDim2.new(1, 0, 0, 34)
     frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    frame.BorderSizePixel = 0
-    frame.ZIndex = 1
+    frame.BorderSizePixel  = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
-    -- ICON (FIXED ZINDEX)
-    local icon = Instance.new("ImageLabel", frame)
-    icon.Name = "TabIcon"
-    icon.Size = UDim2.new(0, 16, 0, 16)
-    icon.Position = UDim2.new(0, 10, 0.5, -8)
+    local icon = Instance.new("TextLabel", frame)
+    icon.Name                   = "TabIcon"
+    icon.Size                   = UDim2.new(0, 20, 1, 0)
+    icon.Position               = UDim2.new(0, 8, 0, 0)
     icon.BackgroundTransparency = 1
-    icon.BorderSizePixel = 0
-    icon.ScaleType = Enum.ScaleType.Fit
-    icon.Image = tabIcons[name] or ""
-    icon.ImageColor3 = Color3.fromRGB(110, 110, 110)
-    icon.ZIndex = 3
+    icon.BorderSizePixel        = 0
+    icon.Font                   = Enum.Font.GothamBold
+    icon.TextSize               = 14
+    icon.TextColor3             = Color3.fromRGB(110, 110, 110)
+    icon.TextXAlignment         = Enum.TextXAlignment.Center
+    icon.TextYAlignment         = Enum.TextYAlignment.Center
+    icon.Text                   = tabIcons[name] or "•"
 
-    -- LABEL (FIXED ZINDEX)
     local nameLbl = Instance.new("TextLabel", frame)
-    nameLbl.Name = "TabLabel"
-    nameLbl.Size = UDim2.new(1, -34, 1, 0)
-    nameLbl.Position = UDim2.new(0, 32, 0, 0)
+    nameLbl.Name               = "TabLabel"
+    nameLbl.Size               = UDim2.new(1, -34, 1, 0)
+    nameLbl.Position           = UDim2.new(0, 32, 0, 0)
     nameLbl.BackgroundTransparency = 1
-    nameLbl.Font = Enum.Font.GothamSemibold
-    nameLbl.TextSize = 13
-    nameLbl.TextColor3 = Color3.fromRGB(110, 110, 110)
-    nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-    nameLbl.Text = name
-    nameLbl.ZIndex = 3
+    nameLbl.Font               = Enum.Font.GothamSemibold
+    nameLbl.TextSize           = 13
+    nameLbl.TextColor3         = Color3.fromRGB(110, 110, 110)
+    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    nameLbl.Text               = name
 
-    -- BUTTON (BEHIND CONTENT NOW)
     local btn = Instance.new("TextButton", frame)
-    btn.Name = name .. "_Btn"
-    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.Name                 = name .. "_Btn"
+    btn.Size                 = UDim2.new(1, 0, 1, 0)
     btn.BackgroundTransparency = 1
-    btn.Text = ""
-    btn.ZIndex = 2
-    btn.AutoButtonColor = false
+    btn.Text                 = ""
+    btn.ZIndex               = 10
+    btn.AutoButtonColor      = false
 
     btn.MouseEnter:Connect(function()
         if activeTabButton ~= frame then
-            TweenService:Create(frame, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-            }):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {
-                TextColor3 = Color3.fromRGB(180, 180, 180)
-            }):Play()
-            TweenService:Create(icon, TweenInfo.new(0.18), {
-                ImageColor3 = Color3.fromRGB(180, 180, 180)
-            }):Play()
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
+            TweenService:Create(icon,    TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
         end
     end)
-
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= frame then
-            TweenService:Create(frame, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            }):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {
-                TextColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
-            TweenService:Create(icon, TweenInfo.new(0.18), {
-                ImageColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
+            TweenService:Create(icon,    TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
         end
     end)
-
-    btn.MouseButton1Click:Connect(function()
-        switchTab(name.."Tab")
-    end)
+    btn.MouseButton1Click:Connect(function() switchTab(name.."Tab") end)
 end
 
 switchTab("HomeTab")
