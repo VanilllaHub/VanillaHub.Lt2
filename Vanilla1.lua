@@ -407,7 +407,7 @@ end
 
 -- TAB ICONS
 local tabIcons = {
-    ["Home"]      = "😭",
+    ["Home"]      = "rbxassetid://103808960525817",
     ["Player"]    = "rbxassetid://124010641391821",
     ["World"]     = "rbxassetid://126582208494394",
     ["Teleport"]  = "rbxassetid://126517940797776",
