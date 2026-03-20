@@ -1,7 +1,6 @@
 -- ════════════════════════════════════════════════════════════════════════════════
 -- VANILLA COMBINED — Vanilla2 (Butter Leak / Dupe Tab)
 -- Requires Vanilla1 (_G.VH) to be loaded first.
--- Update: STATE system, batchMove, grabOwnership, forceMove, pause/resume
 -- ════════════════════════════════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -29,7 +28,7 @@ if not worldPage then
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- THEME
+-- THEME  (Black / Grey / White only)
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local C = {
@@ -62,25 +61,6 @@ local C = {
     TAB_IDLE     = Color3.fromRGB(12,  12,  12),
     TAB_HOVER    = Color3.fromRGB(28,  28,  28),
 }
-
--- ════════════════════════════════════════════════════════════════════════════════
--- STATE SYSTEM (NEW)
--- Per-tab STATE tables so each sub-tab is fully independent.
--- ════════════════════════════════════════════════════════════════════════════════
-
-local function newState()
-    return { running = false, paused = false, stopRequested = false }
-end
-
-local function isRunning(st)
-    return st.running and not st.paused and not st.stopRequested
-end
-
-local function waitIfPaused(st)
-    while st.paused and not st.stopRequested do
-        task.wait(0.1)
-    end
-end
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- SHARED UI HELPERS
@@ -129,11 +109,50 @@ local function makeBtn(parent, text, color, hoverColor, callback)
     btn.Text             = text
     btn.AutoButtonColor  = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    local s = Instance.new("UIStroke", btn)
-    s.Color = Color3.fromRGB(55,55,55); s.Thickness = 1; s.Transparency = 0
+    local btnStr_btn = Instance.new("UIStroke", btn)
+    btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+    btnStr_btn.Thickness    = 1
+    btnStr_btn.Transparency = 0
     applyHover(btn, color, hoverColor)
     if callback then btn.MouseButton1Click:Connect(callback) end
     return btn
+end
+
+local function makeStartStop(parent, startCb, stopCb)
+    local row = Instance.new("Frame", parent)
+    row.Size             = UDim2.new(1, -12, 0, 34)
+    row.BackgroundTransparency = 1
+    row.BorderSizePixel  = 0
+
+    local rl = Instance.new("UIListLayout", row)
+    rl.FillDirection = Enum.FillDirection.Horizontal
+    rl.SortOrder     = Enum.SortOrder.LayoutOrder
+    rl.Padding       = UDim.new(0, 6)
+
+    local function half(text, base, hover, cb, order)
+        local btn = Instance.new("TextButton", row)
+        btn.Size             = UDim2.new(0.5, -3, 1, 0)
+        btn.BackgroundColor3 = base
+        btn.BorderSizePixel  = 0
+        btn.Font             = Enum.Font.GothamBold
+        btn.TextSize         = 13
+        btn.TextColor3       = C.TEXT_BRIGHT
+        btn.Text             = text
+        btn.AutoButtonColor  = false
+        btn.LayoutOrder      = order
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        local btnStr_btn = Instance.new("UIStroke", btn)
+        btnStr_btn.Color        = Color3.fromRGB(55, 55, 55)
+        btnStr_btn.Thickness    = 1
+        btnStr_btn.Transparency = 0
+        applyHover(btn, base, hover)
+        if cb then btn.MouseButton1Click:Connect(cb) end
+        return btn
+    end
+
+    local startBtn = half("▶  Start", C.BTN_START, C.BTN_START_HV, startCb, 1)
+    local stopBtn  = half("■  Stop",  C.BTN_STOP,  C.BTN_STOP_HV,  stopCb,  2)
+    return row, startBtn, stopBtn
 end
 
 local function makeStatusBar(parent, defaultText)
@@ -143,7 +162,8 @@ local function makeStatusBar(parent, defaultText)
     bar.BorderSizePixel  = 0
     Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 6)
     local stroke = Instance.new("UIStroke", bar)
-    stroke.Color = C.BORDER; stroke.Thickness = 1
+    stroke.Color     = C.BORDER
+    stroke.Thickness = 1
 
     local dot = Instance.new("Frame", bar)
     dot.Size             = UDim2.new(0, 7, 0, 7)
@@ -231,7 +251,9 @@ local function makeProgressBar(parent, labelText)
     wrap.Visible          = false
     Instance.new("UICorner", wrap).CornerRadius = UDim.new(0, 7)
     local stroke = Instance.new("UIStroke", wrap)
-    stroke.Color = C.BORDER; stroke.Thickness = 1; stroke.Transparency = 0.4
+    stroke.Color        = C.BORDER
+    stroke.Thickness    = 1
+    stroke.Transparency = 0.4
 
     local topRow = Instance.new("Frame", wrap)
     topRow.Size                 = UDim2.new(1, -12, 0, 17)
@@ -319,7 +341,9 @@ local function makeDupeDropdown(labelText, parentPage)
     outer.ClipsDescendants = true
     Instance.new("UICorner", outer).CornerRadius = UDim.new(0, 7)
     local outerStroke = Instance.new("UIStroke", outer)
-    outerStroke.Color = C.BORDER; outerStroke.Thickness = 1; outerStroke.Transparency = 0.3
+    outerStroke.Color        = C.BORDER
+    outerStroke.Thickness    = 1
+    outerStroke.Transparency = 0.3
 
     local header = Instance.new("Frame", outer)
     header.Size                   = UDim2.new(1, 0, 0, HEADER_H)
@@ -342,7 +366,9 @@ local function makeDupeDropdown(labelText, parentPage)
     selFrame.BorderSizePixel  = 0
     Instance.new("UICorner", selFrame).CornerRadius = UDim.new(0, 5)
     local selStroke = Instance.new("UIStroke", selFrame)
-    selStroke.Color = C.BORDER; selStroke.Thickness = 1; selStroke.Transparency = 0.3
+    selStroke.Color        = C.BORDER
+    selStroke.Thickness    = 1
+    selStroke.Transparency = 0.3
 
     local avatar = Instance.new("ImageLabel", selFrame)
     avatar.Size             = UDim2.new(0, 18, 0, 18)
@@ -565,53 +591,23 @@ local function makeDupeDropdown(labelText, parentPage)
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- CORE MOVEMENT HELPERS (NEW — replaces old seekNetOwn / sendItemPart)
+-- TELEPORT CORE
 -- ════════════════════════════════════════════════════════════════════════════════
 
--- Claim network ownership of a part (12 fires × 0.02s)
-local function grabOwnership(char, part, RS)
+local MAX_ITEM_TRIES = 8
+
+local function seekNetOwn(char, part, RS)
     if not (part and part.Parent) then return end
     if (char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
         char.HumanoidRootPart.CFrame = part.CFrame
         task.wait(0.04)
     end
-    for _ = 1, 12 do
+    for _ = 1, 15 do
+        task.wait(0.015)
         RS.Interaction.ClientIsDragging:FireServer(part.Parent)
-        task.wait(0.02)
     end
 end
 
--- Push a part to a target CFrame for 0.45s (fixes snap-back)
-local function forceMove(part, cf)
-    if not (part and part.Parent) then return end
-    local t = tick() + 0.45
-    repeat
-        part.CFrame = cf
-        task.wait()
-    until tick() > t
-end
-
--- Teleport a list of parts in batches of 12 with pause support
-local function batchMove(parts, giveOrigin, recvOrigin, char, RS, st)
-    local BATCH_SIZE = 12
-    local BATCH_WAIT = 0.4
-    for i = 1, #parts, BATCH_SIZE do
-        if st.stopRequested then break end
-        waitIfPaused(st)
-        for j = i, math.min(i + BATCH_SIZE - 1, #parts) do
-            local part = parts[j]
-            if not (part and part.Parent) then continue end
-            grabOwnership(char, part, RS)
-            local cf     = part.CFrame
-            local newPos = cf.Position - giveOrigin.Position + recvOrigin.Position
-            forceMove(part, CFrame.new(newPos) * cf.Rotation)
-        end
-        task.wait(BATCH_WAIT)
-    end
-end
-
--- Legacy single-item retry used by Base Dupe gifts/wood
-local MAX_ITEM_TRIES = 8
 local function sendItemPart(char, part, Offset, RS, runningRef)
     for attempt = 1, MAX_ITEM_TRIES do
         if not (part and part.Parent) then return false end
@@ -620,8 +616,8 @@ local function sendItemPart(char, part, Offset, RS, runningRef)
             char.HumanoidRootPart.CFrame = part.CFrame
             task.wait(0.04)
         end
-        grabOwnership(char, part, RS)
-        local deadline = tick() + 0.45
+        seekNetOwn(char, part, RS)
+        local deadline = tick() + 0.25
         repeat
             part.CFrame = Offset
             task.wait()
@@ -633,27 +629,23 @@ local function sendItemPart(char, part, Offset, RS, runningRef)
     return false
 end
 
--- Retry pass for cargo that didn't land (shared by all truck tabs)
-local function retryCargo(char, missedList, GiveBaseOrigin, RS, st, setProgFn, statusFn, MAX_TRIES)
+local function retryCargo(char, missedList, GiveBaseOrigin, RS, runningRef, setProgFn, statusFn, MAX_TRIES)
     MAX_TRIES = MAX_TRIES or 25
     if #missedList == 0 then return end
     local missedTotal = #missedList
     local attempt     = 0
     local itemsDone   = 0
     if setProgFn then setProgFn(0, missedTotal) end
-    while #missedList > 0 and isRunning(st) and attempt < MAX_TRIES do
+    while #missedList > 0 and runningRef() and attempt < MAX_TRIES do
         attempt += 1
-        waitIfPaused(st)
-        if st.stopRequested then break end
         if statusFn then
             statusFn(string.format("Retry %d/%d — %d left...", attempt, MAX_TRIES, #missedList), true)
         end
         for _, data in ipairs(missedList) do
-            if not isRunning(st) then break end
+            if not runningRef() then break end
             local item = data.Instance
             if not (item and item.Parent) then continue end
-            grabOwnership(char, item, RS)
-            forceMove(item, data.TargetCFrame)
+            sendItemPart(char, item, data.TargetCFrame, RS, runningRef)
             itemsDone += 1
             if setProgFn then setProgFn(itemsDone, missedTotal) end
             task.wait()
@@ -688,43 +680,6 @@ local function retryCargo(char, missedList, GiveBaseOrigin, RS, st, setProgFn, s
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- ITEM TYPE HELPERS
--- ════════════════════════════════════════════════════════════════════════════════
-
-local function getTypeValue(p)
-    local tv = p:FindFirstChild("Type")
-    return tv and tostring(tv.Value) or ""
-end
-
-local function isStructure(p)
-    local tv = getTypeValue(p)
-    if tv == "Structure" then return true end
-    local tc = p:FindFirstChild("TreeClass")
-    return tc and tostring(tc.Value) == "Structure"
-end
-
-local function isGiftOrItem(p)
-    local tv = getTypeValue(p)
-    if tv == "Gift" or tv == "Loose Item" or tv == "Tool" then return true end
-    if tv == "Furniture" and p:FindFirstChild("PurchasedBoxItemName") then return true end
-    return false
-end
-
-local function isWood(p)
-    local tc = p:FindFirstChild("TreeClass")
-    if not tc then return false end
-    if tostring(tc.Value) == "Structure" then return false end
-    if isGiftOrItem(p) then return false end
-    return true
-end
-
-local function isFurniture(p)
-    if getTypeValue(p) ~= "Furniture" then return false end
-    if p:FindFirstChild("PurchasedBoxItemName") then return false end
-    return true
-end
-
--- ════════════════════════════════════════════════════════════════════════════════
 -- DUPE TAB — SUB-TAB SYSTEM
 -- ════════════════════════════════════════════════════════════════════════════════
 
@@ -734,7 +689,8 @@ tabBarFrame.BackgroundColor3 = C.BG_DEEP
 tabBarFrame.BorderSizePixel  = 0
 Instance.new("UICorner", tabBarFrame).CornerRadius = UDim.new(0, 7)
 local tabBarStroke = Instance.new("UIStroke", tabBarFrame)
-tabBarStroke.Color = C.BORDER; tabBarStroke.Thickness = 1
+tabBarStroke.Color     = C.BORDER
+tabBarStroke.Thickness = 1
 
 local tabLayout = Instance.new("UIListLayout", tabBarFrame)
 tabLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -815,78 +771,53 @@ local singleTruckPage = subPages[2]
 local batchTruckPage  = subPages[3]
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- HELPER: PAUSE/RESUME TOGGLE BUTTON (used by truck tabs)
+-- ITEM TYPE HELPERS
 -- ════════════════════════════════════════════════════════════════════════════════
 
--- Makes a single-button Start → Pause ⇄ Resume control plus a Stop button.
--- Returns (row, startCb setter, stopCb setter) — or just wire callbacks directly.
-local function makePauseToggle(parent, st, onStart, onStop)
-    local row = Instance.new("Frame", parent)
-    row.Size                 = UDim2.new(1, -12, 0, 34)
-    row.BackgroundTransparency = 1
-    row.BorderSizePixel      = 0
+-- Returns the Type.Value string of a model, or "" if not present
+local function getTypeValue(p)
+    local tv = p:FindFirstChild("Type")
+    return tv and tostring(tv.Value) or ""
+end
 
-    local rl = Instance.new("UIListLayout", row)
-    rl.FillDirection = Enum.FillDirection.Horizontal
-    rl.SortOrder     = Enum.SortOrder.LayoutOrder
-    rl.Padding       = UDim.new(0, 6)
+-- True for structures
+local function isStructure(p)
+    local tv = getTypeValue(p)
+    if tv == "Structure" then return true end
+    local tc = p:FindFirstChild("TreeClass")
+    return tc and tostring(tc.Value) == "Structure"
+end
 
-    local function makeHalf(text, base, hover, order)
-        local btn = Instance.new("TextButton", row)
-        btn.Size             = UDim2.new(0.5, -3, 1, 0)
-        btn.BackgroundColor3 = base
-        btn.BorderSizePixel  = 0
-        btn.Font             = Enum.Font.GothamBold
-        btn.TextSize         = 13
-        btn.TextColor3       = C.TEXT_BRIGHT
-        btn.Text             = text
-        btn.AutoButtonColor  = false
-        btn.LayoutOrder      = order
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-        local s = Instance.new("UIStroke", btn)
-        s.Color = Color3.fromRGB(55,55,55); s.Thickness = 1; s.Transparency = 0
-        applyHover(btn, base, hover)
-        return btn
-    end
+-- True for Gift / Loose Item / Tool / Box — matched directly from Type.Value
+-- Covers: standalone gifts, box contents (Loose Item), tools, purchased items,
+--         and Box models (Type = "Furniture" but has PurchasedBoxItemName child —
+--         these are draggable boxes sitting on the plot, NOT placed furniture).
+local function isGiftOrItem(p)
+    local tv = getTypeValue(p)
+    if tv == "Gift" or tv == "Loose Item" or tv == "Tool" then return true end
+    -- Box: Type = "Furniture" AND has PurchasedBoxItemName → draggable box, not placed furniture
+    if tv == "Furniture" and p:FindFirstChild("PurchasedBoxItemName") then return true end
+    return false
+end
 
-    local toggleBtn = makeHalf("▶  Start", C.BTN_START, C.BTN_START_HV, 1)
-    local stopBtn   = makeHalf("■  Stop",  C.BTN_STOP,  C.BTN_STOP_HV,  2)
+-- True for wood logs/planks (TreeClass present, not Structure, not a gift/item/box)
+local function isWood(p)
+    local tc = p:FindFirstChild("TreeClass")
+    if not tc then return false end
+    if tostring(tc.Value) == "Structure" then return false end
+    if isGiftOrItem(p) then return false end
+    return true
+end
 
-    toggleBtn.MouseButton1Click:Connect(function()
-        if not st.running then
-            -- Not running → start
-            st.running       = true
-            st.paused        = false
-            st.stopRequested = false
-            toggleBtn.Text   = "⏸  Pause"
-            if onStart then onStart() end
-
-        elseif not st.paused then
-            -- Running → pause
-            st.paused      = true
-            toggleBtn.Text = "▶  Resume"
-
-        else
-            -- Paused → resume
-            st.paused      = false
-            toggleBtn.Text = "⏸  Pause"
-        end
-    end)
-
-    stopBtn.MouseButton1Click:Connect(function()
-        st.running       = false
-        st.paused        = false
-        st.stopRequested = true
-        toggleBtn.Text   = "▶  Start"
-        if onStop then onStop() end
-    end)
-
-    return row, toggleBtn, stopBtn
+-- True for PLACED furniture (Type = "Furniture" but NOT a Box)
+local function isFurniture(p)
+    if getTypeValue(p) ~= "Furniture" then return false end
+    if p:FindFirstChild("PurchasedBoxItemName") then return false end  -- skip boxes
+    return true
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
 -- SUB-TAB 1 — BASE DUPE
--- (unchanged logic; uses butterRunning bool for backward compat)
 -- ════════════════════════════════════════════════════════════════════════════════
 
 local _, setStatus = makeStatusBar(baseDupePage, "Ready")
@@ -898,11 +829,11 @@ local _, getReceiverName = makeDupeDropdown("Receiver", baseDupePage)
 makeSep(baseDupePage)
 makeLabel(baseDupePage, "What to Transfer")
 
-local _, getStructures = makeToggle(baseDupePage, "Structures",  false)
-local _, getFurniture  = makeToggle(baseDupePage, "Furnitures",  false)
-local _, getTrucks     = makeToggle(baseDupePage, "Truck Loads", false)
-local _, getGifs       = makeToggle(baseDupePage, "Gift/Item",   false)
-local _, getWood       = makeToggle(baseDupePage, "Wood",        false)
+local _, getStructures = makeToggle(baseDupePage, "Structures",     false)
+local _, getFurniture  = makeToggle(baseDupePage, "Furnitures",     false)
+local _, getTrucks     = makeToggle(baseDupePage, "Truck Loads",     false)
+local _, getGifs       = makeToggle(baseDupePage, "Gift/Item",           false)
+local _, getWood       = makeToggle(baseDupePage, "Wood",           false)
 
 makeSep(baseDupePage)
 makeLabel(baseDupePage, "Progress")
@@ -926,35 +857,20 @@ local function resetAllProgress()
     resetProgWood()
 end
 
-local baseST = newState()  -- Base Dupe uses its own STATE too
+local _, startButterBtn, stopButterBtn = makeStartStop(baseDupePage, nil, function()
+    butterRunning = false; VH.butter.running = false
+    if butterThread then pcall(task.cancel, butterThread); butterThread = nil end
+    VH.butter.thread = nil
+    setStatus("Stopped", false)
+    resetAllProgress()
+end)
 
-local _, baseToggleBtn, baseStopBtn = makePauseToggle(baseDupePage, baseST,
-    nil,  -- onStart wired below via MouseButton1Click override
-    function()
-        butterRunning = false; VH.butter.running = false
-        baseST.stopRequested = true
-        if butterThread then pcall(task.cancel, butterThread); butterThread = nil end
-        VH.butter.thread = nil
-        setStatus("Stopped", false)
-        resetAllProgress()
-    end
-)
-
--- Override the toggle button's start action for Base Dupe
--- (can't pass it as onStart because we need access to dropdowns)
-baseToggleBtn.MouseButton1Click:Connect(function()
-    -- Only handle the "not running" → start case here;
-    -- pause/resume is already handled inside makePauseToggle
-    if not baseST.running then return end  -- handled by makePauseToggle already
-    -- guard: already running
+startButterBtn.MouseButton1Click:Connect(function()
     if butterRunning then setStatus("Already running!", true) return end
 
     local giverName    = getGiverName()
     local receiverName = getReceiverName()
     if giverName == "" or receiverName == "" then
-        baseST.running = false
-        baseST.stopRequested = true
-        baseToggleBtn.Text = "▶  Start"
         return
     end
 
@@ -980,15 +896,13 @@ baseToggleBtn.MouseButton1Click:Connect(function()
 
         if not (GiveBaseOrigin and ReceiverBaseOrigin) then
             setStatus("⚠  Couldn't find bases!", false)
-            butterRunning = false; VH.butter.running = false
-            baseST.running = false; butterThread = nil; VH.butter.thread = nil
-            baseToggleBtn.Text = "▶  Start"
+            butterRunning = false; VH.butter.running = false; butterThread = nil; VH.butter.thread = nil
             return
         end
 
         local giveOriginCF = GiveBaseOrigin.CFrame
         local recvOriginCF = ReceiverBaseOrigin.CFrame
-        local butterRunningRef = function() return butterRunning and not baseST.stopRequested end
+        local butterRunningRef = function() return butterRunning end
 
         local function getItemWorldCF(p)
             if p:FindFirstChild("MainCFrame") then return p.MainCFrame.Value
@@ -1000,7 +914,7 @@ baseToggleBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── STRUCTURES
-        if getStructures() and butterRunningRef() then
+        if getStructures() and butterRunning then
             local total = 0
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
@@ -1017,7 +931,7 @@ baseToggleBtn.MouseButton1Click:Connect(function()
                 local done = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                        if not butterRunningRef() then break end
+                        if not butterRunning then break end
                         if v.Name == "Owner" and tostring(v.Value) == giverName then
                             local p = v.Parent
                             if isStructure(p) then
@@ -1040,7 +954,7 @@ baseToggleBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── FURNITURE
-        if getFurniture() and butterRunningRef() then
+        if getFurniture() and butterRunning then
             local total = 0
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
@@ -1056,7 +970,7 @@ baseToggleBtn.MouseButton1Click:Connect(function()
                 local done = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                        if not butterRunningRef() then break end
+                        if not butterRunning then break end
                         if v.Name == "Owner" and tostring(v.Value) == giverName then
                             local p = v.Parent
                             if isFurniture(p) then
@@ -1078,8 +992,8 @@ baseToggleBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── TRUCKS (Base Dupe — now uses batchMove)
-        if getTrucks() and butterRunningRef() then
+        -- ── TRUCKS + CARGO
+        if getTrucks() and butterRunning then
             local teleportedParts = {}
             local ignoredParts    = {}
             local DidTruckTeleport = false
@@ -1113,7 +1027,7 @@ baseToggleBtn.MouseButton1Click:Connect(function()
                 local truckDone = 0
 
                 for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                    if not butterRunningRef() then break end
+                    if not butterRunning then break end
                     if v.Name == "Owner" and tostring(v.Value) == giverName and v.Parent:FindFirstChild("DriveSeat") then
                         v.Parent.DriveSeat:Sit(Char.Humanoid)
                         repeat task.wait() v.Parent.DriveSeat:Sit(Char.Humanoid) until Char.Humanoid.SeatPart
@@ -1124,24 +1038,24 @@ baseToggleBtn.MouseButton1Click:Connect(function()
                         for _, p in ipairs(tModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
                         for _, p in ipairs(Char:GetDescendants())   do if p:IsA("BasePart") then ignoredParts[p] = true end end
 
-                        -- Collect cargo then batch-move it
-                        local cargoParts = {}
                         for _, part in ipairs(workspace:GetDescendants()) do
                             if part:IsA("BasePart") and not ignoredParts[part] then
                                 if part.Name == "Main" or part.Name == "WoodSection" then
                                     if part:FindFirstChild("Weld") and part.Weld.Part1.Parent ~= part.Parent then continue end
-                                    if isPointInside(part.Position, mCF, mSz) then
-                                        TeleportTruck()
-                                        table.insert(cargoParts, part)
-                                        -- pre-compute target and store for retry
-                                        local PCF  = part.CFrame
-                                        local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                                        table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=CFrame.new(nP)*PCF.Rotation})
-                                    end
+                                    task.spawn(function()
+                                        if isPointInside(part.Position, mCF, mSz) then
+                                            TeleportTruck()
+                                            local PCF  = part.CFrame
+                                            local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                                            local tOff = CFrame.new(nP) * PCF.Rotation
+                                            part.CFrame = tOff
+                                            task.wait(0.3)
+                                            table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=tOff})
+                                        end
+                                    end)
                                 end
                             end
                         end
-                        batchMove(cargoParts, GiveBaseOrigin, ReceiverBaseOrigin, Char, RS, baseST)
 
                         local SitPart   = Char.Humanoid.SeatPart
                         local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
@@ -1168,7 +1082,7 @@ baseToggleBtn.MouseButton1Click:Connect(function()
                 end
                 if #missed > 0 then
                     progTrucks.Visible = true
-                    retryCargo(Char, missed, GiveBaseOrigin, RS, baseST,
+                    retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d,t) setProgTrucks(d,t) end,
                         function(msg,act) setStatus(msg,act) end, 25)
                     task.wait(1)
@@ -1178,24 +1092,35 @@ baseToggleBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── GIFT / ITEMS / BOXES
-        if getGifs() and butterRunningRef() then
+        -- ── GIFT / ITEMS / BOXES / PAINTINGS
+        -- Uses isGiftOrItem() which covers:
+        --   Gift, Loose Item, Tool  (by Type.Value)
+        --   Box / Painting / etc    (Type="Furniture" + PurchasedBoxItemName child)
+        -- Part resolution: tries Main directly first, then deep-searches for any
+        -- BasePart so models whose Main is a sub-Model (paintings etc.) still work.
+        if getGifs() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                if not butterRunningRef() then break end
+                if not butterRunning then break end
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
                     local p = v.Parent
                     if isGiftOrItem(p) then
                         local mainChild = p:FindFirstChild("Main")
                         local part, PCF
                         if mainChild and mainChild:IsA("BasePart") then
-                            part = mainChild; PCF = mainChild.CFrame
+                            part = mainChild
+                            PCF  = mainChild.CFrame
                         elseif mainChild then
-                            part = mainChild.PrimaryPart or mainChild:FindFirstChildOfClass("BasePart") or mainChild:FindFirstChildWhichIsA("BasePart", true)
+                            -- Main is a Model/folder — find its primary or first BasePart
+                            part = mainChild.PrimaryPart
+                                or mainChild:FindFirstChildOfClass("BasePart")
+                                or mainChild:FindFirstChildWhichIsA("BasePart", true)
                             PCF  = part and part.CFrame or nil
                         end
                         if not part then
-                            part = p:FindFirstChildOfClass("BasePart") or p:FindFirstChildWhichIsA("BasePart", true)
+                            -- No Main at all — deep search whole model
+                            part = p:FindFirstChildOfClass("BasePart")
+                                or p:FindFirstChildWhichIsA("BasePart", true)
                             PCF  = part and part.CFrame or nil
                         end
                         if part and PCF then
@@ -1210,26 +1135,51 @@ baseToggleBtn.MouseButton1Click:Connect(function()
                 local total  = #items
                 local done   = 0
                 local missed = {}
-                progGifs.Visible = true; setProgGifs(0, total)
+
+                progGifs.Visible = true
+                setProgGifs(0, total)
                 setStatus(string.format("Sending %d gift/item(s)...", total), true)
 
                 for _, entry in ipairs(items) do
-                    if not butterRunningRef() then break end
+                    if not butterRunning then break end
                     local part   = entry.part
                     local Offset = entry.offset
-                    if not (part and part.Parent) then done += 1; setProgGifs(done, total); continue end
-                    grabOwnership(Char, part, RS)
-                    forceMove(part, Offset)
-                    if part and part.Parent and (part.Position - Offset.Position).Magnitude > 8 then
-                        table.insert(missed, {Instance = part, TargetCFrame = Offset})
+
+                    if not (part and part.Parent) then
+                        done += 1; setProgGifs(done, total); continue
                     end
+
+                    -- seek network ownership
+                    if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
+                        Char.HumanoidRootPart.CFrame = part.CFrame
+                        task.wait(0.04)
+                    end
+                    for _ = 1, 15 do
+                        task.wait(0.015)
+                        RS.Interaction.ClientIsDragging:FireServer(part.Parent)
+                    end
+
+                    local deadline = tick() + 0.25
+                    repeat
+                        part.CFrame = Offset
+                        task.wait()
+                    until tick() >= deadline
+
+                    -- track missed immediately after first attempt
+                    if part and part.Parent then
+                        if (part.Position - Offset.Position).Magnitude > 8 then
+                            table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                        end
+                    end
+
                     done += 1; setProgGifs(done, total)
                 end
 
-                if #missed > 0 and butterRunningRef() then
+                -- always run retry pass if anything missed
+                if #missed > 0 and butterRunning then
                     progGifs.Visible = true
                     setStatus(string.format("Gift retry — %d item(s) missed...", #missed), true)
-                    retryCargo(Char, missed, GiveBaseOrigin, RS, baseST,
+                    retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d, t) setProgGifs(d, t) end,
                         function(msg, act) setStatus(msg, act) end, 25)
                     task.wait(1)
@@ -1240,10 +1190,11 @@ baseToggleBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── WOOD
-        if getWood() and butterRunningRef() then
+        -- Excludes Gift / Loose Item / Tool so those aren't double-processed.
+        if getWood() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                if not butterRunningRef() then break end
+                if not butterRunning then break end
                 if v.Name == "Owner" and tostring(v.Value) == giverName then
                     local p = v.Parent
                     if isWood(p) then
@@ -1261,26 +1212,51 @@ baseToggleBtn.MouseButton1Click:Connect(function()
                 local total  = #items
                 local done   = 0
                 local missed = {}
-                progWood.Visible = true; setProgWood(0, total)
+
+                progWood.Visible = true
+                setProgWood(0, total)
                 setStatus(string.format("Sending %d wood piece(s)...", total), true)
 
                 for _, entry in ipairs(items) do
-                    if not butterRunningRef() then break end
+                    if not butterRunning then break end
                     local part   = entry.part
                     local Offset = entry.offset
-                    if not (part and part.Parent) then done += 1; setProgWood(done, total); continue end
-                    grabOwnership(Char, part, RS)
-                    forceMove(part, Offset)
-                    if part and part.Parent and (part.Position - Offset.Position).Magnitude > 8 then
-                        table.insert(missed, {Instance = part, TargetCFrame = Offset})
+
+                    if not (part and part.Parent) then
+                        done += 1; setProgWood(done, total); continue
                     end
+
+                    -- seek network ownership
+                    if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
+                        Char.HumanoidRootPart.CFrame = part.CFrame
+                        task.wait(0.04)
+                    end
+                    for _ = 1, 15 do
+                        task.wait(0.015)
+                        RS.Interaction.ClientIsDragging:FireServer(part.Parent)
+                    end
+
+                    local deadline = tick() + 0.25
+                    repeat
+                        part.CFrame = Offset
+                        task.wait()
+                    until tick() >= deadline
+
+                    -- track missed immediately after first attempt
+                    if part and part.Parent then
+                        if (part.Position - Offset.Position).Magnitude > 8 then
+                            table.insert(missed, {Instance = part, TargetCFrame = Offset})
+                        end
+                    end
+
                     done += 1; setProgWood(done, total)
                 end
 
-                if #missed > 0 and butterRunningRef() then
+                -- always run retry pass if anything missed
+                if #missed > 0 and butterRunning then
                     progWood.Visible = true
                     setStatus(string.format("Wood retry — %d piece(s) missed...", #missed), true)
-                    retryCargo(Char, missed, GiveBaseOrigin, RS, baseST,
+                    retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d, t) setProgWood(d, t) end,
                         function(msg, act) setStatus(msg, act) end, 25)
                     task.wait(1)
@@ -1290,27 +1266,24 @@ baseToggleBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        if butterRunningRef() then setStatus("✓ All done!", false) end
+        if butterRunning then setStatus("✓ All done!", false) end
         butterRunning = false; VH.butter.running = false
-        baseST.running = false; butterThread = nil; VH.butter.thread = nil
-        baseToggleBtn.Text = "▶  Start"
+        butterThread = nil; VH.butter.thread = nil
         task.delay(2.1, resetAllProgress)
     end)
 end)
 
 table.insert(VH.cleanupTasks, function()
     butterRunning = false; VH.butter.running = false
-    baseST.running = false; baseST.stopRequested = true
     if butterThread then pcall(task.cancel, butterThread); butterThread = nil end
     VH.butter.thread = nil
 end)
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- SUB-TAB 2 — SINGLE TRUCK TELEPORT (updated: STATE + batchMove + pause)
+-- SUB-TAB 2 — SINGLE TRUCK TELEPORT
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local singleST = newState()
-local _, setSingleStatus = makeStatusBar(singleTruckPage, "Ready")
+local _, setTruckStatus = makeStatusBar(singleTruckPage, "Ready")
 
 makeLabel(singleTruckPage, "Players")
 local _, getTruckGiverName    = makeDupeDropdown("Giver",    singleTruckPage)
@@ -1323,36 +1296,30 @@ local truckProgBar, setTruckProg, resetTruckProg = makeProgressBar(singleTruckPa
 
 makeSep(singleTruckPage)
 
-local singleTruckThread = nil
+local singleTruckRunning = false
+local singleTruckThread  = nil
 
-local _, singleToggleBtn, singleStopBtn = makePauseToggle(singleTruckPage, singleST,
-    nil,  -- start wired below
-    function()
-        if singleTruckThread then pcall(task.cancel, singleTruckThread); singleTruckThread = nil end
-        setSingleStatus("Stopped", false)
-        resetTruckProg()
-    end
-)
+local _, startSingleBtn, stopSingleBtn = makeStartStop(singleTruckPage, nil, function()
+    singleTruckRunning = false
+    if singleTruckThread then pcall(task.cancel, singleTruckThread); singleTruckThread = nil end
+    setTruckStatus("Stopped", false)
+    resetTruckProg()
+end)
 
-singleToggleBtn.MouseButton1Click:Connect(function()
-    if not singleST.running then return end  -- handled by makePauseToggle
-    if singleTruckThread then setSingleStatus("Already running!", true) return end
+startSingleBtn.MouseButton1Click:Connect(function()
+    if singleTruckRunning then setTruckStatus("Already running!", true) return end
 
     local LP   = Players.LocalPlayer
     local Char = LP.Character
-    if not Char then setSingleStatus("No character found!", false) return end
+    if not Char then setTruckStatus("No character found!", false) return end
     local hum = Char:FindFirstChildOfClass("Humanoid")
-    if not (hum and hum.SeatPart) then setSingleStatus("Not sitting in a truck!", false) return end
+    if not (hum and hum.SeatPart) then setTruckStatus("Not sitting in a truck!", false) return end
     local truckModel = hum.SeatPart.Parent
-    if not truckModel:FindFirstChild("DriveSeat") then setSingleStatus("Seat is not a DriveSeat!", false) return end
+    if not truckModel:FindFirstChild("DriveSeat") then setTruckStatus("Seat is not a DriveSeat!", false) return end
 
     local gName = getTruckGiverName()
     local rName = getTruckReceiverName()
-    if gName == "" or rName == "" then
-        singleST.running = false; singleST.stopRequested = true
-        singleToggleBtn.Text = "▶  Start"
-        return
-    end
+    if gName == "" or rName == "" then return end
 
     local GiveBaseOrigin, ReceiverBaseOrigin
     for _, v in pairs(workspace.Properties:GetDescendants()) do
@@ -1362,11 +1329,12 @@ singleToggleBtn.MouseButton1Click:Connect(function()
             if val == rName then ReceiverBaseOrigin = v.Parent:FindFirstChild("OriginSquare") end
         end
     end
-    if not GiveBaseOrigin     then setSingleStatus("Giver base not found!",    false); singleST.running=false; singleToggleBtn.Text="▶  Start"; return end
-    if not ReceiverBaseOrigin then setSingleStatus("Receiver base not found!", false); singleST.running=false; singleToggleBtn.Text="▶  Start"; return end
+    if not GiveBaseOrigin     then setTruckStatus("Giver base not found!",    false) return end
+    if not ReceiverBaseOrigin then setTruckStatus("Receiver base not found!", false) return end
 
+    singleTruckRunning = true
     resetTruckProg()
-    setSingleStatus("Sending truck...", true)
+    setTruckStatus("Sending truck...", true)
 
     singleTruckThread = task.spawn(function()
         local RS = game:GetService("ReplicatedStorage")
@@ -1398,26 +1366,24 @@ singleToggleBtn.MouseButton1Click:Connect(function()
         for _, p in ipairs(truckModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
         for _, p in ipairs(Char:GetDescendants())       do if p:IsA("BasePart") then ignoredParts[p] = true end end
 
-        -- Collect cargo
-        local cargoParts = {}
         for _, part in ipairs(workspace:GetDescendants()) do
-            if not isRunning(singleST) then break end
+            if not singleTruckRunning then break end
             if part:IsA("BasePart") and not ignoredParts[part] then
                 if part.Name == "Main" or part.Name == "WoodSection" then
                     if part:FindFirstChild("Weld") and part.Weld.Part1 and part.Weld.Part1.Parent ~= part.Parent then continue end
-                    if isPointInside(part.Position, mCF, mSz) then
-                        TeleportTruck()
-                        local PCF = part.CFrame
-                        local nP  = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                        table.insert(cargoParts, part)
-                        table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=CFrame.new(nP)*PCF.Rotation})
-                    end
+                    task.spawn(function()
+                        if isPointInside(part.Position, mCF, mSz) then
+                            TeleportTruck()
+                            local PCF  = part.CFrame
+                            local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                            local tOff = CFrame.new(nP) * PCF.Rotation
+                            part.CFrame = tOff; task.wait(0.3)
+                            table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=tOff})
+                        end
+                    end)
                 end
             end
         end
-
-        -- Batch move cargo (pause-aware)
-        batchMove(cargoParts, GiveBaseOrigin, ReceiverBaseOrigin, Char, RS, singleST)
 
         local SitPart   = Char.Humanoid.SeatPart
         local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
@@ -1441,33 +1407,32 @@ singleToggleBtn.MouseButton1Click:Connect(function()
             end
         end
 
+        local singleRunRef = function() return singleTruckRunning end
         if #missed > 0 then
             truckProgBar.Visible = true
-            retryCargo(Char, missed, GiveBaseOrigin, RS, singleST,
+            retryCargo(Char, missed, GiveBaseOrigin, RS, singleRunRef,
                 function(d,t) setTruckProg(d,t) end,
-                function(msg,act) setSingleStatus(msg,act) end, 25)
+                function(msg,act) setTruckStatus(msg,act) end, 25)
         else
-            setSingleStatus("✓ Truck teleported!", false)
+            setTruckStatus("✓ Truck teleported!", false)
         end
 
         task.wait(1)
-        singleST.running = false; singleST.stopRequested = false
-        singleTruckThread = nil
-        singleToggleBtn.Text = "▶  Start"
+        singleTruckRunning = false
+        singleTruckThread  = nil
         task.delay(2.1, resetTruckProg)
     end)
 end)
 
 table.insert(VH.cleanupTasks, function()
-    singleST.running = false; singleST.stopRequested = true
+    singleTruckRunning = false
     if singleTruckThread then pcall(task.cancel, singleTruckThread); singleTruckThread = nil end
 end)
 
 -- ════════════════════════════════════════════════════════════════════════════════
--- SUB-TAB 3 — BATCH TRUCK TELEPORT (updated: STATE + batchMove + pause)
+-- SUB-TAB 3 — BATCH TRUCK TELEPORT
 -- ════════════════════════════════════════════════════════════════════════════════
 
-local batchST = newState()
 local _, setBatchStatus = makeStatusBar(batchTruckPage, "Ready")
 
 makeLabel(batchTruckPage, "Players")
@@ -1514,35 +1479,25 @@ local batchCargoProgBar, setBatchCargoProg, resetBatchCargoProg = makeProgressBa
 
 makeSep(batchTruckPage)
 
-local batchTruckThread = nil
+local batchTruckRunning = false
+local batchTruckThread  = nil
 
-local _, batchToggleBtn, batchStopBtn = makePauseToggle(batchTruckPage, batchST,
-    nil,
-    function()
-        if batchTruckThread then pcall(task.cancel, batchTruckThread); batchTruckThread = nil end
-        setBatchStatus("Stopped", false)
-        resetBatchTruckProg(); resetBatchCargoProg()
-    end
-)
+local _, startBatchBtn, stopBatchBtn = makeStartStop(batchTruckPage, nil, function()
+    batchTruckRunning = false
+    if batchTruckThread then pcall(task.cancel, batchTruckThread); batchTruckThread = nil end
+    setBatchStatus("Stopped", false)
+    resetBatchTruckProg(); resetBatchCargoProg()
+end)
 
-batchToggleBtn.MouseButton1Click:Connect(function()
-    if not batchST.running then return end
-    if batchTruckThread then setBatchStatus("Already running!", true) return end
+startBatchBtn.MouseButton1Click:Connect(function()
+    if batchTruckRunning then setBatchStatus("Already running!", true) return end
 
     local gName = getBatchGiverName()
     local rName = getBatchReceiverName()
-    if gName == "" or rName == "" then
-        batchST.running = false; batchST.stopRequested = true
-        batchToggleBtn.Text = "▶  Start"
-        return
-    end
+    if gName == "" or rName == "" then return end
 
     local wantedCount = tonumber(batchCountBox.Text)
-    if not wantedCount or wantedCount < 1 then
-        setBatchStatus("⚠  Enter a valid truck count!", false)
-        batchST.running = false; batchToggleBtn.Text = "▶  Start"
-        return
-    end
+    if not wantedCount or wantedCount < 1 then setBatchStatus("⚠  Enter a valid truck count!", false) return end
     wantedCount = math.floor(wantedCount)
 
     local availableTrucks = {}
@@ -1552,11 +1507,7 @@ batchToggleBtn.MouseButton1Click:Connect(function()
         end
     end
     local actualCount = #availableTrucks
-    if actualCount == 0 then
-        setBatchStatus("⚠  No trucks found on giver's plot!", false)
-        batchST.running = false; batchToggleBtn.Text = "▶  Start"
-        return
-    end
+    if actualCount == 0 then setBatchStatus("⚠  No trucks found on giver's plot!", false) return end
 
     if wantedCount < actualCount then
         while #availableTrucks > wantedCount do table.remove(availableTrucks) end
@@ -1574,9 +1525,10 @@ batchToggleBtn.MouseButton1Click:Connect(function()
             if val == rName then ReceiverBaseOrigin = v.Parent:FindFirstChild("OriginSquare") end
         end
     end
-    if not GiveBaseOrigin     then setBatchStatus("Giver base not found!",    false); batchST.running=false; batchToggleBtn.Text="▶  Start"; return end
-    if not ReceiverBaseOrigin then setBatchStatus("Receiver base not found!", false); batchST.running=false; batchToggleBtn.Text="▶  Start"; return end
+    if not GiveBaseOrigin     then setBatchStatus("Giver base not found!",    false) return end
+    if not ReceiverBaseOrigin then setBatchStatus("Receiver base not found!", false) return end
 
+    batchTruckRunning = true
     resetBatchTruckProg(); resetBatchCargoProg()
     setBatchStatus(string.format("Starting — %d truck(s) queued...", #availableTrucks), true)
 
@@ -1595,8 +1547,7 @@ batchToggleBtn.MouseButton1Click:Connect(function()
 
         local trucksDone = 0
         for _, truckModel in ipairs(availableTrucks) do
-            if not isRunning(batchST) then break end
-            waitIfPaused(batchST)
+            if not batchTruckRunning then break end
             if not (truckModel and truckModel.Parent) then
                 trucksDone += 1; setBatchTruckProg(trucksDone, #availableTrucks); continue
             end
@@ -1622,25 +1573,24 @@ batchToggleBtn.MouseButton1Click:Connect(function()
             for _, p in ipairs(truckModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
             for _, p in ipairs(Char:GetDescendants())       do if p:IsA("BasePart") then ignoredParts[p] = true end end
 
-            -- Collect cargo then batch-move (pause-aware)
-            local cargoParts = {}
             for _, part in ipairs(workspace:GetDescendants()) do
-                if not isRunning(batchST) then break end
+                if not batchTruckRunning then break end
                 if part:IsA("BasePart") and not ignoredParts[part] then
                     if part.Name == "Main" or part.Name == "WoodSection" then
                         if part:FindFirstChild("Weld") and part.Weld.Part1 and part.Weld.Part1.Parent ~= part.Parent then continue end
-                        if isPointInside(part.Position, mCF, mSz) then
-                            TeleportThisTruck()
-                            local PCF = part.CFrame
-                            local nP  = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                            table.insert(cargoParts, part)
-                            table.insert(allTeleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=CFrame.new(nP)*PCF.Rotation})
-                        end
+                        task.spawn(function()
+                            if isPointInside(part.Position, mCF, mSz) then
+                                TeleportThisTruck()
+                                local PCF  = part.CFrame
+                                local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                                local tOff = CFrame.new(nP) * PCF.Rotation
+                                part.CFrame = tOff; task.wait(0.3)
+                                table.insert(allTeleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=tOff})
+                            end
+                        end)
                     end
                 end
             end
-
-            batchMove(cargoParts, GiveBaseOrigin, ReceiverBaseOrigin, Char, RS, batchST)
 
             local SitPart   = Char.Humanoid.SeatPart
             local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
@@ -1667,9 +1617,10 @@ batchToggleBtn.MouseButton1Click:Connect(function()
             end
         end
 
+        local batchRunRef = function() return batchTruckRunning end
         if #missed > 0 then
             batchCargoProgBar.Visible = true
-            retryCargo(Char, missed, GiveBaseOrigin, RS, batchST,
+            retryCargo(Char, missed, GiveBaseOrigin, RS, batchRunRef,
                 function(d,t) setBatchCargoProg(d,t) end,
                 function(msg,act) setBatchStatus(msg,act) end, 25)
         else
@@ -1677,9 +1628,8 @@ batchToggleBtn.MouseButton1Click:Connect(function()
         end
 
         task.wait(1)
-        batchST.running = false; batchST.stopRequested = false
-        batchTruckThread = nil
-        batchToggleBtn.Text = "▶  Start"
+        batchTruckRunning = false
+        batchTruckThread  = nil
         task.delay(2.1, function()
             resetBatchTruckProg()
             resetBatchCargoProg()
@@ -1688,8 +1638,8 @@ batchToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 table.insert(VH.cleanupTasks, function()
-    batchST.running = false; batchST.stopRequested = true
+    batchTruckRunning = false
     if batchTruckThread then pcall(task.cancel, batchTruckThread); batchTruckThread = nil end
 end)
 
-print("[VanillaHub] Vanilla2 loaded — STATE system + batchMove + pause/resume")
+print("[VanillaHub] Vanilla2 loaded — black/grey/white theme")
