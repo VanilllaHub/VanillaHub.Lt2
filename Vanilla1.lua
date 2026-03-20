@@ -407,21 +407,21 @@ end
 
 -- TAB ICONS
 local tabIcons = {
-    ["Home"]      = "rbxassetid:/103808960525817",
-    ["Player"]    = "rbxassetid:/124010641391821",
-    ["World"]     = "rbxassetid:/126582208494394",
-    ["Teleport"]  = "rbxassetid:/126517940797776",
-    ["Wood"]      = "rbxassetid:/84914860062890",
-    ["Slot"]      = "rbxassetid:/91125189715601",
-    ["Dupe"]      = "rbxassetid:/84061260593530",
-    ["Item"]      = "rbxassetid:/77054718226216",
-    ["Sorter"]    = "rbxassetid:/104900927627815",
-    ["AutoBuy"]   = "rbxassetid:/76236698231155",
-    ["Pixel Art"] = "rbxassetid:/112117095344788",
-    ["Build"]     = "rbxassetid:/97668717322455",
-    ["Vehicle"]   = "rbxassetid:/131533481576470",
-    ["Search"]    = "rbxassetid:/75885588738364",
-    ["Settings"]  = "rbxassetid:/116984423831131",
+    ["Home"]      = "rbxassetid://103808960525817",
+    ["Player"]    = "rbxassetid://124010641391821",
+    ["World"]     = "rbxassetid://126582208494394",
+    ["Teleport"]  = "rbxassetid://126517940797776",
+    ["Wood"]      = "rbxassetid://84914860062890",
+    ["Slot"]      = "rbxassetid://91125189715601",
+    ["Dupe"]      = "rbxassetid://84061260593530",
+    ["Item"]      = "rbxassetid://77054718226216",
+    ["Sorter"]    = "rbxassetid://104900927627815",
+    ["AutoBuy"]   = "rbxassetid://76236698231155",
+    ["Pixel Art"] = "rbxassetid://112117095344788",
+    ["Build"]     = "rbxassetid://97668717322455",
+    ["Vehicle"]   = "rbxassetid://131533481576470",
+    ["Search"]    = "rbxassetid://75885588738364",
+    ["Settings"]  = "rbxassetid://116984423831131",
 }
 
 for _, name in ipairs(tabs) do
