@@ -112,14 +112,28 @@ local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
 local PB_BAR  = Color3.fromRGB(255, 255, 255)
 local PB_TEXT = Color3.fromRGB(255, 255, 255)
 
--- ── TAB ICON SIZES ──────────────────────────────────────────────────────────
--- Change these values to resize icons in the sidebar.
--- ICON_SIZE controls the width/height of the icon image.
--- ICON_X_OFFSET is the left padding from the frame edge.
--- LABEL_X_START is where the text label begins (should be ICON_X_OFFSET + ICON_SIZE + gap).
-local TAB_ICON_SIZE     = 20   -- icon width & height in pixels
-local TAB_ICON_X_OFFSET = 8    -- distance from left edge of sidebar button
-local TAB_LABEL_X_START = 34   -- left offset of the tab label text
+-- ── TAB ICON SIZES ─────────────────────────────────────────────────────────
+-- Each tab has its own size entry below.
+-- SIZE    = icon image width & height in pixels
+-- X_OFF   = left padding from the frame edge
+-- LBL_X   = where the tab label text starts (should be X_OFF + SIZE + small gap)
+local TAB_ICON_SETTINGS = {
+    ["Home"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Player"]    = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["World"]     = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Teleport"]  = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Wood"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Slot"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Dupe"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Item"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Sorter"]    = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["AutoBuy"]   = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Pixel Art"] = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Build"]     = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Vehicle"]   = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Search"]    = { SIZE=20, X_OFF=8, LBL_X=34 },
+    ["Settings"]  = { SIZE=20, X_OFF=8, LBL_X=34 },
+}
 -- ────────────────────────────────────────────────────────────────────────────
 
 -- EXECUTOR DETECTION
@@ -445,10 +459,15 @@ for _, name in ipairs(tabs) do
     frame.ZIndex = 1
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
+    local _iset = TAB_ICON_SETTINGS[name] or { SIZE=20, X_OFF=8, LBL_X=34 }
+    local _iSz  = _iset.SIZE
+    local _iOff = _iset.X_OFF
+    local _lOff = _iset.LBL_X
+
     local icon = Instance.new("ImageLabel", frame)
     icon.Name = "TabIcon"
-    icon.Size = UDim2.new(0, TAB_ICON_SIZE, 0, TAB_ICON_SIZE)
-    icon.Position = UDim2.new(0, TAB_ICON_X_OFFSET, 0.5, -TAB_ICON_SIZE / 2)
+    icon.Size = UDim2.new(0, _iSz, 0, _iSz)
+    icon.Position = UDim2.new(0, _iOff, 0.5, -_iSz / 2)
     icon.BackgroundTransparency = 1
     icon.BorderSizePixel = 0
     icon.ScaleType = Enum.ScaleType.Fit
@@ -458,8 +477,8 @@ for _, name in ipairs(tabs) do
 
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name = "TabLabel"
-    nameLbl.Size = UDim2.new(1, -(TAB_LABEL_X_START + 4), 1, 0)
-    nameLbl.Position = UDim2.new(0, TAB_LABEL_X_START, 0, 0)
+    nameLbl.Size = UDim2.new(1, -(_lOff + 4), 1, 0)
+    nameLbl.Position = UDim2.new(0, _lOff, 0, 0)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Font = Enum.Font.GothamSemibold
     nameLbl.TextSize = 13
@@ -891,10 +910,10 @@ tpSelLbl.TextXAlignment = Enum.TextXAlignment.Left; tpSelLbl.TextTruncate = Enum
 
 local tpArrowLbl = Instance.new("TextLabel", tpSelFrame)
 tpArrowLbl.Size = UDim2.new(0, 22, 1, 0); tpArrowLbl.Position = UDim2.new(1, -24, 0, 0)
-tpArrowLbl.BackgroundTransparency = 1; tpArrowLbl.Text = "▲"
-tpArrowLbl.Font = Enum.Font.GothamBold; tpArrowLbl.TextSize = 11
+tpArrowLbl.BackgroundTransparency = 1; tpArrowLbl.Text = "▼"
+tpArrowLbl.Font = Enum.Font.GothamBold; tpArrowLbl.TextSize = 16
 tpArrowLbl.TextColor3 = Color3.fromRGB(150, 150, 150); tpArrowLbl.TextXAlignment = Enum.TextXAlignment.Center
-tpArrowLbl.Rotation = 180  -- pointing down when closed
+tpArrowLbl.Rotation = 0
 
 local tpHeaderBtn = Instance.new("TextButton", tpSelFrame)
 tpHeaderBtn.Size = UDim2.new(1, 0, 1, 0); tpHeaderBtn.BackgroundTransparency = 1
@@ -921,7 +940,7 @@ tpListPad.PaddingLeft = UDim.new(0, 6); tpListPad.PaddingRight = UDim.new(0, 6)
 
 local function tpCloseList()
     tpDropIsOpen = false
-    TweenService:Create(tpArrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 180}):Play()
+    tpArrowLbl.Text = "▼"
     TweenService:Create(tpDropOuter,  TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, TP_HEADER_H)}):Play()
     TweenService:Create(tpListScroll, TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, 0)}):Play()
     tpDropDivider.Visible = false
@@ -960,7 +979,7 @@ local function tpOpenList()
     local count = #Players:GetPlayers()
     local listH = math.min(count, TP_MAX_SHOW) * (TP_ITEM_H + 3) + 8
     tpDropDivider.Visible = true
-    TweenService:Create(tpArrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 0}):Play()
+    tpArrowLbl.Text = "▲"
     TweenService:Create(tpDropOuter,  TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, TP_HEADER_H + 2 + listH)}):Play()
     TweenService:Create(tpListScroll, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, listH)}):Play()
 end
