@@ -1164,25 +1164,61 @@ startButterBtn.MouseButton1Click:Connect(function()
 
                     setStatus(string.format("Empty truck %d / %d...", emptyDone + 1, emptyCount), true)
 
-                    -- Sit in the truck to gain control, then instantly teleport it
-                    truckModel.DriveSeat:Sit(Char.Humanoid)
-                    repeat task.wait() truckModel.DriveSeat:Sit(Char.Humanoid) until Char.Humanoid.SeatPart
+                    -- Refresh character reference each iteration — avoids stale humanoid
+                    -- after a prior unseat / respawn
+                    local LP2   = Players.LocalPlayer
+                    local Char2 = LP2.Character or LP2.CharacterAdded:Wait()
+                    local Hum2  = Char2:FindFirstChildOfClass("Humanoid")
+                    if not Hum2 then
+                        emptyDone += 1; setProgEmptyTrucks(emptyDone, emptyCount); continue
+                    end
+
+                    -- Make sure we are fully unseated before trying to sit
+                    if Hum2.SeatPart then
+                        Hum2:ChangeState(Enum.HumanoidStateType.Jumping)
+                        task.wait(0.15)
+                        -- Re-fetch in case character changed
+                        Char2 = LP2.Character or Char2
+                        Hum2  = Char2:FindFirstChildOfClass("Humanoid") or Hum2
+                    end
+
+                    -- Sit with timeout so we never hang forever
+                    local sitDeadline = tick() + 3
+                    repeat
+                        task.wait()
+                        pcall(function() truckModel.DriveSeat:Sit(Hum2) end)
+                    until Hum2.SeatPart or tick() >= sitDeadline
+
+                    if not Hum2.SeatPart then
+                        -- Couldn't sit — skip this truck
+                        setStatus(string.format("⚠ Couldn't sit in truck %d, skipping...", emptyDone + 1), true)
+                        emptyDone += 1; setProgEmptyTrucks(emptyDone, emptyCount)
+                        task.wait(0.5)
+                        continue
+                    end
 
                     -- Teleport the truck body to the receiver's base
-                    local TCF  = Char.Humanoid.SeatPart.Parent:FindFirstChild("Main").CFrame
-                    local nPos = TCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                    truckModel:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
+                    local mainPart = Hum2.SeatPart.Parent:FindFirstChild("Main")
+                    if mainPart then
+                        local TCF  = mainPart.CFrame
+                        local nPos = TCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                        truckModel:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
+                    end
 
                     -- Unseat player cleanly
-                    local SitPart   = Char.Humanoid.SeatPart
-                    local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
+                    local SitPart   = Hum2.SeatPart
+                    local DoorHinge = SitPart and SitPart.Parent:FindFirstChild("PaintParts")
                         and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                         and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-                    task.wait()
-                    Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    task.wait(0.05)
+                    Hum2:ChangeState(Enum.HumanoidStateType.Jumping)
                     task.wait(0.1)
-                    SitPart:Destroy()
+                    if SitPart and SitPart.Parent then SitPart:Destroy() end
                     if DoorHinge then for i = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
+
+                    -- Wait until fully unseated before next truck
+                    local unseatDeadline = tick() + 1.5
+                    repeat task.wait() until (not Hum2.SeatPart) or tick() >= unseatDeadline
 
                     emptyDone += 1
                     setProgEmptyTrucks(emptyDone, emptyCount)
