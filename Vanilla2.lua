@@ -1076,23 +1076,21 @@ startButterBtn.MouseButton1Click:Connect(function()
                     for _, p in ipairs(tModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
                     for _, p in ipairs(Char:GetDescendants())   do if p:IsA("BasePart") then ignoredParts[p] = true end end
 
-                    if not emptyOnly then
-                        for _, part in ipairs(workspace:GetDescendants()) do
-                            if part:IsA("BasePart") and not ignoredParts[part] then
-                                if part.Name == "Main" or part.Name == "WoodSection" then
-                                    if part:FindFirstChild("Weld") and part.Weld.Part1 and part.Weld.Part1.Parent ~= part.Parent then continue end
-                                    task.spawn(function()
-                                        if isPointInside(part.Position, mCF, mSz) then
-                                            TeleportTruck()
-                                            local PCF  = part.CFrame
-                                            local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                                            local tOff = CFrame.new(nP) * PCF.Rotation
-                                            part.CFrame = tOff
-                                            task.wait(0.3)
-                                            table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=tOff})
-                                        end
-                                    end)
-                                end
+                    for _, part in ipairs(workspace:GetDescendants()) do
+                        if part:IsA("BasePart") and not ignoredParts[part] then
+                            if part.Name == "Main" or part.Name == "WoodSection" then
+                                if part:FindFirstChild("Weld") and part.Weld.Part1 and part.Weld.Part1.Parent ~= part.Parent then continue end
+                                task.spawn(function()
+                                    if isPointInside(part.Position, mCF, mSz) then
+                                        TeleportTruck()
+                                        local PCF  = part.CFrame
+                                        local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                                        local tOff = CFrame.new(nP) * PCF.Rotation
+                                        part.CFrame = tOff
+                                        task.wait(0.3)
+                                        table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=tOff})
+                                    end
+                                end)
                             end
                         end
                     end
