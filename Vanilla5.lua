@@ -758,7 +758,7 @@ makeWorldSectionLabel("Water")
 -- ════════════════════════════════════════════════════
 -- WALK ON WATER
 -- Directly sets CanCollide on the Water parts inside
--- workspace.Water — the same approach as Butterhub.
+-- workspace.Water — the same approach as VanillaHub.
 -- Also watches for new parts added at runtime.
 -- ════════════════════════════════════════════════════
 local walkOnWaterConn = nil
