@@ -1,4 +1,4 @@
-local _serverStartTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
+-- Real server uptime: uses workspace.DistributedGameTime (counts from server start)
 
 -- DESTROY OLD GUI + cleanup
 if type(_G.VanillaHubCleanup) == "function" then
@@ -111,30 +111,6 @@ local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
 
 local PB_BAR  = Color3.fromRGB(255, 255, 255)
 local PB_TEXT = Color3.fromRGB(255, 255, 255)
-
--- ── TAB ICON SIZES ─────────────────────────────────────────────────────────
--- Each tab has its own size entry below.
--- SIZE    = icon image width & height in pixels
--- X_OFF   = left padding from the frame edge
--- LBL_X   = where the tab label text starts (should be X_OFF + SIZE + small gap)
-local TAB_ICON_SETTINGS = {
-    ["Home"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Player"]    = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["World"]     = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Teleport"]  = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Wood"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Slot"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Dupe"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Item"]      = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Sorter"]    = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["AutoBuy"]   = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Pixel Art"] = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Build"]     = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Vehicle"]   = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Search"]    = { SIZE=20, X_OFF=8, LBL_X=34 },
-    ["Settings"]  = { SIZE=20, X_OFF=8, LBL_X=34 },
-}
--- ────────────────────────────────────────────────────────────────────────────
 
 -- EXECUTOR DETECTION
 local function detectExecutor()
@@ -428,6 +404,29 @@ local function switchTab(targetName)
     end
 end
 
+
+-- ── TAB ICON SIZES ────────────────────────────────────────────────────────────
+-- Change the number here for each tab to resize its sidebar icon (pixels).
+-- Default is 20. Increase for bigger icons, decrease for smaller.
+local TAB_ICON_SIZE = {
+    ["Home"]      = 20,
+    ["Player"]    = 20,
+    ["World"]     = 20,
+    ["Teleport"]  = 20,
+    ["Wood"]      = 20,
+    ["Slot"]      = 20,
+    ["Dupe"]      = 20,
+    ["Item"]      = 20,
+    ["Sorter"]    = 20,
+    ["AutoBuy"]   = 20,
+    ["Pixel Art"] = 20,
+    ["Build"]     = 20,
+    ["Vehicle"]   = 20,
+    ["Search"]    = 20,
+    ["Settings"]  = 20,
+}
+-- ─────────────────────────────────────────────────────────────────────────────
+
 local tabIcons = {
     ["Home"]      = "103808960525817",
     ["Player"]    = "124010641391821",
@@ -459,15 +458,11 @@ for _, name in ipairs(tabs) do
     frame.ZIndex = 1
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
-    local _iset = TAB_ICON_SETTINGS[name] or { SIZE=20, X_OFF=8, LBL_X=34 }
-    local _iSz  = _iset.SIZE
-    local _iOff = _iset.X_OFF
-    local _lOff = _iset.LBL_X
-
+    -- CHANGE: icon size increased from 16 to 20, position adjusted
     local icon = Instance.new("ImageLabel", frame)
     icon.Name = "TabIcon"
-    icon.Size = UDim2.new(0, _iSz, 0, _iSz)
-    icon.Position = UDim2.new(0, _iOff, 0.5, -_iSz / 2)
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.Position = UDim2.new(0, 8, 0.5, -10)
     icon.BackgroundTransparency = 1
     icon.BorderSizePixel = 0
     icon.ScaleType = Enum.ScaleType.Fit
@@ -475,10 +470,11 @@ for _, name in ipairs(tabs) do
     icon.ImageColor3 = Color3.fromRGB(110, 110, 110)
     icon.ZIndex = 3
 
+    -- CHANGE: label nudged right 2px to match larger icon
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name = "TabLabel"
-    nameLbl.Size = UDim2.new(1, -(_lOff + 4), 1, 0)
-    nameLbl.Position = UDim2.new(0, _lOff, 0, 0)
+    nameLbl.Size = UDim2.new(1, -34, 1, 0)
+    nameLbl.Position = UDim2.new(0, 34, 0, 0)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Font = Enum.Font.GothamSemibold
     nameLbl.TextSize = 13
@@ -697,6 +693,7 @@ local function createServerInfoBox(text, color)
     return lbl
 end
 
+-- CHANGE: uptime/players now use Heartbeat-driven update matching the uploaded script's approach
 local siUptimeLabel  = createServerInfoBox("Uptime: 00:00:00", Color3.fromRGB(210, 210, 210))
 local siPlayersLabel = createServerInfoBox("Players: ...", Color3.fromRGB(200, 200, 200))
 
@@ -753,9 +750,7 @@ serverHopBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- SERVER UPTIME — reads the REAL server start time via DistributedGameTime
--- workspace.DistributedGameTime is the server's total elapsed time since it started,
--- so subtracting it from the current server clock gives us the actual server start time.
+-- CHANGE: replaced old uptime system with Heartbeat-driven update (matching uploaded script)
 local function formatServerUptime(seconds)
     local h = math.floor(seconds / 3600)
     local m = math.floor((seconds % 3600) / 60)
@@ -766,8 +761,6 @@ end
 local uptimeConn
 uptimeConn = RunService.Heartbeat:Connect(function()
     if not (siUptimeLabel and siUptimeLabel.Parent) then return end
-    -- workspace.DistributedGameTime increments continuously since server start,
-    -- so it directly gives us the server's real uptime regardless of when we joined.
     local uptime = workspace.DistributedGameTime
     siUptimeLabel.Text = "Uptime: " .. formatServerUptime(uptime)
     if siPlayersLabel and siPlayersLabel.Parent then
@@ -813,53 +806,52 @@ copyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ════════════════════════════════════════════════════
--- TELEPORT TAB — FULL NEW LAYOUT
--- ════════════════════════════════════════════════════
+-- TELEPORT TAB
 local teleportPage = pages["TeleportTab"]
 
+-- Location data
 local locations = {
-    {name="Spawn",            x=172,     y=3,      z=74},
-    {name="The Den",          x=323,     y=41.8,   z=1930},
-    {name="LightHouse",       x=1464.8,  y=355.25, z=3257.2},
-    {name="Safari",           x=111.85,  y=11,     z=-998.8},
-    {name="Bridge",           x=112.31,  y=11,     z=-782.36},
-    {name="Bob's Shack",      x=260,     y=8.4,    z=-2542},
-    {name="EndTimesCave",     x=113,     y=-213,   z=-951},
-    {name="The Swamp",        x=-1209,   y=132.32, z=-801},
-    {name="The Cabin",        x=1244,    y=63.6,   z=2306},
-    {name="Volcano",          x=-1585,   y=622.8,  z=1140},
-    {name="Boxed Cars",       x=509,     y=3.2,    z=-1463},
-    {name="Tiaga Peak",       x=1560,    y=410.32, z=3274},
-    {name="Land Store",       x=258,     y=3.2,    z=-99},
-    {name="Link's Logic",     x=4605,    y=3,      z=-727},
-    {name="Palm Island",      x=2549,    y=-5.9,   z=-42},
-    {name="Palm Island 2",    x=1960,    y=-5.9,   z=-1501},
-    {name="Palm Island 3",    x=4344,    y=-5.9,   z=-1813},
-    {name="Fine Art Shop",    x=5207,    y=-166.2, z=719},
-    {name="SnowGlow Biome",   x=-1086.85,y=-5.9,   z=-945.32},
-    {name="Cave",             x=3581,    y=-179.54,z=430},
-    {name="Shrine Of Sight",  x=-1600,   y=195.4,  z=919},
-    {name="Fancy Furnishings",x=491,     y=3.2,    z=-1720},
-    {name="Docks",            x=1114,    y=-1.2,   z=-197},
-    {name="Strange Man",      x=1061,    y=16.8,   z=1131},
-    {name="Wood Dropoff",     x=323.41,  y=-2.8,   z=134.73},
-    {name="Snow Biome",       x=889.96,  y=59.8,   z=1195.55},
-    {name="Wood RU's",        x=265,     y=3.2,    z=57},
-    {name="Green Box",        x=-1668.05,y=349.6,  z=1475.39},
-    {name="Cherry Meadow",    x=220.9,   y=59.8,   z=1305.8},
-    {name="Bird Cave",        x=4813.1,  y=17.7,   z=-978.8},
+    {name="Spawn",            x=172,      y=3,       z=74},
+    {name="The Den",          x=323,      y=41.8,    z=1930},
+    {name="LightHouse",       x=1464.8,   y=355.25,  z=3257.2},
+    {name="Safari",           x=111.85,   y=11,      z=-998.8},
+    {name="Bridge",           x=112.31,   y=11,      z=-782.36},
+    {name="Bob's Shack",      x=260,      y=8.4,     z=-2542},
+    {name="EndTimesCave",     x=113,      y=-213,    z=-951},
+    {name="The Swamp",        x=-1209,    y=132.32,  z=-801},
+    {name="The Cabin",        x=1244,     y=63.6,    z=2306},
+    {name="Volcano",          x=-1585,    y=622.8,   z=1140},
+    {name="Boxed Cars",       x=509,      y=3.2,     z=-1463},
+    {name="Tiaga Peak",       x=1560,     y=410.32,  z=3274},
+    {name="Land Store",       x=258,      y=3.2,     z=-99},
+    {name="Link's Logic",     x=4605,     y=3,       z=-727},
+    {name="Palm Island",      x=2549,     y=-5.9,    z=-42},
+    {name="Palm Island 2",    x=1960,     y=-5.9,    z=-1501},
+    {name="Palm Island 3",    x=4344,     y=-5.9,    z=-1813},
+    {name="Fine Art Shop",    x=5207,     y=-166.2,  z=719},
+    {name="SnowGlow Biome",   x=-1086.85, y=-5.9,    z=-945.32},
+    {name="Cave",             x=3581,     y=-179.54, z=430},
+    {name="Shrine Of Sight",  x=-1600,    y=195.4,   z=919},
+    {name="Fancy Furnishings",x=491,      y=3.2,     z=-1720},
+    {name="Docks",            x=1114,     y=-1.2,    z=-197},
+    {name="Strange Man",      x=1061,     y=16.8,    z=1131},
+    {name="Wood Dropoff",     x=323.41,   y=-2.8,    z=134.73},
+    {name="Snow Biome",       x=889.96,   y=59.8,    z=1195.55},
+    {name="Wood RU's",        x=265,      y=3.2,     z=57},
+    {name="Green Box",        x=-1668.05, y=349.6,   z=1475.39},
+    {name="Cherry Meadow",    x=220.9,    y=59.8,    z=1305.8},
+    {name="Bird Cave",        x=4813.1,   y=17.7,    z=-978.8},
 }
 
--- ── TELEPORT SECTION HEADER HELPER ──
+-- ── SECTION HELPER ─────────────────────────────────────────────────────────
 local function tpSectionLabel(text)
-    local w = Instance.new("Frame", teleportPage)
-    w.Size = UDim2.new(1, 0, 0, 22); w.BackgroundTransparency = 1
-    local lbl = Instance.new("TextLabel", w)
-    lbl.Size = UDim2.new(1, -4, 1, 0); lbl.Position = UDim2.new(0, 4, 0, 0)
+    local f = Instance.new("Frame", teleportPage)
+    f.Size = UDim2.new(1, 0, 0, 20); f.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel", f)
+    lbl.Size = UDim2.new(1, -8, 1, 0); lbl.Position = UDim2.new(0, 8, 0, 0)
     lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 10
     lbl.TextColor3 = SECTION_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = "  " .. string.upper(text)
+    lbl.Text = string.upper(text)
 end
 
 local function tpSep()
@@ -867,39 +859,38 @@ local function tpSep()
     s.Size = UDim2.new(1, 0, 0, 1); s.BackgroundColor3 = SEP_COLOR; s.BorderSizePixel = 0
 end
 
--- ── PLAYER TELEPORT ──
-tpSectionLabel("Teleport to Player")
+-- ── PLAYER DROPDOWN ─────────────────────────────────────────────────────────
+tpSectionLabel("Players")
 
--- Dropdown for player selection
 local tpSelectedPlayer = ""
 local TP_HEADER_H = 42
-local TP_ITEM_H   = 34
+local TP_ITEM_H   = 36
 local TP_MAX_SHOW = 5
 local tpDropIsOpen = false
 
 local tpDropOuter = Instance.new("Frame", teleportPage)
 tpDropOuter.Size = UDim2.new(1, 0, 0, TP_HEADER_H)
-tpDropOuter.BackgroundColor3 = Color3.fromRGB(16, 16, 16); tpDropOuter.BorderSizePixel = 0
+tpDropOuter.BackgroundColor3 = Color3.fromRGB(14, 14, 14); tpDropOuter.BorderSizePixel = 0
 tpDropOuter.ClipsDescendants = true
-Instance.new("UICorner", tpDropOuter).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", tpDropOuter).CornerRadius = UDim.new(0, 9)
 local tpDropStroke = Instance.new("UIStroke", tpDropOuter)
-tpDropStroke.Color = BORDER_COLOR; tpDropStroke.Thickness = 1; tpDropStroke.Transparency = 0.4
+tpDropStroke.Color = BORDER_COLOR; tpDropStroke.Thickness = 1.2; tpDropStroke.Transparency = 0.3
 
 local tpDropHeader = Instance.new("Frame", tpDropOuter)
 tpDropHeader.Size = UDim2.new(1, 0, 0, TP_HEADER_H); tpDropHeader.BackgroundTransparency = 1
 
 local tpDropLbl = Instance.new("TextLabel", tpDropHeader)
-tpDropLbl.Size = UDim2.new(0, 70, 1, 0); tpDropLbl.Position = UDim2.new(0, 14, 0, 0)
+tpDropLbl.Size = UDim2.new(0, 70, 1, 0); tpDropLbl.Position = UDim2.new(0, 12, 0, 0)
 tpDropLbl.BackgroundTransparency = 1; tpDropLbl.Text = "Player"
-tpDropLbl.Font = Enum.Font.GothamBold; tpDropLbl.TextSize = 13
+tpDropLbl.Font = Enum.Font.GothamBold; tpDropLbl.TextSize = 12
 tpDropLbl.TextColor3 = THEME_TEXT; tpDropLbl.TextXAlignment = Enum.TextXAlignment.Left
 
 local tpSelFrame = Instance.new("Frame", tpDropHeader)
-tpSelFrame.Size = UDim2.new(1, -100, 0, 28); tpSelFrame.Position = UDim2.new(0, 84, 0.5, -14)
+tpSelFrame.Size = UDim2.new(1, -88, 0, 28); tpSelFrame.Position = UDim2.new(0, 80, 0.5, -14)
 tpSelFrame.BackgroundColor3 = Color3.fromRGB(26, 26, 26); tpSelFrame.BorderSizePixel = 0
 Instance.new("UICorner", tpSelFrame).CornerRadius = UDim.new(0, 7)
 local tpSelStroke = Instance.new("UIStroke", tpSelFrame)
-tpSelStroke.Color = BORDER_COLOR; tpSelStroke.Thickness = 1; tpSelStroke.Transparency = 0.4
+tpSelStroke.Color = BORDER_COLOR; tpSelStroke.Thickness = 1; tpSelStroke.Transparency = 0.35
 
 local tpSelLbl = Instance.new("TextLabel", tpSelFrame)
 tpSelLbl.Size = UDim2.new(1, -32, 1, 0); tpSelLbl.Position = UDim2.new(0, 10, 0, 0)
@@ -910,10 +901,9 @@ tpSelLbl.TextXAlignment = Enum.TextXAlignment.Left; tpSelLbl.TextTruncate = Enum
 
 local tpArrowLbl = Instance.new("TextLabel", tpSelFrame)
 tpArrowLbl.Size = UDim2.new(0, 22, 1, 0); tpArrowLbl.Position = UDim2.new(1, -24, 0, 0)
-tpArrowLbl.BackgroundTransparency = 1; tpArrowLbl.Text = "▼"
-tpArrowLbl.Font = Enum.Font.GothamBold; tpArrowLbl.TextSize = 16
-tpArrowLbl.TextColor3 = Color3.fromRGB(150, 150, 150); tpArrowLbl.TextXAlignment = Enum.TextXAlignment.Center
-tpArrowLbl.Rotation = 0
+tpArrowLbl.BackgroundTransparency = 1; tpArrowLbl.Text = "▲"
+tpArrowLbl.Font = Enum.Font.GothamBold; tpArrowLbl.TextSize = 11
+tpArrowLbl.TextColor3 = Color3.fromRGB(140, 140, 140); tpArrowLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 local tpHeaderBtn = Instance.new("TextButton", tpSelFrame)
 tpHeaderBtn.Size = UDim2.new(1, 0, 1, 0); tpHeaderBtn.BackgroundTransparency = 1
@@ -932,7 +922,7 @@ tpListScroll.CanvasSize = UDim2.new(0, 0, 0, 0); tpListScroll.ClipsDescendants =
 local tpListLayout = Instance.new("UIListLayout", tpListScroll)
 tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder; tpListLayout.Padding = UDim.new(0, 3)
 tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    tpListScroll.CanvasSize = UDim2.new(0, 0, 0, tpListLayout.AbsoluteContentSize.Y + 6)
+    tpListScroll.CanvasSize = UDim2.new(0, 0, 0, tpListLayout.AbsoluteContentSize.Y + 8)
 end)
 local tpListPad = Instance.new("UIPadding", tpListScroll)
 tpListPad.PaddingTop = UDim.new(0, 4); tpListPad.PaddingBottom = UDim.new(0, 4)
@@ -940,7 +930,7 @@ tpListPad.PaddingLeft = UDim.new(0, 6); tpListPad.PaddingRight = UDim.new(0, 6)
 
 local function tpCloseList()
     tpDropIsOpen = false
-    tpArrowLbl.Text = "▼"
+    TweenService:Create(tpArrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 0}):Play()
     TweenService:Create(tpDropOuter,  TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, TP_HEADER_H)}):Play()
     TweenService:Create(tpListScroll, TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, 0)}):Play()
     tpDropDivider.Visible = false
@@ -953,19 +943,19 @@ local function tpBuildList()
     local pList = Players:GetPlayers()
     for i, plr in ipairs(pList) do
         local row = Instance.new("Frame", tpListScroll)
-        row.Size = UDim2.new(1, 0, 0, TP_ITEM_H); row.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+        row.Size = UDim2.new(1, 0, 0, TP_ITEM_H); row.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         row.BorderSizePixel = 0; row.LayoutOrder = i
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
-        local nameLbl2 = Instance.new("TextLabel", row)
-        nameLbl2.Size = UDim2.new(1, -16, 1, 0); nameLbl2.Position = UDim2.new(0, 12, 0, 0)
-        nameLbl2.BackgroundTransparency = 1; nameLbl2.Text = plr.Name
-        nameLbl2.Font = Enum.Font.GothamSemibold; nameLbl2.TextSize = 12
-        nameLbl2.TextColor3 = THEME_TEXT; nameLbl2.TextXAlignment = Enum.TextXAlignment.Left
+        local rowLbl = Instance.new("TextLabel", row)
+        rowLbl.Size = UDim2.new(1, -16, 1, 0); rowLbl.Position = UDim2.new(0, 12, 0, 0)
+        rowLbl.BackgroundTransparency = 1; rowLbl.Text = plr.Name
+        rowLbl.Font = Enum.Font.GothamSemibold; rowLbl.TextSize = 12
+        rowLbl.TextColor3 = THEME_TEXT; rowLbl.TextXAlignment = Enum.TextXAlignment.Left
         local rowBtn = Instance.new("TextButton", row)
         rowBtn.Size = UDim2.new(1, 0, 1, 0); rowBtn.BackgroundTransparency = 1
         rowBtn.Text = ""; rowBtn.AutoButtonColor = false; rowBtn.ZIndex = 5
-        rowBtn.MouseEnter:Connect(function() TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(36, 36, 36)}):Play() end)
-        rowBtn.MouseLeave:Connect(function() TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play() end)
+        rowBtn.MouseEnter:Connect(function() TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}):Play() end)
+        rowBtn.MouseLeave:Connect(function() TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play() end)
         rowBtn.MouseButton1Click:Connect(function()
             tpSelectedPlayer = plr.Name
             tpSelLbl.Text = plr.Name; tpSelLbl.TextColor3 = THEME_TEXT
@@ -977,9 +967,9 @@ end
 local function tpOpenList()
     tpDropIsOpen = true; tpBuildList()
     local count = #Players:GetPlayers()
-    local listH = math.min(count, TP_MAX_SHOW) * (TP_ITEM_H + 3) + 8
+    local listH = math.min(count, TP_MAX_SHOW) * (TP_ITEM_H + 3) + 10
     tpDropDivider.Visible = true
-    tpArrowLbl.Text = "▲"
+    TweenService:Create(tpArrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 180}):Play()
     TweenService:Create(tpDropOuter,  TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, TP_HEADER_H + 2 + listH)}):Play()
     TweenService:Create(tpListScroll, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, listH)}):Play()
 end
@@ -987,21 +977,21 @@ end
 tpHeaderBtn.MouseButton1Click:Connect(function()
     if tpDropIsOpen then tpCloseList() else tpOpenList() end
 end)
-tpHeaderBtn.MouseEnter:Connect(function() TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play() end)
+tpHeaderBtn.MouseEnter:Connect(function() TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(36, 36, 36)}):Play() end)
 tpHeaderBtn.MouseLeave:Connect(function() TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(26, 26, 26)}):Play() end)
 
--- Player action buttons
+-- ── PLAYER ACTION BUTTONS ───────────────────────────────────────────────────
 local tpBtnRow = Instance.new("Frame", teleportPage)
-tpBtnRow.Size = UDim2.new(1, 0, 0, 38); tpBtnRow.BackgroundTransparency = 1
+tpBtnRow.Size = UDim2.new(1, 0, 0, 36); tpBtnRow.BackgroundTransparency = 1
 
 local function makeTpActionBtn(parent, text, xScale, xOffset, cb)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0.5, -5, 1, 0); btn.Position = UDim2.new(xScale, xOffset, 0, 0)
+    btn.Size = UDim2.new(0.5, -4, 1, 0); btn.Position = UDim2.new(xScale, xOffset, 0, 0)
     btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
     btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
     btn.TextColor3 = THEME_TEXT; btn.Text = text; btn.AutoButtonColor = false
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
-    local s = Instance.new("UIStroke", btn); s.Color = SEP_COLOR; s.Thickness = 1; s.Transparency = 0.4
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    local s = Instance.new("UIStroke", btn); s.Color = SEP_COLOR; s.Thickness = 1; s.Transparency = 0.35
     btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play() end)
     btn.MouseButton1Click:Connect(cb)
@@ -1020,7 +1010,7 @@ makeTpActionBtn(tpBtnRow, "To Player", 0, 0, function()
     end
 end)
 
-makeTpActionBtn(tpBtnRow, "To Base", 0.5, 5, function()
+makeTpActionBtn(tpBtnRow, "To Base", 0.5, 4, function()
     if tpSelectedPlayer == "" then return end
     for _, v in ipairs(workspace.Properties:GetChildren()) do
         if v:FindFirstChild("Owner") and tostring(v.Owner.Value) == tpSelectedPlayer then
@@ -1034,31 +1024,31 @@ end)
 
 tpSep()
 
--- ── LOCATIONS ──
+-- ── LOCATIONS SECTION ──────────────────────────────────────────────────────
 tpSectionLabel("Locations")
 
 -- Search bar
 local tpSearchBarFrame = Instance.new("Frame", teleportPage)
-tpSearchBarFrame.Size = UDim2.new(1, 0, 0, 38); tpSearchBarFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
-tpSearchBarFrame.BorderSizePixel = 0
-Instance.new("UICorner", tpSearchBarFrame).CornerRadius = UDim.new(0, 10)
+tpSearchBarFrame.Size = UDim2.new(1, 0, 0, 38)
+tpSearchBarFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14); tpSearchBarFrame.BorderSizePixel = 0
+Instance.new("UICorner", tpSearchBarFrame).CornerRadius = UDim.new(0, 9)
 local tpSearchBarStroke = Instance.new("UIStroke", tpSearchBarFrame)
-tpSearchBarStroke.Color = SEP_COLOR; tpSearchBarStroke.Thickness = 1; tpSearchBarStroke.Transparency = 0.4
+tpSearchBarStroke.Color = SEP_COLOR; tpSearchBarStroke.Thickness = 1; tpSearchBarStroke.Transparency = 0.35
 
 local searchBox = Instance.new("TextBox", tpSearchBarFrame)
-searchBox.Size = UDim2.new(1, -14, 1, 0); searchBox.Position = UDim2.new(0, 12, 0, 0)
+searchBox.Size = UDim2.new(1, -14, 1, 0); searchBox.Position = UDim2.new(0, 10, 0, 0)
 searchBox.BackgroundTransparency = 1; searchBox.Font = Enum.Font.GothamSemibold; searchBox.TextSize = 13
 searchBox.TextColor3 = THEME_TEXT; searchBox.PlaceholderText = "Search locations..."
-searchBox.PlaceholderColor3 = Color3.fromRGB(65, 65, 65); searchBox.Text = ""
+searchBox.PlaceholderColor3 = Color3.fromRGB(60, 60, 60); searchBox.Text = ""
 searchBox.ClearTextOnFocus = false; searchBox.TextXAlignment = Enum.TextXAlignment.Left
 
--- Location cards grid
+-- Location grid — 3-column compact tiles
 local tpCardGrid = Instance.new("Frame", teleportPage)
 tpCardGrid.BackgroundTransparency = 1; tpCardGrid.Size = UDim2.new(1, 0, 0, 0)
 
 local tpGridLayout = Instance.new("UIGridLayout", tpCardGrid)
-tpGridLayout.CellSize = UDim2.new(0.5, -5, 0, 46)
-tpGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+tpGridLayout.CellSize = UDim2.new(0.333, -5, 0, 44)
+tpGridLayout.CellPadding = UDim2.new(0, 5, 0, 5)
 tpGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 tpGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tpGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
@@ -1071,38 +1061,36 @@ local function makeTpCard(loc, idx)
     local card = Instance.new("Frame", tpCardGrid)
     card.Name = loc.name; card.LayoutOrder = idx
     card.BackgroundColor3 = Color3.fromRGB(14, 14, 14); card.BorderSizePixel = 0
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
     local cardStroke = Instance.new("UIStroke", card)
-    cardStroke.Color = Color3.fromRGB(45, 45, 45); cardStroke.Thickness = 1; cardStroke.Transparency = 0.3
-    local accent = Instance.new("Frame", card)
-    accent.Size = UDim2.new(0, 3, 0.6, 0); accent.Position = UDim2.new(0, 0, 0.2, 0)
-    accent.BackgroundColor3 = Color3.fromRGB(50, 50, 50); accent.BorderSizePixel = 0
-    Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
+    cardStroke.Color = Color3.fromRGB(45, 45, 45); cardStroke.Thickness = 1; cardStroke.Transparency = 0.2
+
     local nameLbl = Instance.new("TextLabel", card)
-    nameLbl.Size = UDim2.new(1, -10, 1, 0); nameLbl.Position = UDim2.new(0, 10, 0, 0)
-    nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamBold; nameLbl.TextSize = 11
-    nameLbl.TextColor3 = THEME_TEXT; nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+    nameLbl.Size = UDim2.new(1, -8, 1, 0); nameLbl.Position = UDim2.new(0, 4, 0, 0)
+    nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamSemibold; nameLbl.TextSize = 11
+    nameLbl.TextColor3 = THEME_TEXT; nameLbl.TextXAlignment = Enum.TextXAlignment.Center
     nameLbl.TextYAlignment = Enum.TextYAlignment.Center; nameLbl.TextWrapped = true
-    nameLbl.Text = loc.name
+    nameLbl.TextTruncate = Enum.TextTruncate.AtEnd; nameLbl.Text = loc.name
+
     local btn = Instance.new("TextButton", card)
     btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1
     btn.Text = ""; btn.ZIndex = 10; btn.AutoButtonColor = false
     btn.MouseEnter:Connect(function()
-        TweenService:Create(card,   TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(26, 26, 26)}):Play()
-        TweenService:Create(accent, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(80, 80, 80)}):Play()
+        TweenService:Create(card, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(28, 28, 28)}):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.12), {Color = Color3.fromRGB(75, 75, 75)}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(card,   TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(14, 14, 14)}):Play()
-        TweenService:Create(accent, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+        TweenService:Create(card, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(14, 14, 14)}):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.12), {Color = Color3.fromRGB(45, 45, 45)}):Play()
     end)
     btn.MouseButton1Click:Connect(function()
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = CFrame.new(loc.x, loc.y + 3, loc.z)
         end
-        TweenService:Create(card, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
-        task.delay(0.12, function()
-            TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(14, 14, 14)}):Play()
+        TweenService:Create(card, TweenInfo.new(0.07), {BackgroundColor3 = Color3.fromRGB(55, 55, 55)}):Play()
+        task.delay(0.1, function()
+            TweenService:Create(card, TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(14, 14, 14)}):Play()
         end)
     end)
     return card
@@ -1122,6 +1110,7 @@ searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         if entry.card.Visible then entry.card.LayoutOrder = order; order = order + 1 end
     end
 end)
+
 
 -- SHARED STATE
 local tpItemSpeed = 0.3
@@ -1606,127 +1595,239 @@ end
 
 dSectionLabel("Info")
 
--- ════════════════════════════════════════════════════
--- SEARCH TAB — Clean layout, no symbols/emojis
--- ════════════════════════════════════════════════════
+-- SEARCH TAB
 local searchTabPage = pages["SearchTab"]
-local searchTabList = searchTabPage:FindFirstChildOfClass("UIListLayout")
-if searchTabList then searchTabList.Padding = UDim.new(0, 5) end
 
-local allFeatures = {
-    {"Walkspeed",          "PlayerTab"}, {"Jumppower",           "PlayerTab"},
-    {"Fly Speed",          "PlayerTab"}, {"Fly Hotkey",          "PlayerTab"},
-    {"Fly",                "PlayerTab"}, {"Noclip",              "PlayerTab"},
-    {"InfJump",            "PlayerTab"}, {"Hard Dragger",        "PlayerTab"},
-    {"BTools",             "PlayerTab"}, {"Headlight",           "PlayerTab"},
-    {"Always Day",         "WorldTab"},  {"Always Night",        "WorldTab"},
-    {"Remove Fog",         "WorldTab"},  {"Shadows",             "WorldTab"},
-    {"Walk On Water",      "WorldTab"},  {"Remove Water",        "WorldTab"},
-    {"Teleport to Player", "TeleportTab"}, {"Teleport to Base",  "TeleportTab"},
-    {"Spawn",              "TeleportTab"}, {"The Den",           "TeleportTab"},
-    {"LightHouse",         "TeleportTab"}, {"Safari",            "TeleportTab"},
-    {"Bridge",             "TeleportTab"}, {"Bob's Shack",       "TeleportTab"},
-    {"EndTimesCave",       "TeleportTab"}, {"The Swamp",         "TeleportTab"},
-    {"The Cabin",          "TeleportTab"}, {"Volcano",           "TeleportTab"},
-    {"Boxed Cars",         "TeleportTab"}, {"Tiaga Peak",        "TeleportTab"},
-    {"Land Store",         "TeleportTab"}, {"Link's Logic",      "TeleportTab"},
-    {"Palm Island",        "TeleportTab"}, {"Palm Island 2",     "TeleportTab"},
-    {"Palm Island 3",      "TeleportTab"}, {"Fine Art Shop",     "TeleportTab"},
-    {"SnowGlow Biome",     "TeleportTab"}, {"Cave",              "TeleportTab"},
-    {"Shrine Of Sight",    "TeleportTab"}, {"Fancy Furnishings", "TeleportTab"},
-    {"Docks",              "TeleportTab"}, {"Strange Man",       "TeleportTab"},
-    {"Wood Dropoff",       "TeleportTab"}, {"Snow Biome",        "TeleportTab"},
-    {"Wood RUs",           "TeleportTab"}, {"Green Box",         "TeleportTab"},
-    {"Cherry Meadow",      "TeleportTab"}, {"Bird Cave",         "TeleportTab"},
-    {"Click Selection",    "ItemTab"},   {"Lasso Tool",          "ItemTab"},
-    {"Group Selection",    "ItemTab"},   {"Delay Per Item",      "ItemTab"},
-    {"Teleport Mode",      "ItemTab"},   {"Teleport Selected",   "ItemTab"},
-    {"Sell Selected",      "ItemTab"},   {"Deselect All",        "ItemTab"},
-    {"Grid Size",          "Pixel ArtTab"}, {"Rotation Step",   "Pixel ArtTab"},
-    {"Follow Mouse",       "Pixel ArtTab"}, {"Snap to Grid",    "Pixel ArtTab"},
-    {"Center on Plot",     "Pixel ArtTab"}, {"Remove Pixel Art","Pixel ArtTab"},
-}
-
--- Search input bar
+-- Input bar frame
 local stInputFrame = Instance.new("Frame", searchTabPage)
-stInputFrame.Size = UDim2.new(1, 0, 0, 38)
-stInputFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14); stInputFrame.BorderSizePixel = 0
-Instance.new("UICorner", stInputFrame).CornerRadius = UDim.new(0, 10)
+stInputFrame.Size             = UDim2.new(1, 0, 0, 38)
+stInputFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+stInputFrame.BorderSizePixel  = 0
+Instance.new("UICorner", stInputFrame).CornerRadius = UDim.new(0, 9)
 local stInputStroke = Instance.new("UIStroke", stInputFrame)
-stInputStroke.Color = SEP_COLOR; stInputStroke.Thickness = 1; stInputStroke.Transparency = 0.4
+stInputStroke.Color = SEP_COLOR; stInputStroke.Thickness = 1; stInputStroke.Transparency = 0.35
 
 local stInput = Instance.new("TextBox", stInputFrame)
-stInput.Size = UDim2.new(1, -14, 1, 0); stInput.Position = UDim2.new(0, 12, 0, 0)
-stInput.BackgroundTransparency = 1; stInput.Font = Enum.Font.GothamSemibold; stInput.TextSize = 13
-stInput.TextColor3 = THEME_TEXT; stInput.PlaceholderText = "Search features..."
-stInput.PlaceholderColor3 = Color3.fromRGB(60, 60, 60); stInput.Text = ""
-stInput.ClearTextOnFocus = false; stInput.TextXAlignment = Enum.TextXAlignment.Left
+stInput.Size               = UDim2.new(1, -14, 1, 0)
+stInput.Position           = UDim2.new(0, 10, 0, 0)
+stInput.BackgroundTransparency = 1
+stInput.Font               = Enum.Font.GothamSemibold
+stInput.TextSize           = 13
+stInput.TextColor3         = THEME_TEXT
+stInput.PlaceholderText    = "Search features and tabs..."
+stInput.PlaceholderColor3  = Color3.fromRGB(60, 60, 60)
+stInput.Text               = ""
+stInput.ClearTextOnFocus   = false
+stInput.TextXAlignment     = Enum.TextXAlignment.Left
 
--- Hint label shown when nothing is typed
-local stHintFrame = Instance.new("Frame", searchTabPage)
-stHintFrame.Size = UDim2.new(1, 0, 0, 32)
-stHintFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14); stHintFrame.BorderSizePixel = 0
-Instance.new("UICorner", stHintFrame).CornerRadius = UDim.new(0, 8)
-local stHintLbl = Instance.new("TextLabel", stHintFrame)
-stHintLbl.Size = UDim2.new(1, -16, 1, 0); stHintLbl.Position = UDim2.new(0, 12, 0, 0)
-stHintLbl.BackgroundTransparency = 1; stHintLbl.Font = Enum.Font.Gotham; stHintLbl.TextSize = 12
-stHintLbl.TextColor3 = Color3.fromRGB(70, 70, 70); stHintLbl.TextXAlignment = Enum.TextXAlignment.Left
-stHintLbl.Text = "Type above to search for features and tabs"
+-- Results holder
+local stResultsHolder = Instance.new("Frame", searchTabPage)
+stResultsHolder.Size             = UDim2.new(1, 0, 0, 0)
+stResultsHolder.BackgroundTransparency = 1
+stResultsHolder.AutomaticSize   = Enum.AutomaticSize.Y
 
-local featureRows = {}
+local stResultsLayout = Instance.new("UIListLayout", stResultsHolder)
+stResultsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+stResultsLayout.Padding   = UDim.new(0, 4)
 
-for _, entry in ipairs(allFeatures) do
-    local label   = entry[1]
-    local tabName = entry[2]
+-- Feature list
+local allFeatures = {
+    {"Walkspeed",          "PlayerTab"},  {"Jumppower",           "PlayerTab"},
+    {"Fly Speed",          "PlayerTab"},  {"Fly Hotkey",          "PlayerTab"},
+    {"Fly",                "PlayerTab"},  {"Noclip",              "PlayerTab"},
+    {"InfJump",            "PlayerTab"},  {"Hard Dragger",        "PlayerTab"},
+    {"BTools",             "PlayerTab"},  {"Headlight",           "PlayerTab"},
+    {"Always Day",         "WorldTab"},   {"Always Night",        "WorldTab"},
+    {"Remove Fog",         "WorldTab"},   {"Shadows",             "WorldTab"},
+    {"Walk On Water",      "WorldTab"},   {"Remove Water",        "WorldTab"},
+    {"To Player",          "TeleportTab"},{"To Base",             "TeleportTab"},
+    {"Spawn",              "TeleportTab"},{"The Den",             "TeleportTab"},
+    {"LightHouse",         "TeleportTab"},{"Safari",              "TeleportTab"},
+    {"Wood Dropoff",       "TeleportTab"},{"Snow Biome",          "TeleportTab"},
+    {"Land Store",         "TeleportTab"},{"Links Logic",         "TeleportTab"},
+    {"Palm Island",        "TeleportTab"},{"Fine Art Shop",       "TeleportTab"},
+    {"SnowGlow Biome",     "TeleportTab"},{"Cave",                "TeleportTab"},
+    {"Shrine Of Sight",    "TeleportTab"},{"Fancy Furnishings",   "TeleportTab"},
+    {"Docks",              "TeleportTab"},{"Strange Man",         "TeleportTab"},
+    {"Wood RUs",           "TeleportTab"},{"Green Box",           "TeleportTab"},
+    {"Cherry Meadow",      "TeleportTab"},{"Bird Cave",           "TeleportTab"},
+    {"Click Selection",    "ItemTab"},    {"Lasso Tool",          "ItemTab"},
+    {"Group Selection",    "ItemTab"},    {"Delay Per Item",      "ItemTab"},
+    {"Teleport Mode",      "ItemTab"},    {"Teleport Selected",   "ItemTab"},
+    {"Sell Selected",      "ItemTab"},    {"Deselect All",        "ItemTab"},
+    {"Grid Size",          "Pixel ArtTab"},{"Rotation Step",      "Pixel ArtTab"},
+    {"Follow Mouse",       "Pixel ArtTab"},{"Snap to Grid",       "Pixel ArtTab"},
+    {"Center on Plot",     "Pixel ArtTab"},{"Remove Pixel Art",   "Pixel ArtTab"},
+    {"Load Base",          "SlotTab"},    {"Force Save",          "SlotTab"},
+    {"Free Land",          "SlotTab"},    {"Max Land",            "SlotTab"},
+    {"Click To Expand",    "SlotTab"},    {"Take Land",           "SlotTab"},
+    {"Base Dupe",          "DupeTab"},    {"Single Truck",        "DupeTab"},
+    {"Batch Trucks",       "DupeTab"},    {"Auto Buy",            "AutoBuyTab"},
+    {"Buy Blueprints",     "AutoBuyTab"}, {"Buy RukiryAxe",       "AutoBuyTab"},
+    {"Vehicle Spawner",    "VehicleTab"}, {"GUI Keybind",         "SettingsTab"},
+    {"Ping",               "HomeTab"},    {"Rejoin",              "HomeTab"},
+    {"Server Hop",         "HomeTab"},
+}
 
-    local row = Instance.new("Frame", searchTabPage)
-    row.Size = UDim2.new(1, 0, 0, 36)
-    row.BackgroundColor3 = Color3.fromRGB(16, 16, 16); row.BorderSizePixel = 0; row.Visible = false
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-    local rowStroke = Instance.new("UIStroke", row)
-    rowStroke.Color = Color3.fromRGB(40, 40, 40); rowStroke.Thickness = 1; rowStroke.Transparency = 0.3
+local function stMkHeader(text)
+    local f = Instance.new("Frame", stResultsHolder)
+    f.Size             = UDim2.new(1, 0, 0, 18)
+    f.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel", f)
+    lbl.Size               = UDim2.new(1, -6, 1, 0)
+    lbl.Position           = UDim2.new(0, 6, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font               = Enum.Font.GothamBold
+    lbl.TextSize           = 10
+    lbl.TextColor3         = SECTION_TEXT
+    lbl.TextXAlignment     = Enum.TextXAlignment.Left
+    lbl.Text               = string.upper(text)
+end
 
-    -- Feature name
+local function stMkSep()
+    local s = Instance.new("Frame", stResultsHolder)
+    s.Size             = UDim2.new(1, 0, 0, 1)
+    s.BackgroundColor3 = SEP_COLOR
+    s.BorderSizePixel  = 0
+end
+
+local function stMkTabRow(name, tabKey)
+    local row = Instance.new("TextButton", stResultsHolder)
+    row.Size             = UDim2.new(1, 0, 0, 36)
+    row.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+    row.BorderSizePixel  = 0
+    row.Text             = ""
+    row.AutoButtonColor  = false
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
+    local stroke = Instance.new("UIStroke", row)
+    stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.45
+
     local nameLbl = Instance.new("TextLabel", row)
-    nameLbl.Size = UDim2.new(0.58, -8, 1, 0); nameLbl.Position = UDim2.new(0, 12, 0, 0)
-    nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamSemibold; nameLbl.TextSize = 12
-    nameLbl.TextColor3 = THEME_TEXT; nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-    nameLbl.TextTruncate = Enum.TextTruncate.AtEnd; nameLbl.Text = label
+    nameLbl.Size               = UDim2.new(1, -84, 1, 0)
+    nameLbl.Position           = UDim2.new(0, 12, 0, 0)
+    nameLbl.BackgroundTransparency = 1
+    nameLbl.Font               = Enum.Font.GothamSemibold
+    nameLbl.TextSize           = 13
+    nameLbl.TextColor3         = THEME_TEXT
+    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    nameLbl.TextTruncate       = Enum.TextTruncate.AtEnd
+    nameLbl.Text               = name .. " Tab"
 
-    -- Tab badge
-    local tabBadge = Instance.new("Frame", row)
-    tabBadge.Size = UDim2.new(0.42, -8, 0, 20); tabBadge.Position = UDim2.new(0.58, 0, 0.5, -10)
-    tabBadge.BackgroundColor3 = Color3.fromRGB(24, 24, 24); tabBadge.BorderSizePixel = 0
-    Instance.new("UICorner", tabBadge).CornerRadius = UDim.new(0, 5)
-    local badgeStroke = Instance.new("UIStroke", tabBadge)
-    badgeStroke.Color = Color3.fromRGB(45, 45, 45); badgeStroke.Thickness = 1; badgeStroke.Transparency = 0.2
-    local tabLbl = Instance.new("TextLabel", tabBadge)
-    tabLbl.Size = UDim2.new(1, -8, 1, 0); tabLbl.Position = UDim2.new(0, 4, 0, 0)
-    tabLbl.BackgroundTransparency = 1; tabLbl.Font = Enum.Font.Gotham; tabLbl.TextSize = 10
-    tabLbl.TextColor3 = Color3.fromRGB(100, 100, 100); tabLbl.TextXAlignment = Enum.TextXAlignment.Center
-    tabLbl.TextTruncate = Enum.TextTruncate.AtEnd; tabLbl.Text = tabName:gsub("Tab", "")
+    local tagBg = Instance.new("Frame", row)
+    tagBg.Size             = UDim2.new(0, 66, 0, 20)
+    tagBg.Position         = UDim2.new(1, -72, 0.5, -10)
+    tagBg.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    tagBg.BorderSizePixel  = 0
+    Instance.new("UICorner", tagBg).CornerRadius = UDim.new(0, 4)
+    local tagLbl = Instance.new("TextLabel", tagBg)
+    tagLbl.Size               = UDim2.new(1, 0, 1, 0)
+    tagLbl.BackgroundTransparency = 1
+    tagLbl.Font               = Enum.Font.Gotham
+    tagLbl.TextSize           = 10
+    tagLbl.TextColor3         = SECTION_TEXT
+    tagLbl.TextXAlignment     = Enum.TextXAlignment.Center
+    tagLbl.Text               = "TAB"
 
-    local goBtn = Instance.new("TextButton", row)
-    goBtn.Size = UDim2.new(1, 0, 1, 0); goBtn.BackgroundTransparency = 1
-    goBtn.Text = ""; goBtn.ZIndex = 10; goBtn.AutoButtonColor = false
-    goBtn.MouseEnter:Connect(function() TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(24, 24, 24)}):Play() end)
-    goBtn.MouseLeave:Connect(function() TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play() end)
-    goBtn.MouseButton1Click:Connect(function()
-        if _G.VH and _G.VH.switchTab then _G.VH.switchTab(tabName) end
+    row.MouseEnter:Connect(function()
+        TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(24, 24, 24)}):Play()
     end)
+    row.MouseLeave:Connect(function()
+        TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(14, 14, 14)}):Play()
+    end)
+    row.MouseButton1Click:Connect(function()
+        if _G.VH and _G.VH.switchTab then _G.VH.switchTab(tabKey) end
+    end)
+end
 
-    table.insert(featureRows, {row = row, lower = string.lower(label)})
+local function stMkFeatureRow(fname, ftab)
+    local row = Instance.new("TextButton", stResultsHolder)
+    row.Size             = UDim2.new(1, 0, 0, 42)
+    row.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    row.BorderSizePixel  = 0
+    row.Text             = ""
+    row.AutoButtonColor  = false
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
+    local stroke = Instance.new("UIStroke", row)
+    stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.55
+
+    local nameLbl = Instance.new("TextLabel", row)
+    nameLbl.Size               = UDim2.new(1, -10, 0, 22)
+    nameLbl.Position           = UDim2.new(0, 12, 0, 5)
+    nameLbl.BackgroundTransparency = 1
+    nameLbl.Font               = Enum.Font.GothamSemibold
+    nameLbl.TextSize           = 13
+    nameLbl.TextColor3         = THEME_TEXT
+    nameLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    nameLbl.TextTruncate       = Enum.TextTruncate.AtEnd
+    nameLbl.Text               = fname
+
+    local subLbl = Instance.new("TextLabel", row)
+    subLbl.Size               = UDim2.new(1, -10, 0, 14)
+    subLbl.Position           = UDim2.new(0, 12, 0, 25)
+    subLbl.BackgroundTransparency = 1
+    subLbl.Font               = Enum.Font.Gotham
+    subLbl.TextSize           = 10
+    subLbl.TextColor3         = SECTION_TEXT
+    subLbl.TextXAlignment     = Enum.TextXAlignment.Left
+    subLbl.Text               = ftab:gsub("Tab", "") .. " Tab"
+
+    row.MouseEnter:Connect(function()
+        TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play()
+    end)
+    row.MouseLeave:Connect(function()
+        TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(12, 12, 12)}):Play()
+    end)
+    row.MouseButton1Click:Connect(function()
+        if _G.VH and _G.VH.switchTab then _G.VH.switchTab(ftab) end
+    end)
+end
+
+local function stUpdateResults(query)
+    for _, child in ipairs(stResultsHolder:GetChildren()) do
+        if not child:IsA("UIListLayout") then child:Destroy() end
+    end
+
+    local lq = string.lower(query or "")
+
+    local tabMatches = {}
+    for _, name in ipairs(tabs) do
+        if lq == "" or string.find(string.lower(name), lq, 1, true) then
+            table.insert(tabMatches, name)
+        end
+    end
+
+    if #tabMatches > 0 then
+        stMkHeader("Tabs")
+        for _, name in ipairs(tabMatches) do
+            stMkTabRow(name, name .. "Tab")
+        end
+    end
+
+    if lq ~= "" then
+        local featMatches = {}
+        local seen = {}
+        for _, entry in ipairs(allFeatures) do
+            local fname, ftab = entry[1], entry[2]
+            if string.find(string.lower(fname), lq, 1, true) and not seen[fname] then
+                seen[fname] = true
+                table.insert(featMatches, {fname, ftab})
+            end
+        end
+        if #featMatches > 0 then
+            if #tabMatches > 0 then stMkSep() end
+            stMkHeader("Features")
+            for _, entry in ipairs(featMatches) do
+                stMkFeatureRow(entry[1], entry[2])
+            end
+        end
+    end
 end
 
 stInput:GetPropertyChangedSignal("Text"):Connect(function()
-    local q = string.lower(stInput.Text)
-    local anyVisible = false
-    for _, entry in ipairs(featureRows) do
-        entry.row.Visible = (q ~= "" and string.find(entry.lower, q, 1, true) ~= nil)
-        if entry.row.Visible then anyVisible = true end
-    end
-    stHintFrame.Visible = (q == "")
+    stUpdateResults(stInput.Text)
 end)
+task.delay(0.1, function() stUpdateResults("") end)
+
 
 -- GLOBAL KEY LISTENER
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -1760,7 +1861,7 @@ _G.VH = {
     PB_TEXT           = PB_TEXT,
     switchTab         = switchTab,
     toggleGUI         = toggleGUI,
-    vanilla           = { running = false, thread = nil },
+    vanilla = { running = false, thread = nil },
     isFlyActive       = false,
     flyEnabled        = true,
     currentFlyKey     = Enum.KeyCode.Q,
