@@ -994,10 +994,12 @@ startButterBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── TRUCKS + CARGO
-        if getTrucks() and butterRunning then
+        -- runs if Truck Loads OR Empty Trucks is on
+        if (getTrucks() or getEmptyTrucks()) and butterRunning then
             local teleportedParts = {}
             local ignoredParts    = {}
             local DidTruckTeleport = false
+            -- emptyOnly active when Empty Trucks toggle is on
             local emptyOnly = getEmptyTrucks()
 
             local function isPointInside(point, boxCFrame, boxSize)
