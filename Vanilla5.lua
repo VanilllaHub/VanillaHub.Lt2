@@ -501,9 +501,30 @@ local function giveBtools()
     end)
 end
 
-createPButton("Give BTools", function()
-    giveBtools()
+local function removeBtools()
+    local backpack = player.Backpack
+    for _, t in pairs(backpack:GetChildren()) do
+        if t.Name == "Delete" or t.Name == "Undo" then t:Destroy() end
+    end
+    if player.Character then
+        for _, t in pairs(player.Character:GetChildren()) do
+            if t.Name == "Delete" or t.Name == "Undo" then t:Destroy() end
+        end
+    end
+    btoolsEditedParts = {}
+    btoolsParentFix   = {}
+    btoolsPosFix      = {}
+end
+
+createPToggle("BTools", false, function(val)
+    if val then
+        giveBtools()
+    else
+        removeBtools()
+    end
 end)
+
+table.insert(cleanupTasks, removeBtools)
 
 -- ════════════════════════════════════════════════════
 -- HEADLIGHT
