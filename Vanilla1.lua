@@ -809,10 +809,8 @@ serverHopBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ════════════════════════════════════════════════════
--- SERVER UPTIME & PLAYER COUNT — from second script
+-- SERVER UPTIME & PLAYER COUNT
 -- ════════════════════════════════════════════════════
-local startTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
-
 local function formatServerUptime(seconds)
     local h = math.floor(seconds / 3600)
     local m = math.floor((seconds % 3600) / 60)
@@ -823,7 +821,7 @@ end
 local uptimeConn
 uptimeConn = RunService.Heartbeat:Connect(function()
     if not (siUptimeLabel and siUptimeLabel.Parent) then return end
-    local uptime = workspace:GetServerTimeNow() - startTime
+    local uptime = workspace.DistributedGameTime
     siUptimeLabel.Text = "Uptime: " .. formatServerUptime(uptime)
     if siPlayersLabel and siPlayersLabel.Parent then
         siPlayersLabel.Text = "Players: " .. #Players:GetPlayers() .. " / " .. Players.MaxPlayers
