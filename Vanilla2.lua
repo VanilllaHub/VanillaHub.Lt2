@@ -386,10 +386,9 @@ local function makeDupeDropdown(labelText, parentPage)
     arrowLbl.Size               = UDim2.new(0, 20, 1, 0)
     arrowLbl.Position           = UDim2.new(1, -22, 0, 0)
     arrowLbl.BackgroundTransparency = 1
-    arrowLbl.Text               = "▲"
-    arrowLbl.Rotation           = 180   -- closed: ▲ points down
+    arrowLbl.Text               = "▼"
     arrowLbl.Font               = Enum.Font.GothamBold
-    arrowLbl.TextSize           = 13
+    arrowLbl.TextSize           = 16
     arrowLbl.TextColor3         = C.TEXT_DIM
     arrowLbl.TextXAlignment     = Enum.TextXAlignment.Center
 
@@ -456,8 +455,7 @@ local function makeDupeDropdown(labelText, parentPage)
 
     local function closeList()
         isOpen = false
-        -- ▲ with Rotation=180 = pointing down (closed state)
-        TweenService:Create(arrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 180}):Play()
+        arrowLbl.Text = "▼"
         TweenService:Create(outer,      TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1,-12,0,HEADER_H)}):Play()
         TweenService:Create(listScroll, TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1,0,0,0)}):Play()
         divider.Visible = false
@@ -546,8 +544,7 @@ local function makeDupeDropdown(labelText, parentPage)
         local listH  = math.min(count, MAX_SHOW) * (ITEM_H + 2) + 8
         local totalH = HEADER_H + 2 + listH
         divider.Visible = true
-        -- ▲ with Rotation=0 = pointing up (open state)
-        TweenService:Create(arrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 0}):Play()
+        arrowLbl.Text = "▲"
         TweenService:Create(outer,      TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1,-12,0,totalH)}):Play()
         TweenService:Create(listScroll, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1,0,0,listH)}):Play()
     end
