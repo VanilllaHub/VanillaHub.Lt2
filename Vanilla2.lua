@@ -182,6 +182,7 @@ local function makeStatusBar(parent, defaultText)
     lbl.TextXAlignment     = Enum.TextXAlignment.Left
     lbl.Text               = defaultText or "Ready"
 
+    local function setStatus(msg, active)
         lbl.Text = msg
         TweenService:Create(dot, TweenInfo.new(0.18), {
             BackgroundColor3 = active and C.DOT_ACTIVE or C.DOT_IDLE
@@ -810,6 +811,8 @@ end
 -- SUB-TAB 1 — BASE DUPE
 -- ════════════════════════════════════════════════════════════════════════════════
 
+local _, setStatus = makeStatusBar(baseDupePage, "Ready")
+
 makeLabel(baseDupePage, "Players")
 local _, getGiverName    = makeDupeDropdown("Giver",    baseDupePage)
 local _, getReceiverName = makeDupeDropdown("Receiver", baseDupePage)
@@ -976,16 +979,19 @@ local _, startButterBtn, stopButterBtn = makeStartStop(baseDupePage, nil, functi
     butterRunning = false; VH.butter.running = false
     if butterThread then pcall(task.cancel, butterThread); butterThread = nil end
     VH.butter.thread = nil
+    setStatus("Stopped", false)
     resetAllProgress()
 end)
 
 startButterBtn.MouseButton1Click:Connect(function()
+    if butterRunning then setStatus("Already running!", true) return end
 
     local giverName    = getGiverName()
     local receiverName = getReceiverName()
     if giverName == "" or receiverName == "" then return end
 
     butterRunning = true; VH.butter.running = true
+    setStatus("Finding bases...", true)
     resetAllProgress()
 
     butterThread = task.spawn(function()
@@ -1005,6 +1011,7 @@ startButterBtn.MouseButton1Click:Connect(function()
         end
 
         if not (GiveBaseOrigin and ReceiverBaseOrigin) then
+            setStatus("⚠  Couldn't find bases!", false)
             butterRunning = false; VH.butter.running = false; butterThread = nil; VH.butter.thread = nil
             return
         end
@@ -1036,6 +1043,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
             if total > 0 then
                 progStructures.Visible = true; setProgStructures(0, total)
+                setStatus("Sending structures...", true)
                 local done = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1074,6 +1082,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
             if total > 0 then
                 progFurniture.Visible = true; setProgFurniture(0, total)
+                setStatus("Sending furnitures...", true)
                 local done = 0
                 pcall(function()
                     for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1130,6 +1139,7 @@ startButterBtn.MouseButton1Click:Connect(function()
 
             if truckCount > 0 then
                 progTrucks.Visible = true; setProgTrucks(0, truckCount)
+                setStatus("Sending trucks...", true)
                 local truckDone = 0
 
                 for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1190,6 +1200,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                     progTrucks.Visible = true
                     retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d,t) setProgTrucks(d,t) end,
+                        function(msg,act) setStatus(msg,act) end, 25)
                     task.wait(1)
                 else
                     setProgTrucks(truckCount, truckCount)
@@ -1233,6 +1244,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                 local done   = 0
                 local missed = {}
                 progGifs.Visible = true; setProgGifs(0, total)
+                setStatus(string.format("Sending %d gift/item(s)...", total), true)
 
                 for _, entry in ipairs(items) do
                     if not butterRunning then break end
@@ -1258,8 +1270,10 @@ startButterBtn.MouseButton1Click:Connect(function()
 
                 if #missed > 0 and butterRunning then
                     progGifs.Visible = true
+                    setStatus(string.format("Gift retry — %d item(s) missed...", #missed), true)
                     retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d, t) setProgGifs(d, t) end,
+                        function(msg, act) setStatus(msg, act) end, 25)
                     task.wait(1)
                 else
                     setProgGifs(total, total)
@@ -1290,6 +1304,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                 local done   = 0
                 local missed = {}
                 progWood.Visible = true; setProgWood(0, total)
+                setStatus(string.format("Sending %d wood piece(s)...", total), true)
 
                 for _, entry in ipairs(items) do
                     if not butterRunning then break end
@@ -1315,8 +1330,10 @@ startButterBtn.MouseButton1Click:Connect(function()
 
                 if #missed > 0 and butterRunning then
                     progWood.Visible = true
+                    setStatus(string.format("Wood retry — %d piece(s) missed...", #missed), true)
                     retryCargo(Char, missed, GiveBaseOrigin, RS, butterRunningRef,
                         function(d, t) setProgWood(d, t) end,
+                        function(msg, act) setStatus(msg, act) end, 25)
                     task.wait(1)
                 else
                     setProgWood(total, total)
@@ -1324,6 +1341,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
+        if butterRunning then setStatus("✓ All done!", false) end
         butterRunning = false; VH.butter.running = false
         butterThread = nil; VH.butter.thread = nil
         task.delay(2.1, resetAllProgress)
