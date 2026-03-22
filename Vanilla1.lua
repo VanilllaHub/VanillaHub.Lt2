@@ -1,3 +1,5 @@
+local _serverStartTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
+
 -- DESTROY OLD GUI + cleanup
 if type(_G.VanillaHubCleanup) == "function" then
     pcall(_G.VanillaHubCleanup)
@@ -811,8 +813,6 @@ end)
 -- ════════════════════════════════════════════════════
 -- SERVER UPTIME & PLAYER COUNT
 -- ════════════════════════════════════════════════════
-local _serverStartTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
-
 local function formatServerUptime(seconds)
     local h = math.floor(seconds / 3600)
     local m = math.floor((seconds % 3600) / 60)
