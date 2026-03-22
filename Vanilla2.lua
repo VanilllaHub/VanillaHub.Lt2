@@ -825,8 +825,6 @@ local _, getFurniture  = makeToggle(baseDupePage, "Furnitures",  false)
 local _, getTrucks     = makeToggle(baseDupePage, "Truck Loads", false)
 
 -- ── Empty Trucks (lives under Truck Loads in Base Dupe) ──────────────────────
-local _, setEmptyStatus = makeStatusBar(baseDupePage, "Ready")
-
 local emptyTruckRunning = false
 local emptyTruckThread  = nil
 
@@ -894,7 +892,6 @@ makeToggle(baseDupePage, "Empty Trucks", false, function(on)
                             end
 
                             if emptyTruck then
-                                setEmptyStatus("Teleporting empty truck...", true)
                                 local DidTeleport = false
 
                                 local function DoTeleport()
@@ -928,19 +925,14 @@ makeToggle(baseDupePage, "Empty Trucks", false, function(on)
                                             RS.Interaction.RemoteProxy:FireServer(DoorHinge)
                                         end
                                     end
-                                    setEmptyStatus("Sent ✓ — waiting...", false)
                                 else
-                                    setEmptyStatus("Couldn't sit — skipping", false)
                                 end
                             else
-                                setEmptyStatus("No empty trucks found", false)
                             end
                         end
                     else
-                        setEmptyStatus("Select Giver & Receiver first", false)
                     end
                 else
-                    setEmptyStatus("Select Giver & Receiver first", false)
                 end
 
                 task.wait(1.5)
@@ -949,7 +941,6 @@ makeToggle(baseDupePage, "Empty Trucks", false, function(on)
     else
         emptyTruckRunning = false
         if emptyTruckThread then pcall(task.cancel, emptyTruckThread); emptyTruckThread = nil end
-        setEmptyStatus("Stopped", false)
     end
 end)
 
