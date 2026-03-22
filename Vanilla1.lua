@@ -808,7 +808,10 @@ serverHopBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
-local _serverStartTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
+-- ════════════════════════════════════════════════════
+-- SERVER UPTIME & PLAYER COUNT — from second script
+-- ════════════════════════════════════════════════════
+local startTime = workspace:GetServerTimeNow() - workspace.DistributedGameTime
 
 local function formatServerUptime(seconds)
     local h = math.floor(seconds / 3600)
@@ -820,10 +823,10 @@ end
 local uptimeConn
 uptimeConn = RunService.Heartbeat:Connect(function()
     if not (siUptimeLabel and siUptimeLabel.Parent) then return end
-    local uptime = workspace:GetServerTimeNow() - _serverStartTime
+    local uptime = workspace:GetServerTimeNow() - startTime
     siUptimeLabel.Text = "Uptime: " .. formatServerUptime(uptime)
     if siPlayersLabel and siPlayersLabel.Parent then
-        siPlayersLabel.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
+        siPlayersLabel.Text = "Players: " .. #Players:GetPlayers() .. " / " .. Players.MaxPlayers
     end
 end)
 table.insert(cleanupTasks, function()
@@ -920,7 +923,6 @@ local locations = {
 
 -- ════════════════════════════════════════════════════
 -- TELEPORT TAB — PLAYER SECTION
--- (Added before location search/grid so it appears at top)
 -- ════════════════════════════════════════════════════
 
 local tpPlayerHeader = Instance.new("Frame", teleportPage)
@@ -936,10 +938,8 @@ tpPlayerHeaderLbl.TextColor3 = SECTION_TEXT
 tpPlayerHeaderLbl.TextXAlignment = Enum.TextXAlignment.Left
 tpPlayerHeaderLbl.Text = "  PLAYERS"
 
--- Shared selected player state
 local tpSelectedPlayer = ""
 
--- Player dropdown
 local TP_HEADER_H = 38
 local TP_ITEM_H   = 32
 local TP_MAX_SHOW = 5
@@ -1079,7 +1079,6 @@ tpHeaderBtn.MouseLeave:Connect(function()
     TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
 end)
 
--- Two-button row: Teleport to Player | Teleport to Base
 local tpBtnRow = Instance.new("Frame", teleportPage)
 tpBtnRow.Size = UDim2.new(1, 0, 0, 34)
 tpBtnRow.BackgroundTransparency = 1
@@ -1128,12 +1127,10 @@ makeTpActionBtn(tpBtnRow, "To Base", 0.5, 4, function()
     end
 end)
 
--- Separator before location search
 local tpPlayerSep = Instance.new("Frame", teleportPage)
 tpPlayerSep.Size = UDim2.new(1, 0, 0, 1)
 tpPlayerSep.BackgroundColor3 = SEP_COLOR; tpPlayerSep.BorderSizePixel = 0
 
--- Location section label
 local tpLocHeader = Instance.new("Frame", teleportPage)
 tpLocHeader.Size = UDim2.new(1, 0, 0, 22)
 tpLocHeader.BackgroundTransparency = 1
@@ -1145,7 +1142,6 @@ tpLocHeaderLbl.Font = Enum.Font.GothamBold; tpLocHeaderLbl.TextSize = 10
 tpLocHeaderLbl.TextColor3 = SECTION_TEXT; tpLocHeaderLbl.TextXAlignment = Enum.TextXAlignment.Left
 tpLocHeaderLbl.Text = "  LOCATIONS"
 
--- Search bar
 local tpSearchBarFrame = Instance.new("Frame", teleportPage)
 tpSearchBarFrame.Size = UDim2.new(1, 0, 0, 36)
 tpSearchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
@@ -1450,9 +1446,6 @@ local function trySelect(target)
     end
 end
 
--- ════════════════════════════════════════════════════
--- GROUP SELECT — fixed: same ItemName AND same Owner
--- ════════════════════════════════════════════════════
 local function tryGroupSelect(target)
     if not target then return end
     local model = target.Parent
@@ -1461,17 +1454,16 @@ local function tryGroupSelect(target)
     end
     if not (model and model:FindFirstChild("Owner")) then return end
 
-    local clickedOwner = model.Owner.Value  -- Player instance of the clicked item's owner
+    local clickedOwner = model.Owner.Value
     local iv           = model:FindFirstChild("ItemName")
     local groupName    = iv and iv.Value or model.Name
 
     if not workspace:FindFirstChild("PlayerModels") then return end
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
         local vOwner = v:FindFirstChild("Owner")
-        -- Must match both owner AND item name/model name
         if vOwner and vOwner.Value == clickedOwner then
             local viv   = v:FindFirstChild("ItemName")
-            local vName = viv and viv.Value or v.Name   -- fixed: was iv.Value (wrong)
+            local vName = viv and viv.Value or v.Name
             if vName == groupName then
                 if v:FindFirstChild("Main") then selectPart(v.Main) end
                 if v:FindFirstChild("WoodSection") then selectPart(v.WoodSection) end
@@ -1535,7 +1527,6 @@ local function isnetworkowner(part)
     return part.ReceiveAge == 0
 end
 
--- ── Selection ────────────────────────────────────────
 iSectionLabel("Selection")
 iToggle("Click Select", false, function(val)
     clickSelectEnabled = val
@@ -1553,7 +1544,6 @@ iButton("Deselect All", function() deselectAll() end)
 
 iSep()
 
--- ── Teleport ─────────────────────────────────────────
 iSectionLabel("Teleport")
 iSlider("Delay", 1, 20, 3, function(v) tpItemSpeed = v / 10 end)
 
@@ -1646,7 +1636,6 @@ end)
 
 iSep()
 
--- ── Actions ───────────────────────────────────────────
 iSectionLabel("Actions")
 
 local tpSelectBtn = iButton("Teleport Selected", function() end)
