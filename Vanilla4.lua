@@ -450,8 +450,8 @@ selLbl.TextTruncate = Enum.TextTruncate.AtEnd
 -- ▲ arrow: Rotation=180 = pointing down (closed), Rotation=0 = pointing up (open)
 local arrowLbl = Instance.new("TextLabel", selFrame)
 arrowLbl.Size = UDim2.new(0, 20, 1, 0); arrowLbl.Position = UDim2.new(1, -22, 0, 0)
-arrowLbl.BackgroundTransparency = 1; arrowLbl.Text = "▲"; arrowLbl.Rotation = 180
-arrowLbl.Font = Enum.Font.GothamBold; arrowLbl.TextSize = 11
+arrowLbl.BackgroundTransparency = 1; arrowLbl.Text = "▼"
+arrowLbl.Font = Enum.Font.GothamBold; arrowLbl.TextSize = 16
 arrowLbl.TextColor3 = C.TEXT_DIM; arrowLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 local headerBtn = Instance.new("TextButton", selFrame)
@@ -496,7 +496,7 @@ end
 
 local function closeList()
     dropIsOpen = false
-    tw(arrowLbl,   { Rotation = 180 })  -- ▲ pointing down = closed
+    arrowLbl.Text = "▼"
     tw(dropOuter,  { Size = UDim2.new(1, -12, 0, HEADER_H) })
     tw(listScroll, { Size = UDim2.new(1, 0, 0, 0) })
     divider.Visible = false
@@ -545,7 +545,7 @@ local function openList()
     dropIsOpen = true; dropItems = grabAllItems(); buildList()
     local count = #dropItems; local listH = math.min(count, MAX_SHOW) * (ITEM_H + 2) + 8
     local totalH = HEADER_H + 2 + listH; divider.Visible = true
-    tw(arrowLbl,   { Rotation = 0 })    -- ▲ pointing up = open
+    arrowLbl.Text = "▲"
     tw(dropOuter,  { Size = UDim2.new(1, -12, 0, totalH) })
     tw(listScroll, { Size = UDim2.new(1, 0, 0, listH) })
 end
