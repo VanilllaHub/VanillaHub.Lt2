@@ -71,6 +71,21 @@ local function createPSep()
     s.BackgroundColor3 = SEP_COLOR; s.BorderSizePixel = 0
 end
 
+local function createPButton(text, cb)
+    local btn = Instance.new("TextButton", playerPage)
+    btn.Size = UDim2.new(1, 0, 0, 34)
+    btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13
+    btn.TextColor3 = THEME_TEXT; btn.Text = text; btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    local s = Instance.new("UIStroke", btn)
+    s.Color = Color3.fromRGB(55, 55, 55); s.Thickness = 1; s.Transparency = 0
+    btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
+    btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play() end)
+    if cb then btn.MouseButton1Click:Connect(function() task.spawn(cb) end) end
+    return btn
+end
+
 local savedWalkSpeed = 16
 local savedJumpPower = 50
 
@@ -199,13 +214,12 @@ local function stopFly()
             flyBV.MaxForce = Vector3.new(1e6, 1e6, 1e6)
         end
         if flyBG and flyBG.Parent then
-            -- snap to upright using camera yaw so character falls feet-first
             local _, camYaw, _ = workspace.CurrentCamera.CFrame:ToEulerAnglesYXZ()
             flyBG.CFrame    = CFrame.Angles(0, camYaw, 0)
             flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
         end
     end)
-    task.wait(0.07) -- a few frames for the gyro to settle upright before releasing
+    task.wait(0.07)
     pcall(function()
         if flyBV and flyBV.Parent then flyBV:Destroy() end
         if flyBG and flyBG.Parent then flyBG:Destroy() end
@@ -259,7 +273,6 @@ local function startFly()
         flyBV.MaxForce  = Vector3.new(1e6, 1e6, 1e6)
         flyBV.Velocity  = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
 
-        -- Body follows the full camera CFrame so it tilts where you look
         flyBG.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
         flyBG.CFrame    = cf
     end)
@@ -437,6 +450,99 @@ end)
 
 table.insert(cleanupTasks, stopHardDrag)
 
+-- ════════════════════════════════════════════════════
+-- BTOOLS
+-- ════════════════════════════════════════════════════
+local btoolsEditedParts = {}
+local btoolsParentFix   = {}
+local btoolsPosFix      = {}
+
+local function giveBtools()
+    local backpack = player.Backpack
+    -- Remove any existing btools first so we don't stack them
+    for _, t in pairs(backpack:GetChildren()) do
+        if t.Name == "Delete" or t.Name == "Undo" then t:Destroy() end
+    end
+    if player.Character then
+        for _, t in pairs(player.Character:GetChildren()) do
+            if t.Name == "Delete" or t.Name == "Undo" then t:Destroy() end
+        end
+    end
+
+    local deleteTool = Instance.new("Tool", backpack)
+    deleteTool.Name           = "Delete"
+    deleteTool.CanBeDropped   = false
+    deleteTool.RequiresHandle = false
+
+    local undoTool = Instance.new("Tool", backpack)
+    undoTool.Name           = "Undo"
+    undoTool.CanBeDropped   = false
+    undoTool.RequiresHandle = false
+
+    deleteTool.Activated:Connect(function()
+        local target = mouse.Target
+        if not target then return end
+        table.insert(btoolsEditedParts, target)
+        table.insert(btoolsParentFix,   target.Parent)
+        table.insert(btoolsPosFix,      target.CFrame)
+        target.Parent = nil
+    end)
+
+    undoTool.Activated:Connect(function()
+        if #btoolsEditedParts == 0 then return end
+        local n = #btoolsEditedParts
+        pcall(function()
+            btoolsEditedParts[n].Parent = btoolsParentFix[n]
+            btoolsEditedParts[n].CFrame = btoolsPosFix[n]
+        end)
+        table.remove(btoolsEditedParts, n)
+        table.remove(btoolsParentFix,   n)
+        table.remove(btoolsPosFix,      n)
+    end)
+end
+
+createPButton("Give BTools", function()
+    giveBtools()
+end)
+
+-- ════════════════════════════════════════════════════
+-- HEADLIGHT
+-- ════════════════════════════════════════════════════
+local headlightOn = false
+
+local function setHeadlight(enabled)
+    local char = player.Character
+    local head = char and char:FindFirstChild("Head")
+    if not head then return end
+    -- Remove any existing light first
+    local existing = head:FindFirstChildOfClass("PointLight")
+    if existing then existing:Destroy() end
+    if enabled then
+        local light = Instance.new("PointLight", head)
+        light.Range      = 60
+        light.Brightness = 2
+        light.Shadows    = false
+    end
+end
+
+-- Re-apply headlight on respawn
+player.CharacterAdded:Connect(function()
+    if headlightOn then
+        task.wait(1)
+        setHeadlight(true)
+    end
+end)
+
+createPToggle("Headlight", false, function(val)
+    headlightOn = val
+    setHeadlight(val)
+end)
+
+table.insert(cleanupTasks, function()
+    headlightOn = false
+    setHeadlight(false)
+end)
+
 -- ── Fly key listener (lives here since fly is in this file) ──
 local flyKeyConn = UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if waitingForFlyKey then
@@ -474,16 +580,13 @@ _G.VH.currentFlyKey  = currentFlyKey
 local worldPage = pages["WorldTab"]
 
 local origClockTime = Lighting.ClockTime
-local origFogEnd    = Lighting.FogEnd
-local origFogStart  = Lighting.FogStart
-local origFogColor  = Lighting.FogColor
 local origShadows   = Lighting.GlobalShadows
 
+-- LT2 neutral fog values (replace the blue game fog on load)
 local LT2_FOG_END   = 10000
 local LT2_FOG_START = 0
 local LT2_FOG_COLOR = Color3.fromRGB(200, 200, 200)
 
--- Apply neutral fog immediately on load so the blue game fog is gone
 Lighting.FogColor = LT2_FOG_COLOR
 Lighting.FogEnd   = LT2_FOG_END
 Lighting.FogStart = LT2_FOG_START
@@ -596,21 +699,34 @@ stopDayNight()
 Lighting.ClockTime = 14
 dayConn = RunService.Heartbeat:Connect(function() Lighting.ClockTime = 14 end)
 
+-- ════════════════════════════════════════════════════
+-- REMOVE FOG
+-- Uses Lighting.Changed to lock fog out — the game's
+-- own lighting scripts can't push it back.
+-- ════════════════════════════════════════════════════
 makeWorldToggle("Remove Fog", false, function(v)
     if fogConn then fogConn:Disconnect(); fogConn = nil end
     if v then
-        Lighting.FogEnd = 1e9; Lighting.FogStart = 1e9
-        fogConn = RunService.Heartbeat:Connect(function()
-            Lighting.FogEnd = 1e9; Lighting.FogStart = 1e9
+        Lighting.FogEnd   = 1e9
+        Lighting.FogStart = 1e9
+        -- Re-lock every time LT2's lighting system tries to change it
+        fogConn = Lighting.Changed:Connect(function()
+            if Lighting.FogEnd ~= 1e9 then
+                Lighting.FogEnd   = 1e9
+                Lighting.FogStart = 1e9
+            end
         end)
     else
-        if fogConn then fogConn:Disconnect(); fogConn = nil end
+        -- Restore neutral LT2 fog (no blue game fog)
         Lighting.FogEnd   = LT2_FOG_END
         Lighting.FogStart = LT2_FOG_START
         Lighting.FogColor = LT2_FOG_COLOR
     end
 end)
 
+-- ════════════════════════════════════════════════════
+-- SHADOWS
+-- ════════════════════════════════════════════════════
 makeWorldToggle("Shadows", true, function(v)
     Lighting.GlobalShadows = v
 end)
@@ -618,42 +734,64 @@ end)
 makeWorldSep()
 makeWorldSectionLabel("Water")
 
-local walkOnWaterConn  = nil
-local walkOnWaterParts = {}
+-- ════════════════════════════════════════════════════
+-- WALK ON WATER
+-- Directly sets CanCollide on the Water parts inside
+-- workspace.Water — the same approach as Butterhub.
+-- Also watches for new parts added at runtime.
+-- ════════════════════════════════════════════════════
+local walkOnWaterConn = nil
 
 local function removeWalkWater()
     if walkOnWaterConn then walkOnWaterConn:Disconnect(); walkOnWaterConn = nil end
-    for _, p in ipairs(walkOnWaterParts) do
-        if p and p.Parent then p:Destroy() end
+    -- Restore CanCollide = false on all water parts
+    pcall(function()
+        for _, part in next, workspace.Water:GetChildren() do
+            if part.Name == "Water" then
+                part.CanCollide = false
+            end
+        end
+    end)
+    -- Also remove any clone planes from the old system
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj.Name == "WalkWaterPlane" then obj:Destroy() end
     end
-    walkOnWaterParts = {}
 end
 
 makeWorldToggle("Walk On Water", false, function(v)
     removeWalkWater()
     if v then
-        local function makeSolid(part)
-            if part:IsA("Part") and part.Name == "Water" then
-                local clone = Instance.new("Part")
-                clone.Size = part.Size; clone.CFrame = part.CFrame
-                clone.Anchored = true; clone.CanCollide = true
-                clone.Transparency = 1; clone.Name = "WalkWaterPlane"
-                clone.Parent = workspace
-                table.insert(walkOnWaterParts, clone)
+        pcall(function()
+            for _, part in next, workspace.Water:GetChildren() do
+                if part.Name == "Water" then
+                    part.CanCollide = true
+                end
             end
-        end
-        for _, p in ipairs(workspace:GetDescendants()) do makeSolid(p) end
-        walkOnWaterConn = workspace.DescendantAdded:Connect(makeSolid)
+        end)
+        -- Watch for any new water parts added at runtime
+        pcall(function()
+            walkOnWaterConn = workspace.Water.ChildAdded:Connect(function(part)
+                if part.Name == "Water" then
+                    part.CanCollide = true
+                end
+            end)
+        end)
     end
 end)
 
+-- ════════════════════════════════════════════════════
+-- REMOVE WATER
+-- Hides/shows the Water parts by setting transparency.
+-- ════════════════════════════════════════════════════
 makeWorldToggle("Remove Water", false, function(v)
-    for _, p in ipairs(workspace:GetDescendants()) do
-        if p:IsA("Part") and p.Name == "Water" then
-            p.Transparency = v and 1 or 0.5
-            p.CanCollide = false
+    pcall(function()
+        for _, part in next, workspace.Water:GetChildren() do
+            if part.Name == "Water" then
+                part.Transparency = v and 1 or 0.5
+                part.CanCollide   = false  -- ensure we don't ghost-collide invisible water
+            end
         end
-    end
+    end)
 end)
 
 makeWorldSep()
@@ -679,7 +817,6 @@ local cfg = {
     followingMouse = false,
 }
 
--- Model helpers
 local function getBuilds()
     local folder = workspace:FindFirstChild("Builds")
     if not folder then return {} end
@@ -802,7 +939,6 @@ local function centerOnPlot()
     end
 end
 
--- Mouse follow
 local followConn
 
 local function startFollow()
@@ -831,7 +967,6 @@ end
 startFollow()
 table.insert(cleanupTasks, stopFollow)
 
--- Keyboard input (only active when Pixel Art tab is open)
 local paInputConn = UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     local paPage = pages["Pixel ArtTab"]
@@ -854,7 +989,6 @@ table.insert(cleanupTasks, function()
     if paInputConn then paInputConn:Disconnect(); paInputConn = nil end
 end)
 
--- Pixel Art UI helpers (scoped to paPage)
 local paPage = pages["Pixel ArtTab"]
 
 local function mkLabel(text)
@@ -1082,7 +1216,6 @@ mkBtn("Remove Pixel Art", C.BTN_DANGER, function()
     setFollowToggle(false)
 end)
 
--- Stop follow on world click
 local clickStopConn = UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
