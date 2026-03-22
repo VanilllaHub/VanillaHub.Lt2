@@ -789,9 +789,13 @@ local function isStructure(p)
 end
 
 -- True for Gift / Loose Item / Tool / Box — matched directly from Type.Value
+-- Covers: standalone gifts, box contents (Loose Item), tools, purchased items,
+--         and Box models (Type = "Furniture" but has PurchasedBoxItemName child —
+--         these are draggable boxes sitting on the plot, NOT placed furniture).
 local function isGiftOrItem(p)
     local tv = getTypeValue(p)
     if tv == "Gift" or tv == "Loose Item" or tv == "Tool" then return true end
+    -- Box: Type = "Furniture" AND has PurchasedBoxItemName → draggable box, not placed furniture
     if tv == "Furniture" and p:FindFirstChild("PurchasedBoxItemName") then return true end
     return false
 end
@@ -808,48 +812,8 @@ end
 -- True for PLACED furniture (Type = "Furniture" but NOT a Box)
 local function isFurniture(p)
     if getTypeValue(p) ~= "Furniture" then return false end
-    if p:FindFirstChild("PurchasedBoxItemName") then return false end
+    if p:FindFirstChild("PurchasedBoxItemName") then return false end  -- skip boxes
     return true
-end
-
--- ════════════════════════════════════════════════════════════════════════════════
--- EMPTY TRUCK HELPER
--- Checks whether a truck model has any cargo (Main / WoodSection parts) sitting
--- inside its bounding box.  Returns true when NO cargo is found (empty truck).
--- ════════════════════════════════════════════════════════════════════════════════
-
-local function isTruckEmpty(truckModel)
-    local mCF, mSz = truckModel:GetBoundingBox()
-
-    -- Build a set of every BasePart that belongs to the truck itself so we
-    -- do not count them as cargo.
-    local truckParts = {}
-    for _, p in ipairs(truckModel:GetDescendants()) do
-        if p:IsA("BasePart") then truckParts[p] = true end
-    end
-
-    local function isPointInside(point)
-        local r = mCF:PointToObjectSpace(point)
-        return math.abs(r.X) <= mSz.X / 2
-           and math.abs(r.Y) <= mSz.Y / 2 + 2
-           and math.abs(r.Z) <= mSz.Z / 2
-    end
-
-    for _, part in ipairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and not truckParts[part] then
-            if part.Name == "Main" or part.Name == "WoodSection" then
-                -- Skip parts that are welded to a different parent (not loose cargo)
-                if part:FindFirstChild("Weld") and part.Weld.Part1
-                    and part.Weld.Part1.Parent ~= part.Parent then
-                    continue
-                end
-                if isPointInside(part.Position) then
-                    return false   -- found cargo → not empty
-                end
-            end
-        end
-    end
-    return true   -- no cargo found → empty
 end
 
 -- ════════════════════════════════════════════════════════════════════════════════
@@ -865,22 +829,20 @@ local _, getReceiverName = makeDupeDropdown("Receiver", baseDupePage)
 makeSep(baseDupePage)
 makeLabel(baseDupePage, "What to Transfer")
 
-local _, getStructures  = makeToggle(baseDupePage, "Structures",   false)
-local _, getFurniture   = makeToggle(baseDupePage, "Furnitures",   false)
-local _, getTrucks      = makeToggle(baseDupePage, "Truck Loads",  false)
-local _, getEmptyTrucks = makeToggle(baseDupePage, "Empty Trucks", false)   -- ← NEW
-local _, getGifs        = makeToggle(baseDupePage, "Gift/Item",    false)
-local _, getWood        = makeToggle(baseDupePage, "Wood",         false)
+local _, getStructures = makeToggle(baseDupePage, "Structures",     false)
+local _, getFurniture  = makeToggle(baseDupePage, "Furnitures",     false)
+local _, getTrucks     = makeToggle(baseDupePage, "Truck Loads",     false)
+local _, getGifs       = makeToggle(baseDupePage, "Gift/Item",           false)
+local _, getWood       = makeToggle(baseDupePage, "Wood",           false)
 
 makeSep(baseDupePage)
 makeLabel(baseDupePage, "Progress")
 
-local progStructures,  setProgStructures,  resetProgStructures  = makeProgressBar(baseDupePage, "Structures")
-local progFurniture,   setProgFurniture,   resetProgFurniture   = makeProgressBar(baseDupePage, "Furnitures")
-local progTrucks,      setProgTrucks,      resetProgTrucks      = makeProgressBar(baseDupePage, "Trucks")
-local progEmptyTrucks, setProgEmptyTrucks, resetProgEmptyTrucks = makeProgressBar(baseDupePage, "Empty Trucks")  -- ← NEW
-local progGifs,        setProgGifs,        resetProgGifs        = makeProgressBar(baseDupePage, "Gift/Item")
-local progWood,        setProgWood,        resetProgWood        = makeProgressBar(baseDupePage, "Wood")
+local progStructures, setProgStructures, resetProgStructures = makeProgressBar(baseDupePage, "Structures")
+local progFurniture,  setProgFurniture,  resetProgFurniture  = makeProgressBar(baseDupePage, "Furnitures")
+local progTrucks,     setProgTrucks,     resetProgTrucks     = makeProgressBar(baseDupePage, "Trucks")
+local progGifs,       setProgGifs,       resetProgGifs       = makeProgressBar(baseDupePage, "Gift/Item")
+local progWood,       setProgWood,       resetProgWood       = makeProgressBar(baseDupePage, "Wood")
 
 makeSep(baseDupePage)
 
@@ -891,7 +853,6 @@ local function resetAllProgress()
     resetProgStructures()
     resetProgFurniture()
     resetProgTrucks()
-    resetProgEmptyTrucks()   -- ← NEW
     resetProgGifs()
     resetProgWood()
 end
@@ -1031,7 +992,7 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── TRUCKS + CARGO  (loaded trucks only)
+        -- ── TRUCKS + CARGO
         if getTrucks() and butterRunning then
             local teleportedParts = {}
             local ignoredParts    = {}
@@ -1053,64 +1014,59 @@ startButterBtn.MouseButton1Click:Connect(function()
                 DidTruckTeleport = true
             end
 
-            -- Collect only LOADED trucks (skip empty ones for this pass)
-            local loadedTrucks = {}
+            local truckCount = 0
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                 if v.Name == "Owner" and tostring(v.Value) == giverName and v.Parent:FindFirstChild("DriveSeat") then
-                    if not isTruckEmpty(v.Parent) then
-                        table.insert(loadedTrucks, v.Parent)
-                    end
+                    truckCount += 1
                 end
             end
-            local truckCount = #loadedTrucks
 
             if truckCount > 0 then
                 progTrucks.Visible = true; setProgTrucks(0, truckCount)
                 setStatus("Sending trucks...", true)
                 local truckDone = 0
 
-                for _, truckModel in ipairs(loadedTrucks) do
+                for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
                     if not butterRunning then break end
-                    if not (truckModel and truckModel.Parent) then
-                        truckDone += 1; setProgTrucks(truckDone, truckCount); continue
-                    end
+                    if v.Name == "Owner" and tostring(v.Value) == giverName and v.Parent:FindFirstChild("DriveSeat") then
+                        v.Parent.DriveSeat:Sit(Char.Humanoid)
+                        repeat task.wait() v.Parent.DriveSeat:Sit(Char.Humanoid) until Char.Humanoid.SeatPart
 
-                    truckModel.DriveSeat:Sit(Char.Humanoid)
-                    repeat task.wait() truckModel.DriveSeat:Sit(Char.Humanoid) until Char.Humanoid.SeatPart
+                        local tModel   = Char.Humanoid.SeatPart.Parent
+                        local mCF, mSz = tModel:GetBoundingBox()
 
-                    local mCF, mSz = truckModel:GetBoundingBox()
+                        for _, p in ipairs(tModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
+                        for _, p in ipairs(Char:GetDescendants())   do if p:IsA("BasePart") then ignoredParts[p] = true end end
 
-                    for _, p in ipairs(truckModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
-                    for _, p in ipairs(Char:GetDescendants())       do if p:IsA("BasePart") then ignoredParts[p] = true end end
-
-                    for _, part in ipairs(workspace:GetDescendants()) do
-                        if part:IsA("BasePart") and not ignoredParts[part] then
-                            if part.Name == "Main" or part.Name == "WoodSection" then
-                                if part:FindFirstChild("Weld") and part.Weld.Part1.Parent ~= part.Parent then continue end
-                                task.spawn(function()
-                                    if isPointInside(part.Position, mCF, mSz) then
-                                        TeleportTruck()
-                                        local PCF  = part.CFrame
-                                        local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                                        local tOff = CFrame.new(nP) * PCF.Rotation
-                                        part.CFrame = tOff
-                                        task.wait(0.3)
-                                        table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=tOff})
-                                    end
-                                end)
+                        for _, part in ipairs(workspace:GetDescendants()) do
+                            if part:IsA("BasePart") and not ignoredParts[part] then
+                                if part.Name == "Main" or part.Name == "WoodSection" then
+                                    if part:FindFirstChild("Weld") and part.Weld.Part1.Parent ~= part.Parent then continue end
+                                    task.spawn(function()
+                                        if isPointInside(part.Position, mCF, mSz) then
+                                            TeleportTruck()
+                                            local PCF  = part.CFrame
+                                            local nP   = PCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                                            local tOff = CFrame.new(nP) * PCF.Rotation
+                                            part.CFrame = tOff
+                                            task.wait(0.3)
+                                            table.insert(teleportedParts, {Instance=part, OldPos=part.Position, TargetCFrame=tOff})
+                                        end
+                                    end)
+                                end
                             end
                         end
-                    end
 
-                    local SitPart   = Char.Humanoid.SeatPart
-                    local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
-                        and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
-                        and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-                    task.wait()
-                    Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    task.wait(0.1); SitPart:Destroy(); TeleportTruck(); DidTruckTeleport = false; task.wait(0.1)
-                    if DoorHinge then for i=1,10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
-                    truckDone += 1; setProgTrucks(truckDone, truckCount)
+                        local SitPart   = Char.Humanoid.SeatPart
+                        local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
+                            and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
+                            and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
+                        task.wait()
+                        Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                        task.wait(0.1); SitPart:Destroy(); TeleportTruck(); DidTruckTeleport = false; task.wait(0.1)
+                        if DoorHinge then for i=1,10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
+                        truckDone += 1; setProgTrucks(truckDone, truckCount)
+                    end
                 end
 
                 task.wait(2)
@@ -1136,105 +1092,12 @@ startButterBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── EMPTY TRUCKS  (no cargo, 1 per 1.5 s, no cargo teleport needed)
-        -- ════════════════════════════════════════════════════════════════════
-        if getEmptyTrucks() and butterRunning then
-            -- Collect trucks that have no cargo inside them
-            local emptyTrucks = {}
-            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                if v.Name == "Owner" and tostring(v.Value) == giverName and v.Parent:FindFirstChild("DriveSeat") then
-                    if isTruckEmpty(v.Parent) then
-                        table.insert(emptyTrucks, v.Parent)
-                    end
-                end
-            end
-
-            local emptyCount = #emptyTrucks
-            if emptyCount > 0 then
-                progEmptyTrucks.Visible = true
-                setProgEmptyTrucks(0, emptyCount)
-                setStatus(string.format("Sending %d empty truck(s)...", emptyCount), true)
-
-                local emptyDone = 0
-                for _, truckModel in ipairs(emptyTrucks) do
-                    if not butterRunning then break end
-                    if not (truckModel and truckModel.Parent) then
-                        emptyDone += 1; setProgEmptyTrucks(emptyDone, emptyCount); continue
-                    end
-
-                    setStatus(string.format("Empty truck %d / %d...", emptyDone + 1, emptyCount), true)
-
-                    -- Refresh character reference each iteration — avoids stale humanoid
-                    -- after a prior unseat / respawn
-                    local LP2   = Players.LocalPlayer
-                    local Char2 = LP2.Character or LP2.CharacterAdded:Wait()
-                    local Hum2  = Char2:FindFirstChildOfClass("Humanoid")
-                    if not Hum2 then
-                        emptyDone += 1; setProgEmptyTrucks(emptyDone, emptyCount); continue
-                    end
-
-                    -- Make sure we are fully unseated before trying to sit
-                    if Hum2.SeatPart then
-                        Hum2:ChangeState(Enum.HumanoidStateType.Jumping)
-                        task.wait(0.15)
-                        -- Re-fetch in case character changed
-                        Char2 = LP2.Character or Char2
-                        Hum2  = Char2:FindFirstChildOfClass("Humanoid") or Hum2
-                    end
-
-                    -- Sit with timeout so we never hang forever
-                    local sitDeadline = tick() + 3
-                    repeat
-                        task.wait()
-                        pcall(function() truckModel.DriveSeat:Sit(Hum2) end)
-                    until Hum2.SeatPart or tick() >= sitDeadline
-
-                    if not Hum2.SeatPart then
-                        -- Couldn't sit — skip this truck
-                        setStatus(string.format("⚠ Couldn't sit in truck %d, skipping...", emptyDone + 1), true)
-                        emptyDone += 1; setProgEmptyTrucks(emptyDone, emptyCount)
-                        task.wait(0.5)
-                        continue
-                    end
-
-                    -- Teleport the truck body to the receiver's base
-                    local mainPart = Hum2.SeatPart.Parent:FindFirstChild("Main")
-                    if mainPart then
-                        local TCF  = mainPart.CFrame
-                        local nPos = TCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                        truckModel:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
-                    end
-
-                    -- Unseat player cleanly
-                    local SitPart   = Hum2.SeatPart
-                    local DoorHinge = SitPart and SitPart.Parent:FindFirstChild("PaintParts")
-                        and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
-                        and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-                    task.wait(0.05)
-                    Hum2:ChangeState(Enum.HumanoidStateType.Jumping)
-                    task.wait(0.1)
-                    if SitPart and SitPart.Parent then SitPart:Destroy() end
-                    if DoorHinge then for i = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end end
-
-                    -- Wait until fully unseated before next truck
-                    local unseatDeadline = tick() + 1.5
-                    repeat task.wait() until (not Hum2.SeatPart) or tick() >= unseatDeadline
-
-                    emptyDone += 1
-                    setProgEmptyTrucks(emptyDone, emptyCount)
-
-                    -- 1.5 s gap between each empty truck
-                    if emptyDone < emptyCount and butterRunning then
-                        task.wait(1.5)
-                    end
-                end
-
-                setProgEmptyTrucks(emptyCount, emptyCount)
-            end
-        end
-        -- ════════════════════════════════════════════════════════════════════
-
         -- ── GIFT / ITEMS / BOXES / PAINTINGS
+        -- Uses isGiftOrItem() which covers:
+        --   Gift, Loose Item, Tool  (by Type.Value)
+        --   Box / Painting / etc    (Type="Furniture" + PurchasedBoxItemName child)
+        -- Part resolution: tries Main directly first, then deep-searches for any
+        -- BasePart so models whose Main is a sub-Model (paintings etc.) still work.
         if getGifs() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1248,12 +1111,14 @@ startButterBtn.MouseButton1Click:Connect(function()
                             part = mainChild
                             PCF  = mainChild.CFrame
                         elseif mainChild then
+                            -- Main is a Model/folder — find its primary or first BasePart
                             part = mainChild.PrimaryPart
                                 or mainChild:FindFirstChildOfClass("BasePart")
                                 or mainChild:FindFirstChildWhichIsA("BasePart", true)
                             PCF  = part and part.CFrame or nil
                         end
                         if not part then
+                            -- No Main at all — deep search whole model
                             part = p:FindFirstChildOfClass("BasePart")
                                 or p:FindFirstChildWhichIsA("BasePart", true)
                             PCF  = part and part.CFrame or nil
@@ -1284,6 +1149,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                         done += 1; setProgGifs(done, total); continue
                     end
 
+                    -- seek network ownership
                     if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
                         Char.HumanoidRootPart.CFrame = part.CFrame
                         task.wait(0.04)
@@ -1299,6 +1165,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                         task.wait()
                     until tick() >= deadline
 
+                    -- track missed immediately after first attempt
                     if part and part.Parent then
                         if (part.Position - Offset.Position).Magnitude > 8 then
                             table.insert(missed, {Instance = part, TargetCFrame = Offset})
@@ -1308,6 +1175,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                     done += 1; setProgGifs(done, total)
                 end
 
+                -- always run retry pass if anything missed
                 if #missed > 0 and butterRunning then
                     progGifs.Visible = true
                     setStatus(string.format("Gift retry — %d item(s) missed...", #missed), true)
@@ -1322,6 +1190,7 @@ startButterBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── WOOD
+        -- Excludes Gift / Loose Item / Tool so those aren't double-processed.
         if getWood() and butterRunning then
             local items = {}
             for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
@@ -1357,6 +1226,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                         done += 1; setProgWood(done, total); continue
                     end
 
+                    -- seek network ownership
                     if (Char.HumanoidRootPart.Position - part.Position).Magnitude > 25 then
                         Char.HumanoidRootPart.CFrame = part.CFrame
                         task.wait(0.04)
@@ -1372,6 +1242,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                         task.wait()
                     until tick() >= deadline
 
+                    -- track missed immediately after first attempt
                     if part and part.Parent then
                         if (part.Position - Offset.Position).Magnitude > 8 then
                             table.insert(missed, {Instance = part, TargetCFrame = Offset})
@@ -1381,6 +1252,7 @@ startButterBtn.MouseButton1Click:Connect(function()
                     done += 1; setProgWood(done, total)
                 end
 
+                -- always run retry pass if anything missed
                 if #missed > 0 and butterRunning then
                     progWood.Visible = true
                     setStatus(string.format("Wood retry — %d piece(s) missed...", #missed), true)
