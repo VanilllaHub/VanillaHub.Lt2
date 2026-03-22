@@ -1078,6 +1078,9 @@ startButterBtn.MouseButton1Click:Connect(function()
                     for _, p in ipairs(tModel:GetDescendants()) do if p:IsA("BasePart") then ignoredParts[p] = true end end
                     for _, p in ipairs(Char:GetDescendants())   do if p:IsA("BasePart") then ignoredParts[p] = true end end
 
+                    -- empty trucks have no cargo to trigger TeleportTruck, so call it directly
+                    if emptyOnly then TeleportTruck() end
+
                     for _, part in ipairs(workspace:GetDescendants()) do
                         if part:IsA("BasePart") and not ignoredParts[part] then
                             if part.Name == "Main" or part.Name == "WoodSection" then
