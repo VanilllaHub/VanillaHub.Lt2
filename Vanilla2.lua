@@ -823,6 +823,142 @@ makeLabel(baseDupePage, "What to Transfer")
 local _, getStructures = makeToggle(baseDupePage, "Structures",  false)
 local _, getFurniture  = makeToggle(baseDupePage, "Furnitures",  false)
 local _, getTrucks     = makeToggle(baseDupePage, "Truck Loads", false)
+
+-- ── Empty Trucks (lives under Truck Loads in Base Dupe) ──────────────────────
+local _, setEmptyStatus = makeStatusBar(baseDupePage, "Ready")
+
+local emptyTruckRunning = false
+local emptyTruckThread  = nil
+
+local function truckHasCargo(truckModel)
+    local mCF, mSz = truckModel:GetBoundingBox()
+    local ignoredParts = {}
+    for _, p in ipairs(truckModel:GetDescendants()) do
+        if p:IsA("BasePart") then ignoredParts[p] = true end
+    end
+    local LP2  = Players.LocalPlayer
+    local Char2 = LP2.Character
+    if Char2 then
+        for _, p in ipairs(Char2:GetDescendants()) do
+            if p:IsA("BasePart") then ignoredParts[p] = true end
+        end
+    end
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and not ignoredParts[part] then
+            if part.Name == "Main" or part.Name == "WoodSection" then
+                local r = mCF:PointToObjectSpace(part.Position)
+                if math.abs(r.X) <= mSz.X / 2
+                and math.abs(r.Y) <= mSz.Y / 2 + 2
+                and math.abs(r.Z) <= mSz.Z / 2 then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+makeToggle(baseDupePage, "Empty Trucks", false, function(on)
+    if on then
+        emptyTruckRunning = true
+        emptyTruckThread = task.spawn(function()
+            while emptyTruckRunning do
+                local gName = getGiverName()
+                local rName = getReceiverName()
+
+                if gName ~= "" and rName ~= "" then
+                    local GiveBase, RecvBase
+                    for _, v in pairs(workspace.Properties:GetDescendants()) do
+                        if v.Name == "Owner" then
+                            local val = tostring(v.Value)
+                            if val == gName then GiveBase = v.Parent:FindFirstChild("OriginSquare") end
+                            if val == rName then RecvBase  = v.Parent:FindFirstChild("OriginSquare") end
+                        end
+                    end
+
+                    if GiveBase and RecvBase then
+                        local RS   = game:GetService("ReplicatedStorage")
+                        local LP   = Players.LocalPlayer
+                        local Char = LP.Character
+
+                        if Char then
+                            local emptyTruck = nil
+                            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
+                                if v.Name == "Owner" and tostring(v.Value) == gName then
+                                    local m = v.Parent
+                                    if m:FindFirstChild("DriveSeat") and not truckHasCargo(m) then
+                                        emptyTruck = m
+                                        break
+                                    end
+                                end
+                            end
+
+                            if emptyTruck then
+                                setEmptyStatus("Teleporting empty truck...", true)
+                                local DidTeleport = false
+
+                                local function DoTeleport()
+                                    if DidTeleport then return end
+                                    if not Char.Humanoid.SeatPart then return end
+                                    local TCF  = Char.Humanoid.SeatPart.Parent:FindFirstChild("Main").CFrame
+                                    local nPos = TCF.Position - GiveBase.Position + RecvBase.Position
+                                    Char.Humanoid.SeatPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
+                                    DidTeleport = true
+                                end
+
+                                emptyTruck.DriveSeat:Sit(Char.Humanoid)
+                                local t0 = tick()
+                                repeat
+                                    task.wait()
+                                    emptyTruck.DriveSeat:Sit(Char.Humanoid)
+                                until Char.Humanoid.SeatPart or (tick() - t0 > 5)
+
+                                if Char.Humanoid.SeatPart then
+                                    local SitPart   = Char.Humanoid.SeatPart
+                                    local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
+                                        and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
+                                        and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
+                                    task.wait(0.1)
+                                    Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                                    task.wait(0.1)
+                                    DoTeleport()
+                                    SitPart:Destroy()
+                                    if DoorHinge then
+                                        for _ = 1, 10 do
+                                            RS.Interaction.RemoteProxy:FireServer(DoorHinge)
+                                        end
+                                    end
+                                    setEmptyStatus("Sent ✓ — waiting...", false)
+                                else
+                                    setEmptyStatus("Couldn't sit — skipping", false)
+                                end
+                            else
+                                setEmptyStatus("No empty trucks found", false)
+                            end
+                        end
+                    else
+                        setEmptyStatus("Select Giver & Receiver first", false)
+                    end
+                else
+                    setEmptyStatus("Select Giver & Receiver first", false)
+                end
+
+                task.wait(1.5)
+            end
+        end)
+    else
+        emptyTruckRunning = false
+        if emptyTruckThread then pcall(task.cancel, emptyTruckThread); emptyTruckThread = nil end
+        setEmptyStatus("Stopped", false)
+    end
+end)
+
+table.insert(VH.cleanupTasks, function()
+    emptyTruckRunning = false
+    if emptyTruckThread then pcall(task.cancel, emptyTruckThread); emptyTruckThread = nil end
+end)
+-- ─────────────────────────────────────────────────────────────────────────────
+
 local _, getGifs       = makeToggle(baseDupePage, "Gift/Item",   false)
 local _, getWood       = makeToggle(baseDupePage, "Wood",        false)
 
@@ -1375,151 +1511,6 @@ end)
 table.insert(VH.cleanupTasks, function()
     singleTruckRunning = false
     if singleTruckThread then pcall(task.cancel, singleTruckThread); singleTruckThread = nil end
-end)
-
--- ════════════════════════════════════════════════════════════════════════════════
--- EMPTY TRUCKS — auto-teleport trucks with no cargo, one every 1.5s
--- Uses the same Giver / Receiver dropdowns as Single Truck
--- ════════════════════════════════════════════════════════════════════════════════
-
-makeSep(singleTruckPage)
-makeLabel(singleTruckPage, "Empty Trucks")
-
-local _, setEmptyStatus = makeStatusBar(singleTruckPage, "Ready")
-
-local emptyTruckRunning = false
-local emptyTruckThread  = nil
-
--- Check whether a truck model has any cargo inside its bounding box
-local function truckHasCargo(truckModel)
-    local mCF, mSz = truckModel:GetBoundingBox()
-    -- Build ignore set from the truck's own parts
-    local ignoredParts = {}
-    for _, p in ipairs(truckModel:GetDescendants()) do
-        if p:IsA("BasePart") then ignoredParts[p] = true end
-    end
-    local LP   = Players.LocalPlayer
-    local Char = LP.Character
-    if Char then
-        for _, p in ipairs(Char:GetDescendants()) do
-            if p:IsA("BasePart") then ignoredParts[p] = true end
-        end
-    end
-    for _, part in ipairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and not ignoredParts[part] then
-            if part.Name == "Main" or part.Name == "WoodSection" then
-                local r = mCF:PointToObjectSpace(part.Position)
-                if math.abs(r.X) <= mSz.X / 2
-                and math.abs(r.Y) <= mSz.Y / 2 + 2
-                and math.abs(r.Z) <= mSz.Z / 2 then
-                    return true
-                end
-            end
-        end
-    end
-    return false
-end
-
-makeToggle(singleTruckPage, "Empty Trucks", false, function(on)
-    if on then
-        emptyTruckRunning = true
-        emptyTruckThread = task.spawn(function()
-            while emptyTruckRunning do
-                local gName = getTruckGiverName()
-                local rName = getTruckReceiverName()
-
-                if gName ~= "" and rName ~= "" then
-                    local GiveBase, RecvBase
-                    for _, v in pairs(workspace.Properties:GetDescendants()) do
-                        if v.Name == "Owner" then
-                            local val = tostring(v.Value)
-                            if val == gName then GiveBase = v.Parent:FindFirstChild("OriginSquare") end
-                            if val == rName then RecvBase  = v.Parent:FindFirstChild("OriginSquare") end
-                        end
-                    end
-
-                    if GiveBase and RecvBase then
-                        local RS   = game:GetService("ReplicatedStorage")
-                        local LP   = Players.LocalPlayer
-                        local Char = LP.Character
-
-                        if Char then
-                            -- Find first empty truck owned by giver
-                            local emptyTruck = nil
-                            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                                if v.Name == "Owner" and tostring(v.Value) == gName then
-                                    local m = v.Parent
-                                    if m:FindFirstChild("DriveSeat") and not truckHasCargo(m) then
-                                        emptyTruck = m
-                                        break
-                                    end
-                                end
-                            end
-
-                            if emptyTruck then
-                                setEmptyStatus("Teleporting empty truck...", true)
-                                local DidTeleport = false
-
-                                local function DoTeleport()
-                                    if DidTeleport then return end
-                                    if not Char.Humanoid.SeatPart then return end
-                                    local TCF  = Char.Humanoid.SeatPart.Parent:FindFirstChild("Main").CFrame
-                                    local nPos = TCF.Position - GiveBase.Position + RecvBase.Position
-                                    Char.Humanoid.SeatPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
-                                    DidTeleport = true
-                                end
-
-                                -- Sit in the truck
-                                emptyTruck.DriveSeat:Sit(Char.Humanoid)
-                                local t0 = tick()
-                                repeat
-                                    task.wait()
-                                    emptyTruck.DriveSeat:Sit(Char.Humanoid)
-                                until Char.Humanoid.SeatPart or (tick() - t0 > 5)
-
-                                if Char.Humanoid.SeatPart then
-                                    local SitPart   = Char.Humanoid.SeatPart
-                                    local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
-                                        and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
-                                        and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
-                                    task.wait(0.1)
-                                    Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                                    task.wait(0.1)
-                                    DoTeleport()
-                                    SitPart:Destroy()
-                                    if DoorHinge then
-                                        for _ = 1, 10 do
-                                            RS.Interaction.RemoteProxy:FireServer(DoorHinge)
-                                        end
-                                    end
-                                    setEmptyStatus("Sent ✓ — waiting...", false)
-                                else
-                                    setEmptyStatus("Couldn't sit — skipping", false)
-                                end
-                            else
-                                setEmptyStatus("No empty trucks found", false)
-                            end
-                        end
-                    else
-                        setEmptyStatus("Select Giver & Receiver first", false)
-                    end
-                else
-                    setEmptyStatus("Select Giver & Receiver first", false)
-                end
-
-                task.wait(1.5)
-            end
-        end)
-    else
-        emptyTruckRunning = false
-        if emptyTruckThread then pcall(task.cancel, emptyTruckThread); emptyTruckThread = nil end
-        setEmptyStatus("Stopped", false)
-    end
-end)
-
-table.insert(VH.cleanupTasks, function()
-    emptyTruckRunning = false
-    if emptyTruckThread then pcall(task.cancel, emptyTruckThread); emptyTruckThread = nil end
 end)
 
 -- ════════════════════════════════════════════════════════════════════════════════
