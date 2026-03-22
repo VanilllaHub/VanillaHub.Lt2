@@ -1105,17 +1105,26 @@ startVanillaBtn.MouseButton1Click:Connect(function()
                         if p:IsA("BasePart") then truckParts[p] = true end
                     end
 
+                    -- FIX: prefer the explicit Cargo IntValue the game sets on each truck.
+                    -- A value of 0 means truly empty; only fall back to the bounding-box
+                    -- scan when the value doesn't exist (older truck models, etc.).
                     local hasCargo = false
-                    for _, part in ipairs(workspace:GetDescendants()) do
-                        if hasCargo then break end
-                        if part:IsA("BasePart") and not truckParts[part] then
-                            if part.Name == "Main" or part.Name == "WoodSection" then
-                                local weld = part:FindFirstChild("Weld")
-                                if weld and weld.Part1 and weld.Part1.Parent ~= part.Parent then
-                                    continue
-                                end
-                                if isPointInsideEmpty(part.Position, mCF, mSz) then
-                                    hasCargo = true
+                    local cargoVal = tModel:FindFirstChild("Cargo")
+                    if cargoVal and cargoVal:IsA("IntValue") then
+                        hasCargo = cargoVal.Value > 0
+                    else
+                        -- Fallback: bounding-box scan for wood/cargo parts
+                        for _, part in ipairs(workspace:GetDescendants()) do
+                            if hasCargo then break end
+                            if part:IsA("BasePart") and not truckParts[part] then
+                                if part.Name == "Main" or part.Name == "WoodSection" then
+                                    local weld = part:FindFirstChild("Weld")
+                                    if weld and weld.Part1 and weld.Part1.Parent ~= part.Parent then
+                                        continue
+                                    end
+                                    if isPointInsideEmpty(part.Position, mCF, mSz) then
+                                        hasCargo = true
+                                    end
                                 end
                             end
                         end
