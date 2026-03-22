@@ -79,9 +79,7 @@ if game.PlaceId ~= 13822889 then
     return
 end
 
--- ════════════════════════════════════════════════════
 -- SERVICES & PLAYER
--- ════════════════════════════════════════════════════
 local TweenService      = game:GetService("TweenService")
 local Players           = game:GetService("Players")
 local UserInputService  = game:GetService("UserInputService")
@@ -93,9 +91,7 @@ local Lighting          = game:GetService("Lighting")
 local player            = Players.LocalPlayer
 local mouse             = player:GetMouse()
 
--- ════════════════════════════════════════════════════
 -- THEME
--- ════════════════════════════════════════════════════
 local THEME_TEXT   = Color3.fromRGB(220, 220, 220)
 local BTN_COLOR    = Color3.fromRGB(14, 14, 14)
 local BTN_HOVER    = Color3.fromRGB(32,  32,  32)
@@ -116,9 +112,7 @@ local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
 local PB_BAR  = Color3.fromRGB(255, 255, 255)
 local PB_TEXT = Color3.fromRGB(255, 255, 255)
 
--- ════════════════════════════════════════════════════
 -- EXECUTOR DETECTION
--- ════════════════════════════════════════════════════
 local function detectExecutor()
     if syn and syn.request then return "Synapse X"
     elseif KRNL_LOADED then return "Krnl"
@@ -141,9 +135,7 @@ local function detectExecutor()
     return "Unknown / Studio"
 end
 
--- ════════════════════════════════════════════════════
 -- CLEANUP REGISTRY
--- ════════════════════════════════════════════════════
 local cleanupTasks = {}
 local butterRunning = false
 local butterThread  = nil
@@ -192,9 +184,7 @@ local function onExit()
     _G.VanillaHubCleanup = nil
 end
 
--- ════════════════════════════════════════════════════
 -- GUI SCAFFOLD
--- ════════════════════════════════════════════════════
 local gui = Instance.new("ScreenGui")
 gui.Name = "VanillaHub"; gui.Parent = game.CoreGui; gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -284,9 +274,7 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- ════════════════════════════════════════════════════
 -- SIDE PANEL
--- ════════════════════════════════════════════════════
 local side = Instance.new("ScrollingFrame", main)
 side.Size = UDim2.new(0, 155, 1, -40)
 side.Position = UDim2.new(0, 0, 0, 40)
@@ -325,9 +313,7 @@ content.Position = UDim2.new(0, 156, 0, 40)
 content.BackgroundColor3 = BG_DARK
 content.BorderSizePixel = 0
 
--- ════════════════════════════════════════════════════
 -- WELCOME POPUP
--- ════════════════════════════════════════════════════
 task.spawn(function()
     task.wait(0.8)
     if not (gui and gui.Parent) then return end
@@ -361,9 +347,7 @@ task.spawn(function()
     end)
 end)
 
--- ════════════════════════════════════════════════════
 -- TABS
--- ════════════════════════════════════════════════════
 local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
 local pages = {}
 
@@ -405,38 +389,18 @@ local function switchTab(targetName)
     if activeTabButton then
         local oldLbl  = activeTabButton:FindFirstChild("TabLabel")
         local oldIcon = activeTabButton:FindFirstChild("TabIcon")
-        TweenService:Create(activeTabButton, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        }):Play()
-        if oldLbl then
-            TweenService:Create(oldLbl, TweenInfo.new(0.22), {
-                TextColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
-        end
-        if oldIcon then
-            TweenService:Create(oldIcon, TweenInfo.new(0.22), {
-                ImageColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
-        end
+        TweenService:Create(activeTabButton, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+        if oldLbl  then TweenService:Create(oldLbl,  TweenInfo.new(0.22), {TextColor3  = Color3.fromRGB(110, 110, 110)}):Play() end
+        if oldIcon then TweenService:Create(oldIcon, TweenInfo.new(0.22), {ImageColor3 = Color3.fromRGB(110, 110, 110)}):Play() end
     end
     local frame = side:FindFirstChild(targetName:gsub("Tab",""))
     if frame then
         activeTabButton = frame
         local newLbl  = frame:FindFirstChild("TabLabel")
         local newIcon = frame:FindFirstChild("TabIcon")
-        TweenService:Create(frame, TweenInfo.new(0.22), {
-            BackgroundColor3 = Color3.fromRGB(38, 38, 38)
-        }):Play()
-        if newLbl then
-            TweenService:Create(newLbl, TweenInfo.new(0.22), {
-                TextColor3 = THEME_TEXT
-            }):Play()
-        end
-        if newIcon then
-            TweenService:Create(newIcon, TweenInfo.new(0.22), {
-                ImageColor3 = THEME_TEXT
-            }):Play()
-        end
+        TweenService:Create(frame, TweenInfo.new(0.22), {BackgroundColor3 = Color3.fromRGB(38, 38, 38)}):Play()
+        if newLbl  then TweenService:Create(newLbl,  TweenInfo.new(0.22), {TextColor3  = THEME_TEXT}):Play() end
+        if newIcon then TweenService:Create(newIcon, TweenInfo.new(0.22), {ImageColor3 = THEME_TEXT}):Play() end
     end
 end
 
@@ -471,10 +435,11 @@ for _, name in ipairs(tabs) do
     frame.ZIndex = 1
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
+    -- CHANGE: icon size increased from 16 to 20, position adjusted
     local icon = Instance.new("ImageLabel", frame)
     icon.Name = "TabIcon"
-    icon.Size = UDim2.new(0, 16, 0, 16)
-    icon.Position = UDim2.new(0, 10, 0.5, -8)
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.Position = UDim2.new(0, 8, 0.5, -10)
     icon.BackgroundTransparency = 1
     icon.BorderSizePixel = 0
     icon.ScaleType = Enum.ScaleType.Fit
@@ -482,10 +447,11 @@ for _, name in ipairs(tabs) do
     icon.ImageColor3 = Color3.fromRGB(110, 110, 110)
     icon.ZIndex = 3
 
+    -- CHANGE: label nudged right 2px to match larger icon
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name = "TabLabel"
     nameLbl.Size = UDim2.new(1, -34, 1, 0)
-    nameLbl.Position = UDim2.new(0, 32, 0, 0)
+    nameLbl.Position = UDim2.new(0, 34, 0, 0)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Font = Enum.Font.GothamSemibold
     nameLbl.TextSize = 13
@@ -504,32 +470,18 @@ for _, name in ipairs(tabs) do
 
     btn.MouseEnter:Connect(function()
         if activeTabButton ~= frame then
-            TweenService:Create(frame, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-            }):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {
-                TextColor3 = Color3.fromRGB(180, 180, 180)
-            }):Play()
-            TweenService:Create(icon, TweenInfo.new(0.18), {
-                ImageColor3 = Color3.fromRGB(180, 180, 180)
-            }):Play()
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(180, 180, 180)}):Play()
+            TweenService:Create(icon,    TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(180, 180, 180)}):Play()
         end
     end)
-
     btn.MouseLeave:Connect(function()
         if activeTabButton ~= frame then
-            TweenService:Create(frame, TweenInfo.new(0.18), {
-                BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            }):Play()
-            TweenService:Create(nameLbl, TweenInfo.new(0.18), {
-                TextColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
-            TweenService:Create(icon, TweenInfo.new(0.18), {
-                ImageColor3 = Color3.fromRGB(110, 110, 110)
-            }):Play()
+            TweenService:Create(frame,   TweenInfo.new(0.18), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+            TweenService:Create(nameLbl, TweenInfo.new(0.18), {TextColor3       = Color3.fromRGB(110, 110, 110)}):Play()
+            TweenService:Create(icon,    TweenInfo.new(0.18), {ImageColor3      = Color3.fromRGB(110, 110, 110)}):Play()
         end
     end)
-
     btn.MouseButton1Click:Connect(function()
         switchTab(name.."Tab")
     end)
@@ -537,9 +489,7 @@ end
 
 switchTab("HomeTab")
 
--- ════════════════════════════════════════════════════
 -- GUI TOGGLE
--- ════════════════════════════════════════════════════
 local currentToggleKey = Enum.KeyCode.LeftAlt
 local guiOpen = true
 local isAnimatingGUI = false
@@ -554,8 +504,7 @@ local function toggleGUI()
         main.BackgroundTransparency = 1
         wrapper.Size = UDim2.new(0, 0, 0, 0)
         local t = TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 540, 0, 360),
-            BackgroundTransparency = 0
+            Size = UDim2.new(0, 540, 0, 360), BackgroundTransparency = 0
         })
         TweenService:Create(wrapper, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Size = UDim2.new(0, 540, 0, 360)
@@ -564,23 +513,17 @@ local function toggleGUI()
         t.Completed:Connect(function() isAnimatingGUI = false end)
     else
         local t = TweenService:Create(main, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 0, 0, 0),
-            BackgroundTransparency = 1
+            Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1
         })
         TweenService:Create(wrapper, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             Size = UDim2.new(0, 0, 0, 0)
         }):Play()
         t:Play()
-        t.Completed:Connect(function()
-            main.Visible = false
-            isAnimatingGUI = false
-        end)
+        t.Completed:Connect(function() main.Visible = false; isAnimatingGUI = false end)
     end
 end
 
--- ════════════════════════════════════════════════════
 -- HOME TAB
--- ════════════════════════════════════════════════════
 local homePage = pages["HomeTab"]
 
 local bubbleRow = Instance.new("Frame", homePage)
@@ -622,9 +565,7 @@ bubbleMsg.TextColor3=Color3.fromRGB(160,160,160); bubbleMsg.TextXAlignment=Enum.
 bubbleMsg.TextYAlignment=Enum.TextYAlignment.Top; bubbleMsg.TextWrapped=true
 bubbleMsg.Text="Welcome back, "..player.DisplayName.."!\nSo glad you're here. Let's get to it."; bubbleMsg.ZIndex=3
 
--- ════════════════════════════════════════════════════
 -- QUICK STATS GRID
--- ════════════════════════════════════════════════════
 local statsContainer = Instance.new("Frame", homePage)
 statsContainer.Size = UDim2.new(1, 0, 0, 80)
 statsContainer.BackgroundTransparency = 1
@@ -689,9 +630,7 @@ table.insert(cleanupTasks, function()
     if lagThread then pcall(task.cancel, lagThread); lagThread = nil end
 end)
 
--- ════════════════════════════════════════════════════
 -- SERVER INFO SECTION
--- ════════════════════════════════════════════════════
 local serverInfoHeader = Instance.new("Frame", homePage)
 serverInfoHeader.Size = UDim2.new(1, 0, 0, 22)
 serverInfoHeader.BackgroundTransparency = 1
@@ -719,64 +658,44 @@ siGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local function createServerInfoBox(text, color)
     local box = Instance.new("Frame", serverInfoGrid)
-    box.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    box.BorderSizePixel = 0
+    box.BackgroundColor3 = Color3.fromRGB(20, 20, 20); box.BorderSizePixel = 0
     Instance.new("UICorner", box).CornerRadius = UDim.new(0, 7)
     local stroke = Instance.new("UIStroke", box)
     stroke.Color = SEP_COLOR; stroke.Thickness = 1; stroke.Transparency = 0.4
     local lbl = Instance.new("TextLabel", box)
-    lbl.Size = UDim2.new(1, -10, 1, -4)
-    lbl.Position = UDim2.new(0, 5, 0, 2)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextColor3 = color or THEME_TEXT
-    lbl.Text = text
-    lbl.TextWrapped = true
-    lbl.TextXAlignment = Enum.TextXAlignment.Center
-    lbl.TextTruncate = Enum.TextTruncate.AtEnd
+    lbl.Size = UDim2.new(1, -10, 1, -4); lbl.Position = UDim2.new(0, 5, 0, 2)
+    lbl.BackgroundTransparency = 1; lbl.Font = Enum.Font.Gotham; lbl.TextSize = 12
+    lbl.TextColor3 = color or THEME_TEXT; lbl.Text = text; lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Center; lbl.TextTruncate = Enum.TextTruncate.AtEnd
     return lbl
 end
 
+-- CHANGE: uptime/players now use Heartbeat-driven update matching the uploaded script's approach
 local siUptimeLabel  = createServerInfoBox("Uptime: 00:00:00", Color3.fromRGB(210, 210, 210))
 local siPlayersLabel = createServerInfoBox("Players: ...", Color3.fromRGB(200, 200, 200))
 
 local rejoinBtn = Instance.new("TextButton", serverInfoGrid)
-rejoinBtn.BackgroundColor3 = BTN_COLOR
-rejoinBtn.BorderSizePixel = 0
-rejoinBtn.Font = Enum.Font.GothamSemibold
-rejoinBtn.TextSize = 12
-rejoinBtn.TextColor3 = THEME_TEXT
-rejoinBtn.Text = "Rejoin"
+rejoinBtn.BackgroundColor3 = BTN_COLOR; rejoinBtn.BorderSizePixel = 0
+rejoinBtn.Font = Enum.Font.GothamSemibold; rejoinBtn.TextSize = 12
+rejoinBtn.TextColor3 = THEME_TEXT; rejoinBtn.Text = "Rejoin"
 Instance.new("UICorner", rejoinBtn).CornerRadius = UDim.new(0, 7)
 local rjStroke = Instance.new("UIStroke", rejoinBtn)
 rjStroke.Color = SEP_COLOR; rjStroke.Thickness = 1; rjStroke.Transparency = 0.4
-rejoinBtn.MouseEnter:Connect(function()
-    TweenService:Create(rejoinBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_HOVER}):Play()
-end)
-rejoinBtn.MouseLeave:Connect(function()
-    TweenService:Create(rejoinBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_COLOR}):Play()
-end)
+rejoinBtn.MouseEnter:Connect(function() TweenService:Create(rejoinBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_HOVER}):Play() end)
+rejoinBtn.MouseLeave:Connect(function() TweenService:Create(rejoinBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_COLOR}):Play() end)
 rejoinBtn.MouseButton1Click:Connect(function()
     pcall(function() TeleportService:Teleport(game.PlaceId, player) end)
 end)
 
 local serverHopBtn = Instance.new("TextButton", serverInfoGrid)
-serverHopBtn.BackgroundColor3 = BTN_COLOR
-serverHopBtn.BorderSizePixel = 0
-serverHopBtn.Font = Enum.Font.GothamSemibold
-serverHopBtn.TextSize = 12
-serverHopBtn.TextColor3 = THEME_TEXT
-serverHopBtn.Text = "Server Hop"
+serverHopBtn.BackgroundColor3 = BTN_COLOR; serverHopBtn.BorderSizePixel = 0
+serverHopBtn.Font = Enum.Font.GothamSemibold; serverHopBtn.TextSize = 12
+serverHopBtn.TextColor3 = THEME_TEXT; serverHopBtn.Text = "Server Hop"
 Instance.new("UICorner", serverHopBtn).CornerRadius = UDim.new(0, 7)
 local shStroke = Instance.new("UIStroke", serverHopBtn)
 shStroke.Color = SEP_COLOR; shStroke.Thickness = 1; shStroke.Transparency = 0.4
-serverHopBtn.MouseEnter:Connect(function()
-    TweenService:Create(serverHopBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_HOVER}):Play()
-end)
-serverHopBtn.MouseLeave:Connect(function()
-    TweenService:Create(serverHopBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_COLOR}):Play()
-end)
+serverHopBtn.MouseEnter:Connect(function() TweenService:Create(serverHopBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_HOVER}):Play() end)
+serverHopBtn.MouseLeave:Connect(function() TweenService:Create(serverHopBtn, TweenInfo.new(0.18), {BackgroundColor3 = BTN_COLOR}):Play() end)
 serverHopBtn.MouseButton1Click:Connect(function()
     serverHopBtn.Text = "Searching..."
     task.spawn(function()
@@ -801,18 +720,14 @@ serverHopBtn.MouseButton1Click:Connect(function()
             if serverHopBtn and serverHopBtn.Parent then
                 serverHopBtn.Text = "No Server Found"
                 task.delay(2.5, function()
-                    if serverHopBtn and serverHopBtn.Parent then
-                        serverHopBtn.Text = "Server Hop"
-                    end
+                    if serverHopBtn and serverHopBtn.Parent then serverHopBtn.Text = "Server Hop" end
                 end)
             end
         end
     end)
 end)
 
--- ════════════════════════════════════════════════════
--- SERVER UPTIME & PLAYER COUNT
--- ════════════════════════════════════════════════════
+-- CHANGE: replaced old uptime system with Heartbeat-driven update (matching uploaded script)
 local function formatServerUptime(seconds)
     local h = math.floor(seconds / 3600)
     local m = math.floor((seconds % 3600) / 60)
@@ -833,9 +748,7 @@ table.insert(cleanupTasks, function()
     if uptimeConn then uptimeConn:Disconnect(); uptimeConn = nil end
 end)
 
--- ════════════════════════════════════════════════════
 -- DISCORD ROW
--- ════════════════════════════════════════════════════
 local discordFrame = Instance.new("Frame", homePage)
 discordFrame.Size = UDim2.new(1, 0, 0, 44)
 discordFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -846,33 +759,20 @@ local discordStroke = Instance.new("UIStroke", discordFrame)
 discordStroke.Color = SEP_COLOR; discordStroke.Thickness = 1; discordStroke.Transparency = 0.4
 
 local discordLabel = Instance.new("TextLabel", discordFrame)
-discordLabel.Size = UDim2.new(1, -130, 1, 0)
-discordLabel.Position = UDim2.new(0, 12, 0, 0)
-discordLabel.BackgroundTransparency = 1
-discordLabel.Font = Enum.Font.GothamSemibold
-discordLabel.TextSize = 13
-discordLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
-discordLabel.TextXAlignment = Enum.TextXAlignment.Left
+discordLabel.Size = UDim2.new(1, -130, 1, 0); discordLabel.Position = UDim2.new(0, 12, 0, 0)
+discordLabel.BackgroundTransparency = 1; discordLabel.Font = Enum.Font.GothamSemibold; discordLabel.TextSize = 13
+discordLabel.TextColor3 = Color3.fromRGB(160, 160, 160); discordLabel.TextXAlignment = Enum.TextXAlignment.Left
 discordLabel.Text = "discord.gg/bpfjSze8VB"
 
 local copyBtn = Instance.new("TextButton", discordFrame)
-copyBtn.Size = UDim2.new(0, 110, 0, 28)
-copyBtn.Position = UDim2.new(1, -118, 0.5, -14)
-copyBtn.BackgroundColor3 = BTN_COLOR
-copyBtn.Font = Enum.Font.GothamSemibold
-copyBtn.TextSize = 12
-copyBtn.TextColor3 = THEME_TEXT
-copyBtn.Text = "Copy Invite"
-copyBtn.BorderSizePixel = 0
+copyBtn.Size = UDim2.new(0, 110, 0, 28); copyBtn.Position = UDim2.new(1, -118, 0.5, -14)
+copyBtn.BackgroundColor3 = BTN_COLOR; copyBtn.Font = Enum.Font.GothamSemibold; copyBtn.TextSize = 12
+copyBtn.TextColor3 = THEME_TEXT; copyBtn.Text = "Copy Invite"; copyBtn.BorderSizePixel = 0
 Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 7)
 local copyStroke = Instance.new("UIStroke", copyBtn)
 copyStroke.Color = Color3.fromRGB(55, 55, 55); copyStroke.Thickness = 1; copyStroke.Transparency = 0
-copyBtn.MouseEnter:Connect(function()
-    TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play()
-end)
-copyBtn.MouseLeave:Connect(function()
-    TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play()
-end)
+copyBtn.MouseEnter:Connect(function() TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
+copyBtn.MouseLeave:Connect(function() TweenService:Create(copyBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play() end)
 copyBtn.MouseButton1Click:Connect(function()
     if setclipboard then
         setclipboard("https://discord.gg/bpfjSze8VB")
@@ -883,9 +783,7 @@ copyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ════════════════════════════════════════════════════
 -- TELEPORT TAB
--- ════════════════════════════════════════════════════
 local teleportPage = pages["TeleportTab"]
 
 local locations = {
@@ -921,25 +819,16 @@ local locations = {
     {name="Bird Cave",        x=4813.1,  y=17.7,   z=-978.8},
 }
 
--- ════════════════════════════════════════════════════
 -- TELEPORT TAB — PLAYER SECTION
--- ════════════════════════════════════════════════════
-
 local tpPlayerHeader = Instance.new("Frame", teleportPage)
-tpPlayerHeader.Size = UDim2.new(1, 0, 0, 22)
-tpPlayerHeader.BackgroundTransparency = 1
+tpPlayerHeader.Size = UDim2.new(1, 0, 0, 22); tpPlayerHeader.BackgroundTransparency = 1
 local tpPlayerHeaderLbl = Instance.new("TextLabel", tpPlayerHeader)
-tpPlayerHeaderLbl.Size = UDim2.new(1, -4, 1, 0)
-tpPlayerHeaderLbl.Position = UDim2.new(0, 4, 0, 0)
-tpPlayerHeaderLbl.BackgroundTransparency = 1
-tpPlayerHeaderLbl.Font = Enum.Font.GothamBold
-tpPlayerHeaderLbl.TextSize = 10
-tpPlayerHeaderLbl.TextColor3 = SECTION_TEXT
-tpPlayerHeaderLbl.TextXAlignment = Enum.TextXAlignment.Left
-tpPlayerHeaderLbl.Text = "  PLAYERS"
+tpPlayerHeaderLbl.Size = UDim2.new(1, -4, 1, 0); tpPlayerHeaderLbl.Position = UDim2.new(0, 4, 0, 0)
+tpPlayerHeaderLbl.BackgroundTransparency = 1; tpPlayerHeaderLbl.Font = Enum.Font.GothamBold
+tpPlayerHeaderLbl.TextSize = 10; tpPlayerHeaderLbl.TextColor3 = SECTION_TEXT
+tpPlayerHeaderLbl.TextXAlignment = Enum.TextXAlignment.Left; tpPlayerHeaderLbl.Text = "  PLAYERS"
 
 local tpSelectedPlayer = ""
-
 local TP_HEADER_H = 38
 local TP_ITEM_H   = 32
 local TP_MAX_SHOW = 5
@@ -947,16 +836,14 @@ local tpDropIsOpen = false
 
 local tpDropOuter = Instance.new("Frame", teleportPage)
 tpDropOuter.Size = UDim2.new(1, 0, 0, TP_HEADER_H)
-tpDropOuter.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
-tpDropOuter.BorderSizePixel = 0
+tpDropOuter.BackgroundColor3 = Color3.fromRGB(16, 16, 16); tpDropOuter.BorderSizePixel = 0
 tpDropOuter.ClipsDescendants = true
 Instance.new("UICorner", tpDropOuter).CornerRadius = UDim.new(0, 8)
 local tpDropStroke = Instance.new("UIStroke", tpDropOuter)
 tpDropStroke.Color = BORDER_COLOR; tpDropStroke.Thickness = 1; tpDropStroke.Transparency = 0.4
 
 local tpDropHeader = Instance.new("Frame", tpDropOuter)
-tpDropHeader.Size = UDim2.new(1, 0, 0, TP_HEADER_H)
-tpDropHeader.BackgroundTransparency = 1
+tpDropHeader.Size = UDim2.new(1, 0, 0, TP_HEADER_H); tpDropHeader.BackgroundTransparency = 1
 
 local tpDropLbl = Instance.new("TextLabel", tpDropHeader)
 tpDropLbl.Size = UDim2.new(0, 80, 1, 0); tpDropLbl.Position = UDim2.new(0, 12, 0, 0)
@@ -965,10 +852,8 @@ tpDropLbl.Font = Enum.Font.GothamBold; tpDropLbl.TextSize = 12
 tpDropLbl.TextColor3 = THEME_TEXT; tpDropLbl.TextXAlignment = Enum.TextXAlignment.Left
 
 local tpSelFrame = Instance.new("Frame", tpDropHeader)
-tpSelFrame.Size = UDim2.new(1, -96, 0, 26)
-tpSelFrame.Position = UDim2.new(0, 90, 0.5, -13)
-tpSelFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-tpSelFrame.BorderSizePixel = 0
+tpSelFrame.Size = UDim2.new(1, -96, 0, 26); tpSelFrame.Position = UDim2.new(0, 90, 0.5, -13)
+tpSelFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); tpSelFrame.BorderSizePixel = 0
 Instance.new("UICorner", tpSelFrame).CornerRadius = UDim.new(0, 6)
 local tpSelStroke = Instance.new("UIStroke", tpSelFrame)
 tpSelStroke.Color = BORDER_COLOR; tpSelStroke.Thickness = 1; tpSelStroke.Transparency = 0.4
@@ -978,38 +863,30 @@ tpSelLbl.Size = UDim2.new(1, -30, 1, 0); tpSelLbl.Position = UDim2.new(0, 8, 0, 
 tpSelLbl.BackgroundTransparency = 1; tpSelLbl.Text = "Select..."
 tpSelLbl.Font = Enum.Font.GothamSemibold; tpSelLbl.TextSize = 12
 tpSelLbl.TextColor3 = Color3.fromRGB(90, 90, 90)
-tpSelLbl.TextXAlignment = Enum.TextXAlignment.Left
-tpSelLbl.TextTruncate = Enum.TextTruncate.AtEnd
+tpSelLbl.TextXAlignment = Enum.TextXAlignment.Left; tpSelLbl.TextTruncate = Enum.TextTruncate.AtEnd
 
 local tpArrowLbl = Instance.new("TextLabel", tpSelFrame)
 tpArrowLbl.Size = UDim2.new(0, 20, 1, 0); tpArrowLbl.Position = UDim2.new(1, -22, 0, 0)
-tpArrowLbl.BackgroundTransparency = 1; tpArrowLbl.Text = "▾"
+tpArrowLbl.BackgroundTransparency = 1; tpArrowLbl.Text = "v"
 tpArrowLbl.Font = Enum.Font.GothamBold; tpArrowLbl.TextSize = 13
-tpArrowLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
-tpArrowLbl.TextXAlignment = Enum.TextXAlignment.Center
+tpArrowLbl.TextColor3 = Color3.fromRGB(150, 150, 150); tpArrowLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 local tpHeaderBtn = Instance.new("TextButton", tpSelFrame)
 tpHeaderBtn.Size = UDim2.new(1, 0, 1, 0); tpHeaderBtn.BackgroundTransparency = 1
 tpHeaderBtn.Text = ""; tpHeaderBtn.AutoButtonColor = false; tpHeaderBtn.ZIndex = 5
 
 local tpDropDivider = Instance.new("Frame", tpDropOuter)
-tpDropDivider.Size = UDim2.new(1, -14, 0, 1)
-tpDropDivider.Position = UDim2.new(0, 7, 0, TP_HEADER_H)
-tpDropDivider.BackgroundColor3 = BORDER_COLOR
-tpDropDivider.BorderSizePixel = 0; tpDropDivider.Visible = false
+tpDropDivider.Size = UDim2.new(1, -14, 0, 1); tpDropDivider.Position = UDim2.new(0, 7, 0, TP_HEADER_H)
+tpDropDivider.BackgroundColor3 = BORDER_COLOR; tpDropDivider.BorderSizePixel = 0; tpDropDivider.Visible = false
 
 local tpListScroll = Instance.new("ScrollingFrame", tpDropOuter)
-tpListScroll.Position = UDim2.new(0, 0, 0, TP_HEADER_H + 2)
-tpListScroll.Size = UDim2.new(1, 0, 0, 0)
+tpListScroll.Position = UDim2.new(0, 0, 0, TP_HEADER_H + 2); tpListScroll.Size = UDim2.new(1, 0, 0, 0)
 tpListScroll.BackgroundTransparency = 1; tpListScroll.BorderSizePixel = 0
-tpListScroll.ScrollBarThickness = 3
-tpListScroll.ScrollBarImageColor3 = BORDER_COLOR
-tpListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-tpListScroll.ClipsDescendants = true
+tpListScroll.ScrollBarThickness = 3; tpListScroll.ScrollBarImageColor3 = BORDER_COLOR
+tpListScroll.CanvasSize = UDim2.new(0, 0, 0, 0); tpListScroll.ClipsDescendants = true
 
 local tpListLayout = Instance.new("UIListLayout", tpListScroll)
-tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tpListLayout.Padding = UDim.new(0, 2)
+tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder; tpListLayout.Padding = UDim.new(0, 2)
 tpListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     tpListScroll.CanvasSize = UDim2.new(0, 0, 0, tpListLayout.AbsoluteContentSize.Y + 6)
 end)
@@ -1032,8 +909,7 @@ local function tpBuildList()
     local pList = Players:GetPlayers()
     for i, plr in ipairs(pList) do
         local row = Instance.new("Frame", tpListScroll)
-        row.Size = UDim2.new(1, 0, 0, TP_ITEM_H)
-        row.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+        row.Size = UDim2.new(1, 0, 0, TP_ITEM_H); row.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
         row.BorderSizePixel = 0; row.LayoutOrder = i
         Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
         local nameLbl2 = Instance.new("TextLabel", row)
@@ -1044,16 +920,11 @@ local function tpBuildList()
         local rowBtn = Instance.new("TextButton", row)
         rowBtn.Size = UDim2.new(1, 0, 1, 0); rowBtn.BackgroundTransparency = 1
         rowBtn.Text = ""; rowBtn.AutoButtonColor = false; rowBtn.ZIndex = 5
-        rowBtn.MouseEnter:Connect(function()
-            TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(36, 36, 36)}):Play()
-        end)
-        rowBtn.MouseLeave:Connect(function()
-            TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play()
-        end)
+        rowBtn.MouseEnter:Connect(function() TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(36, 36, 36)}):Play() end)
+        rowBtn.MouseLeave:Connect(function() TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(22, 22, 22)}):Play() end)
         rowBtn.MouseButton1Click:Connect(function()
             tpSelectedPlayer = plr.Name
-            tpSelLbl.Text = plr.Name
-            tpSelLbl.TextColor3 = THEME_TEXT
+            tpSelLbl.Text = plr.Name; tpSelLbl.TextColor3 = THEME_TEXT
             tpCloseList()
         end)
     end
@@ -1072,27 +943,20 @@ end
 tpHeaderBtn.MouseButton1Click:Connect(function()
     if tpDropIsOpen then tpCloseList() else tpOpenList() end
 end)
-tpHeaderBtn.MouseEnter:Connect(function()
-    TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(42, 42, 42)}):Play()
-end)
-tpHeaderBtn.MouseLeave:Connect(function()
-    TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
-end)
+tpHeaderBtn.MouseEnter:Connect(function() TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(42, 42, 42)}):Play() end)
+tpHeaderBtn.MouseLeave:Connect(function() TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play() end)
 
 local tpBtnRow = Instance.new("Frame", teleportPage)
-tpBtnRow.Size = UDim2.new(1, 0, 0, 34)
-tpBtnRow.BackgroundTransparency = 1
+tpBtnRow.Size = UDim2.new(1, 0, 0, 34); tpBtnRow.BackgroundTransparency = 1
 
 local function makeTpActionBtn(parent, text, xScale, xOffset, cb)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0.5, -4, 1, 0)
-    btn.Position = UDim2.new(xScale, xOffset, 0, 0)
+    btn.Size = UDim2.new(0.5, -4, 1, 0); btn.Position = UDim2.new(xScale, xOffset, 0, 0)
     btn.BackgroundColor3 = BTN_COLOR; btn.BorderSizePixel = 0
     btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 12
     btn.TextColor3 = THEME_TEXT; btn.Text = text; btn.AutoButtonColor = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-    local s = Instance.new("UIStroke", btn)
-    s.Color = SEP_COLOR; s.Thickness = 1; s.Transparency = 0.4
+    local s = Instance.new("UIStroke", btn); s.Color = SEP_COLOR; s.Thickness = 1; s.Transparency = 0.4
     btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_COLOR}):Play() end)
     btn.MouseButton1Click:Connect(cb)
@@ -1105,9 +969,7 @@ makeTpActionBtn(tpBtnRow, "To Player", 0, 0, function()
         if p.Name == tpSelectedPlayer then
             local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
             local myHrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if hrp and myHrp then
-                myHrp.CFrame = hrp.CFrame * CFrame.new(3, 0, 0)
-            end
+            if hrp and myHrp then myHrp.CFrame = hrp.CFrame * CFrame.new(3, 0, 0) end
             break
         end
     end
@@ -1119,60 +981,43 @@ makeTpActionBtn(tpBtnRow, "To Base", 0.5, 4, function()
         if v:FindFirstChild("Owner") and tostring(v.Owner.Value) == tpSelectedPlayer then
             local myHrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             local origSq = v:FindFirstChild("OriginSquare")
-            if myHrp and origSq then
-                myHrp.CFrame = origSq.CFrame + Vector3.new(0, 3, 0)
-            end
+            if myHrp and origSq then myHrp.CFrame = origSq.CFrame + Vector3.new(0, 3, 0) end
             break
         end
     end
 end)
 
 local tpPlayerSep = Instance.new("Frame", teleportPage)
-tpPlayerSep.Size = UDim2.new(1, 0, 0, 1)
-tpPlayerSep.BackgroundColor3 = SEP_COLOR; tpPlayerSep.BorderSizePixel = 0
+tpPlayerSep.Size = UDim2.new(1, 0, 0, 1); tpPlayerSep.BackgroundColor3 = SEP_COLOR; tpPlayerSep.BorderSizePixel = 0
 
 local tpLocHeader = Instance.new("Frame", teleportPage)
-tpLocHeader.Size = UDim2.new(1, 0, 0, 22)
-tpLocHeader.BackgroundTransparency = 1
+tpLocHeader.Size = UDim2.new(1, 0, 0, 22); tpLocHeader.BackgroundTransparency = 1
 local tpLocHeaderLbl = Instance.new("TextLabel", tpLocHeader)
-tpLocHeaderLbl.Size = UDim2.new(1, -4, 1, 0)
-tpLocHeaderLbl.Position = UDim2.new(0, 4, 0, 0)
-tpLocHeaderLbl.BackgroundTransparency = 1
-tpLocHeaderLbl.Font = Enum.Font.GothamBold; tpLocHeaderLbl.TextSize = 10
+tpLocHeaderLbl.Size = UDim2.new(1, -4, 1, 0); tpLocHeaderLbl.Position = UDim2.new(0, 4, 0, 0)
+tpLocHeaderLbl.BackgroundTransparency = 1; tpLocHeaderLbl.Font = Enum.Font.GothamBold; tpLocHeaderLbl.TextSize = 10
 tpLocHeaderLbl.TextColor3 = SECTION_TEXT; tpLocHeaderLbl.TextXAlignment = Enum.TextXAlignment.Left
 tpLocHeaderLbl.Text = "  LOCATIONS"
 
 local tpSearchBarFrame = Instance.new("Frame", teleportPage)
-tpSearchBarFrame.Size = UDim2.new(1, 0, 0, 36)
-tpSearchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+tpSearchBarFrame.Size = UDim2.new(1, 0, 0, 36); tpSearchBarFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 tpSearchBarFrame.BorderSizePixel = 0
 Instance.new("UICorner", tpSearchBarFrame).CornerRadius = UDim.new(0, 9)
 local tpSearchBarStroke = Instance.new("UIStroke", tpSearchBarFrame)
 tpSearchBarStroke.Color = SEP_COLOR; tpSearchBarStroke.Thickness = 1; tpSearchBarStroke.Transparency = 0.4
 
 local searchBox = Instance.new("TextBox", tpSearchBarFrame)
-searchBox.Size = UDim2.new(1, -12, 1, 0)
-searchBox.Position = UDim2.new(0, 10, 0, 0)
-searchBox.BackgroundTransparency = 1
-searchBox.Font = Enum.Font.GothamSemibold
-searchBox.TextSize = 13
-searchBox.TextColor3 = THEME_TEXT
-searchBox.PlaceholderText = "Search locations..."
-searchBox.PlaceholderColor3 = Color3.fromRGB(70, 70, 70)
-searchBox.Text = ""
-searchBox.ClearTextOnFocus = false
-searchBox.TextXAlignment = Enum.TextXAlignment.Left
+searchBox.Size = UDim2.new(1, -12, 1, 0); searchBox.Position = UDim2.new(0, 10, 0, 0)
+searchBox.BackgroundTransparency = 1; searchBox.Font = Enum.Font.GothamSemibold; searchBox.TextSize = 13
+searchBox.TextColor3 = THEME_TEXT; searchBox.PlaceholderText = "Search locations..."
+searchBox.PlaceholderColor3 = Color3.fromRGB(70, 70, 70); searchBox.Text = ""
+searchBox.ClearTextOnFocus = false; searchBox.TextXAlignment = Enum.TextXAlignment.Left
 
 local tpCardGrid = Instance.new("Frame", teleportPage)
-tpCardGrid.BackgroundTransparency = 1
-tpCardGrid.Size = UDim2.new(1, 0, 0, 0)
+tpCardGrid.BackgroundTransparency = 1; tpCardGrid.Size = UDim2.new(1, 0, 0, 0)
 
 local tpGridLayout = Instance.new("UIGridLayout", tpCardGrid)
-tpGridLayout.CellSize = UDim2.new(0.5, -5, 0, 52)
-tpGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-tpGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-tpGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
+tpGridLayout.CellSize = UDim2.new(0.5, -5, 0, 52); tpGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
+tpGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left; tpGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tpGridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     tpCardGrid.Size = UDim2.new(1, 0, 0, tpGridLayout.AbsoluteContentSize.Y)
 end)
@@ -1181,43 +1026,28 @@ local tpCards = {}
 
 local function makeTpCard(loc, idx)
     local card = Instance.new("Frame", tpCardGrid)
-    card.Name = loc.name
-    card.LayoutOrder = idx
-    card.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
-    card.BorderSizePixel = 0
+    card.Name = loc.name; card.LayoutOrder = idx
+    card.BackgroundColor3 = Color3.fromRGB(16, 16, 16); card.BorderSizePixel = 0
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
-
     local accent = Instance.new("Frame", card)
-    accent.Size = UDim2.new(0, 3, 0.7, 0)
-    accent.Position = UDim2.new(0, 0, 0.15, 0)
-    accent.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-    accent.BorderSizePixel = 0
+    accent.Size = UDim2.new(0, 3, 0.7, 0); accent.Position = UDim2.new(0, 0, 0.15, 0)
+    accent.BackgroundColor3 = Color3.fromRGB(55, 55, 55); accent.BorderSizePixel = 0
     Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
-
     local nameLbl = Instance.new("TextLabel", card)
-    nameLbl.Size = UDim2.new(1, -8, 1, 0)
-    nameLbl.Position = UDim2.new(0, 8, 0, 0)
-    nameLbl.BackgroundTransparency = 1
-    nameLbl.Font = Enum.Font.GothamBold
-    nameLbl.TextSize = 12
-    nameLbl.TextColor3 = THEME_TEXT
-    nameLbl.TextXAlignment = Enum.TextXAlignment.Center
-    nameLbl.TextYAlignment = Enum.TextYAlignment.Center
-    nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+    nameLbl.Size = UDim2.new(1, -8, 1, 0); nameLbl.Position = UDim2.new(0, 8, 0, 0)
+    nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamBold; nameLbl.TextSize = 12
+    nameLbl.TextColor3 = THEME_TEXT; nameLbl.TextXAlignment = Enum.TextXAlignment.Center
+    nameLbl.TextYAlignment = Enum.TextYAlignment.Center; nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
     nameLbl.Text = loc.name
-
     local btn = Instance.new("TextButton", card)
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.BackgroundTransparency = 1
-    btn.Text = ""; btn.ZIndex = 10
-    btn.AutoButtonColor = false
-
+    btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1
+    btn.Text = ""; btn.ZIndex = 10; btn.AutoButtonColor = false
     btn.MouseEnter:Connect(function()
-        TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(28, 28, 28)}):Play()
+        TweenService:Create(card,   TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(28, 28, 28)}):Play()
         TweenService:Create(accent, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(80, 80, 80)}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
+        TweenService:Create(card,   TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
         TweenService:Create(accent, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(55, 55, 55)}):Play()
     end)
     btn.MouseButton1Click:Connect(function()
@@ -1230,7 +1060,6 @@ local function makeTpCard(loc, idx)
             TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
         end)
     end)
-
     return card
 end
 
@@ -1245,21 +1074,14 @@ searchBox:GetPropertyChangedSignal("Text"):Connect(function()
     for _, entry in ipairs(tpCards) do
         local visible = query == "" or string.find(entry.name, query, 1, true)
         entry.card.Visible = visible ~= nil
-        if entry.card.Visible then
-            entry.card.LayoutOrder = order
-            order = order + 1
-        end
+        if entry.card.Visible then entry.card.LayoutOrder = order; order = order + 1 end
     end
 end)
 
--- ════════════════════════════════════════════════════
--- SHARED ITEM/DUPE STATE
--- ════════════════════════════════════════════════════
+-- SHARED STATE
 local tpItemSpeed = 0.3
 
--- ════════════════════════════════════════════════════
 -- ITEM TAB
--- ════════════════════════════════════════════════════
 local itemPage = pages["ItemTab"]
 local itemPageList = itemPage:FindFirstChildOfClass("UIListLayout")
 if itemPageList then itemPageList.Padding = UDim.new(0, 8) end
@@ -1284,8 +1106,7 @@ end
 
 local function iSep()
     local sep = Instance.new("Frame", itemPage)
-    sep.Size = UDim2.new(1, 0, 0, 1)
-    sep.BackgroundColor3 = SEP_COLOR; sep.BorderSizePixel = 0
+    sep.Size = UDim2.new(1, 0, 0, 1); sep.BackgroundColor3 = SEP_COLOR; sep.BorderSizePixel = 0
 end
 
 local function iButton(text, cb)
@@ -1304,8 +1125,7 @@ end
 
 local function iToggle(text, default, cb)
     local frame = Instance.new("Frame", itemPage)
-    frame.Size = UDim2.new(1, 0, 0, 36); frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    frame.BorderSizePixel = 0
+    frame.Size = UDim2.new(1, 0, 0, 36); frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local lbl = Instance.new("TextLabel", frame)
     lbl.Size = UDim2.new(1, -54, 1, 0); lbl.Position = UDim2.new(0, 12, 0, 0)
@@ -1313,8 +1133,7 @@ local function iToggle(text, default, cb)
     lbl.TextSize = 13; lbl.TextColor3 = THEME_TEXT; lbl.TextXAlignment = Enum.TextXAlignment.Left
     local tb = Instance.new("TextButton", frame)
     tb.Size = UDim2.new(0, 36, 0, 20); tb.Position = UDim2.new(1, -46, 0.5, -10)
-    tb.BackgroundColor3 = default and SW_ON or SW_OFF
-    tb.Text = ""; tb.BorderSizePixel = 0
+    tb.BackgroundColor3 = default and SW_ON or SW_OFF; tb.Text = ""; tb.BorderSizePixel = 0
     Instance.new("UICorner", tb).CornerRadius = UDim.new(1, 0)
     local circle = Instance.new("Frame", tb)
     circle.Size = UDim2.new(0, 14, 0, 14)
@@ -1325,9 +1144,7 @@ local function iToggle(text, default, cb)
     if cb then cb(toggled) end
     tb.MouseButton1Click:Connect(function()
         toggled = not toggled
-        TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            BackgroundColor3 = toggled and SW_ON or SW_OFF
-        }):Play()
+        TweenService:Create(tb, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {BackgroundColor3 = toggled and SW_ON or SW_OFF}):Play()
         TweenService:Create(circle, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
             Position = UDim2.new(0, toggled and 20 or 2, 0.5, -7),
             BackgroundColor3 = toggled and SW_KNOB_ON or SW_KNOB_OFF
@@ -1339,12 +1156,10 @@ end
 
 local function iSlider(text, minV, maxV, defV, cb)
     local frame = Instance.new("Frame", itemPage)
-    frame.Size = UDim2.new(1, 0, 0, 54); frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    frame.BorderSizePixel = 0
+    frame.Size = UDim2.new(1, 0, 0, 54); frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); frame.BorderSizePixel = 0
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local topRow = Instance.new("Frame", frame)
-    topRow.Size = UDim2.new(1, -16, 0, 22); topRow.Position = UDim2.new(0, 8, 0, 7)
-    topRow.BackgroundTransparency = 1
+    topRow.Size = UDim2.new(1, -16, 0, 22); topRow.Position = UDim2.new(0, 8, 0, 7); topRow.BackgroundTransparency = 1
     local lbl = Instance.new("TextLabel", topRow)
     lbl.Size = UDim2.new(0.72, 0, 1, 0); lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 13
@@ -1352,8 +1167,7 @@ local function iSlider(text, minV, maxV, defV, cb)
     local valLbl = Instance.new("TextLabel", topRow)
     valLbl.Size = UDim2.new(0.28, 0, 1, 0); valLbl.Position = UDim2.new(0.72, 0, 0, 0)
     valLbl.BackgroundTransparency = 1; valLbl.Font = Enum.Font.GothamBold; valLbl.TextSize = 13
-    valLbl.TextColor3 = PB_TEXT; valLbl.TextXAlignment = Enum.TextXAlignment.Right
-    valLbl.Text = tostring(defV)
+    valLbl.TextColor3 = PB_TEXT; valLbl.TextXAlignment = Enum.TextXAlignment.Right; valLbl.Text = tostring(defV)
     local track = Instance.new("Frame", frame)
     track.Size = UDim2.new(1, -16, 0, 5); track.Position = UDim2.new(0, 8, 0, 38)
     track.BackgroundColor3 = Color3.fromRGB(40, 40, 40); track.BorderSizePixel = 0
@@ -1393,8 +1207,7 @@ local function selectPart(part)
     local sb = Instance.new("SelectionBox", part)
     sb.Name = "Selection"; sb.Adornee = part
     sb.SurfaceTransparency = 0.5; sb.LineThickness = 0.09
-    sb.SurfaceColor3 = Color3.fromRGB(0,0,0)
-    sb.Color3 = Color3.fromRGB(180,180,180)
+    sb.SurfaceColor3 = Color3.fromRGB(0,0,0); sb.Color3 = Color3.fromRGB(180,180,180)
 end
 
 local function deselectPart(part)
@@ -1406,12 +1219,8 @@ end
 local function deselectAll()
     if not (workspace:FindFirstChild("PlayerModels")) then return end
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
-        if v:FindFirstChild("Main") and v.Main:FindFirstChild("Selection") then
-            v.Main.Selection:Destroy()
-        end
-        if v:FindFirstChild("WoodSection") and v.WoodSection:FindFirstChild("Selection") then
-            v.WoodSection.Selection:Destroy()
-        end
+        if v:FindFirstChild("Main") and v.Main:FindFirstChild("Selection") then v.Main.Selection:Destroy() end
+        if v:FindFirstChild("WoodSection") and v.WoodSection:FindFirstChild("Selection") then v.WoodSection.Selection:Destroy() end
     end
 end
 table.insert(cleanupTasks, deselectAll)
@@ -1453,16 +1262,14 @@ local function tryGroupSelect(target)
         model = target:FindFirstAncestorOfClass("Model")
     end
     if not (model and model:FindFirstChild("Owner")) then return end
-
     local clickedOwner = model.Owner.Value
-    local iv           = model:FindFirstChild("ItemName")
-    local groupName    = iv and iv.Value or model.Name
-
+    local iv = model:FindFirstChild("ItemName")
+    local groupName = iv and iv.Value or model.Name
     if not workspace:FindFirstChild("PlayerModels") then return end
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
         local vOwner = v:FindFirstChild("Owner")
         if vOwner and vOwner.Value == clickedOwner then
-            local viv   = v:FindFirstChild("ItemName")
+            local viv = v:FindFirstChild("ItemName")
             local vName = viv and viv.Value or v.Name
             if vName == groupName then
                 if v:FindFirstChild("Main") then selectPart(v.Main) end
@@ -1513,8 +1320,7 @@ UserInputService.InputBegan:Connect(function(input)
             end
         end
     end
-    lassoFrame.Size = UDim2.new(0, 1, 0, 1)
-    lassoFrame.Visible = false
+    lassoFrame.Size = UDim2.new(0, 1, 0, 1); lassoFrame.Visible = false
 end)
 
 mouse.Button1Up:Connect(function()
@@ -1580,22 +1386,18 @@ end
 updateItemModeButtons("Group")
 
 local tpDestRow = Instance.new("Frame", itemPage)
-tpDestRow.Size = UDim2.new(1, 0, 0, 30)
-tpDestRow.BackgroundTransparency = 1
-tpDestRow.Visible = false
+tpDestRow.Size = UDim2.new(1, 0, 0, 30); tpDestRow.BackgroundTransparency = 1; tpDestRow.Visible = false
 
 local tpSetBtn = Instance.new("TextButton", tpDestRow)
 tpSetBtn.Size = UDim2.new(0.5, -4, 1, 0); tpSetBtn.Position = UDim2.new(0, 0, 0, 0)
 tpSetBtn.BackgroundColor3 = BTN_COLOR; tpSetBtn.Font = Enum.Font.GothamSemibold
-tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"
-tpSetBtn.BorderSizePixel = 0
+tpSetBtn.TextSize = 12; tpSetBtn.TextColor3 = THEME_TEXT; tpSetBtn.Text = "Set Destination"; tpSetBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpSetBtn).CornerRadius = UDim.new(0, 7)
 
 local tpRemoveBtn = Instance.new("TextButton", tpDestRow)
 tpRemoveBtn.Size = UDim2.new(0.5, -4, 1, 0); tpRemoveBtn.Position = UDim2.new(0.5, 4, 0, 0)
 tpRemoveBtn.BackgroundColor3 = BTN_COLOR; tpRemoveBtn.Font = Enum.Font.GothamSemibold
-tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Clear Destination"
-tpRemoveBtn.BorderSizePixel = 0
+tpRemoveBtn.TextSize = 12; tpRemoveBtn.TextColor3 = THEME_TEXT; tpRemoveBtn.Text = "Clear Destination"; tpRemoveBtn.BorderSizePixel = 0
 Instance.new("UICorner", tpRemoveBtn).CornerRadius = UDim.new(0, 7)
 
 for _, b in {tpSetBtn, tpRemoveBtn} do
@@ -1608,8 +1410,7 @@ tpSetBtn.MouseButton1Click:Connect(function()
     tpCircle = Instance.new("Part")
     tpCircle.Name = "VanillaHubTpCircle"
     tpCircle.Shape = Enum.PartType.Ball; tpCircle.Size = Vector3.new(3,3,3)
-    tpCircle.Material = Enum.Material.SmoothPlastic
-    tpCircle.Color = Color3.fromRGB(110,110,120)
+    tpCircle.Material = Enum.Material.SmoothPlastic; tpCircle.Color = Color3.fromRGB(110,110,120)
     tpCircle.Anchored = true; tpCircle.CanCollide = false
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -1627,38 +1428,24 @@ table.insert(cleanupTasks, function()
 end)
 
 iToggle("Custom Destination", false, function(val)
-    useCustomDest = val
-    tpDestRow.Visible = val
-    if not val and tpCircle then
-        tpCircle:Destroy(); tpCircle = nil
-    end
+    useCustomDest = val; tpDestRow.Visible = val
+    if not val and tpCircle then tpCircle:Destroy(); tpCircle = nil end
 end)
 
 iSep()
-
 iSectionLabel("Actions")
 
 local tpSelectBtn = iButton("Teleport Selected", function() end)
 tpSelectBtn.MouseButton1Click:Connect(function()
-    if isTeleportingItems then
-        stopTeleportItems = true; return
-    end
+    if isTeleportingItems then stopTeleportItems = true; return end
     if useCustomDest and not tpCircle then return end
-
     isTeleportingItems = true; stopTeleportItems = false
     tpSelectBtn.Text = "Stop"
     TweenService:Create(tpSelectBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50,50,50)}):Play()
-
     local destCF = useCustomDest
         and tpCircle.CFrame
-        or (player.Character
-            and player.Character:FindFirstChild("HumanoidRootPart")
-            and player.Character.HumanoidRootPart.CFrame)
-
-    local OldPos = player.Character
-        and player.Character:FindFirstChild("HumanoidRootPart")
-        and player.Character.HumanoidRootPart.CFrame
-
+        or (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.CFrame)
+    local OldPos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.CFrame
     task.spawn(function()
         if not workspace:FindFirstChild("PlayerModels") then
             isTeleportingItems = false; stopTeleportItems = false
@@ -1687,16 +1474,13 @@ tpSelectBtn.MouseButton1Click:Connect(function()
                 if getItemType(selectedParts[i]) == getItemType(selectedParts[i-1]) then
                     for j = i+1, #selectedParts do
                         if getItemType(selectedParts[j]) ~= getItemType(selectedParts[i-1]) then
-                            selectedParts[i], selectedParts[j] = selectedParts[j], selectedParts[i]
-                            break
+                            selectedParts[i], selectedParts[j] = selectedParts[j], selectedParts[i]; break
                         end
                     end
                 end
             end
         elseif itemTpMode == "group" then
-            table.sort(selectedParts, function(a, b)
-                return getItemType(a) < getItemType(b)
-            end)
+            table.sort(selectedParts, function(a, b) return getItemType(a) < getItemType(b) end)
         end
         for _, part in ipairs(selectedParts) do
             if stopTeleportItems then break end
@@ -1729,9 +1513,7 @@ tpSelectBtn.MouseButton1Click:Connect(function()
 end)
 
 iButton("Sell Selected", function()
-    local OldPos = player.Character
-        and player.Character:FindFirstChild("HumanoidRootPart")
-        and player.Character.HumanoidRootPart.CFrame
+    local OldPos = player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.CFrame
     if not workspace:FindFirstChild("PlayerModels") then return end
     task.spawn(function()
         for _, v in next, workspace.PlayerModels:GetDescendants() do
@@ -1762,9 +1544,7 @@ iButton("Sell Selected", function()
     end)
 end)
 
--- ════════════════════════════════════════════════════
 -- DUPE TAB
--- ════════════════════════════════════════════════════
 local dupePage = pages["DupeTab"]
 local dupeList = dupePage:FindFirstChildOfClass("UIListLayout")
 if dupeList then dupeList.Padding = UDim.new(0, 8) end
@@ -1781,67 +1561,58 @@ end
 
 dSectionLabel("Info")
 
--- ════════════════════════════════════════════════════
--- SEARCH TAB
--- ════════════════════════════════════════════════════
+-- SEARCH TAB — clean, no symbols
 local searchTabPage = pages["SearchTab"]
 local searchTabList = searchTabPage:FindFirstChildOfClass("UIListLayout")
 if searchTabList then searchTabList.Padding = UDim.new(0, 6) end
 
 local allFeatures = {
-    {"Walkspeed",        "PlayerTab"}, {"Jumppower",          "PlayerTab"},
-    {"Fly Speed",        "PlayerTab"}, {"Fly Hotkey",         "PlayerTab"},
-    {"Fly",              "PlayerTab"}, {"Noclip",             "PlayerTab"},
-    {"InfJump",          "PlayerTab"}, {"Hard Dragger",       "PlayerTab"},
-    {"BTools",           "PlayerTab"}, {"Headlight",          "PlayerTab"},
-    {"Always Day",       "WorldTab"},  {"Always Night",       "WorldTab"},
-    {"Remove Fog",       "WorldTab"},  {"Shadows",            "WorldTab"},
-    {"Walk On Water",    "WorldTab"},  {"Remove Water",       "WorldTab"},
-    {"Teleport to Player","TeleportTab"}, {"Teleport to Base","TeleportTab"},
-    {"Spawn",            "TeleportTab"}, {"The Den",          "TeleportTab"},
-    {"LightHouse",       "TeleportTab"}, {"Safari",           "TeleportTab"},
-    {"Bridge",           "TeleportTab"}, {"Bob's Shack",      "TeleportTab"},
-    {"EndTimesCave",     "TeleportTab"}, {"The Swamp",        "TeleportTab"},
-    {"The Cabin",        "TeleportTab"}, {"Volcano",          "TeleportTab"},
-    {"Boxed Cars",       "TeleportTab"}, {"Tiaga Peak",       "TeleportTab"},
-    {"Land Store",       "TeleportTab"}, {"Link's Logic",     "TeleportTab"},
-    {"Palm Island",      "TeleportTab"}, {"Palm Island 2",    "TeleportTab"},
-    {"Palm Island 3",    "TeleportTab"}, {"Fine Art Shop",    "TeleportTab"},
-    {"SnowGlow Biome",   "TeleportTab"}, {"Cave",             "TeleportTab"},
-    {"Shrine Of Sight",  "TeleportTab"}, {"Fancy Furnishings","TeleportTab"},
-    {"Docks",            "TeleportTab"}, {"Strange Man",      "TeleportTab"},
-    {"Wood Dropoff",     "TeleportTab"}, {"Snow Biome",       "TeleportTab"},
-    {"Wood RU's",        "TeleportTab"}, {"Green Box",        "TeleportTab"},
-    {"Cherry Meadow",    "TeleportTab"}, {"Bird Cave",        "TeleportTab"},
-    {"Click Selection",  "ItemTab"},   {"Lasso Tool",         "ItemTab"},
-    {"Group Selection",  "ItemTab"},   {"Delay Per Item",     "ItemTab"},
-    {"Teleport Mode",    "ItemTab"},   {"Teleport Selected",  "ItemTab"},
-    {"Sell Selected",    "ItemTab"},   {"Deselect All",       "ItemTab"},
-    {"Grid Size",        "Pixel ArtTab"}, {"Rotation Step",  "Pixel ArtTab"},
-    {"Follow Mouse",     "Pixel ArtTab"}, {"Snap to Grid",   "Pixel ArtTab"},
-    {"Center on Plot",   "Pixel ArtTab"}, {"Remove Pixel Art","Pixel ArtTab"},
+    {"Walkspeed",          "PlayerTab"}, {"Jumppower",           "PlayerTab"},
+    {"Fly Speed",          "PlayerTab"}, {"Fly Hotkey",          "PlayerTab"},
+    {"Fly",                "PlayerTab"}, {"Noclip",              "PlayerTab"},
+    {"InfJump",            "PlayerTab"}, {"Hard Dragger",        "PlayerTab"},
+    {"BTools",             "PlayerTab"}, {"Headlight",           "PlayerTab"},
+    {"Always Day",         "WorldTab"},  {"Always Night",        "WorldTab"},
+    {"Remove Fog",         "WorldTab"},  {"Shadows",             "WorldTab"},
+    {"Walk On Water",      "WorldTab"},  {"Remove Water",        "WorldTab"},
+    {"Teleport to Player", "TeleportTab"}, {"Teleport to Base",  "TeleportTab"},
+    {"Spawn",              "TeleportTab"}, {"The Den",           "TeleportTab"},
+    {"LightHouse",         "TeleportTab"}, {"Safari",            "TeleportTab"},
+    {"Bridge",             "TeleportTab"}, {"Bob's Shack",       "TeleportTab"},
+    {"EndTimesCave",       "TeleportTab"}, {"The Swamp",         "TeleportTab"},
+    {"The Cabin",          "TeleportTab"}, {"Volcano",           "TeleportTab"},
+    {"Boxed Cars",         "TeleportTab"}, {"Tiaga Peak",        "TeleportTab"},
+    {"Land Store",         "TeleportTab"}, {"Link's Logic",      "TeleportTab"},
+    {"Palm Island",        "TeleportTab"}, {"Palm Island 2",     "TeleportTab"},
+    {"Palm Island 3",      "TeleportTab"}, {"Fine Art Shop",     "TeleportTab"},
+    {"SnowGlow Biome",     "TeleportTab"}, {"Cave",              "TeleportTab"},
+    {"Shrine Of Sight",    "TeleportTab"}, {"Fancy Furnishings", "TeleportTab"},
+    {"Docks",              "TeleportTab"}, {"Strange Man",       "TeleportTab"},
+    {"Wood Dropoff",       "TeleportTab"}, {"Snow Biome",        "TeleportTab"},
+    {"Wood RUs",           "TeleportTab"}, {"Green Box",         "TeleportTab"},
+    {"Cherry Meadow",      "TeleportTab"}, {"Bird Cave",         "TeleportTab"},
+    {"Click Selection",    "ItemTab"},   {"Lasso Tool",          "ItemTab"},
+    {"Group Selection",    "ItemTab"},   {"Delay Per Item",      "ItemTab"},
+    {"Teleport Mode",      "ItemTab"},   {"Teleport Selected",   "ItemTab"},
+    {"Sell Selected",      "ItemTab"},   {"Deselect All",        "ItemTab"},
+    {"Grid Size",          "Pixel ArtTab"}, {"Rotation Step",   "Pixel ArtTab"},
+    {"Follow Mouse",       "Pixel ArtTab"}, {"Snap to Grid",    "Pixel ArtTab"},
+    {"Center on Plot",     "Pixel ArtTab"}, {"Remove Pixel Art","Pixel ArtTab"},
 }
 
 local stInputFrame = Instance.new("Frame", searchTabPage)
 stInputFrame.Size = UDim2.new(1, 0, 0, 36)
-stInputFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
-stInputFrame.BorderSizePixel = 0
+stInputFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14); stInputFrame.BorderSizePixel = 0
 Instance.new("UICorner", stInputFrame).CornerRadius = UDim.new(0, 9)
 local stInputStroke = Instance.new("UIStroke", stInputFrame)
 stInputStroke.Color = SEP_COLOR; stInputStroke.Thickness = 1; stInputStroke.Transparency = 0.4
 
 local stInput = Instance.new("TextBox", stInputFrame)
-stInput.Size = UDim2.new(1, -12, 1, 0)
-stInput.Position = UDim2.new(0, 10, 0, 0)
-stInput.BackgroundTransparency = 1
-stInput.Font = Enum.Font.GothamSemibold
-stInput.TextSize = 13
-stInput.TextColor3 = THEME_TEXT
-stInput.PlaceholderText = "Search features"
-stInput.PlaceholderColor3 = Color3.fromRGB(60, 60, 60)
-stInput.Text = ""
-stInput.ClearTextOnFocus = false
-stInput.TextXAlignment = Enum.TextXAlignment.Left
+stInput.Size = UDim2.new(1, -12, 1, 0); stInput.Position = UDim2.new(0, 10, 0, 0)
+stInput.BackgroundTransparency = 1; stInput.Font = Enum.Font.GothamSemibold; stInput.TextSize = 13
+stInput.TextColor3 = THEME_TEXT; stInput.PlaceholderText = "Search features"
+stInput.PlaceholderColor3 = Color3.fromRGB(60, 60, 60); stInput.Text = ""
+stInput.ClearTextOnFocus = false; stInput.TextXAlignment = Enum.TextXAlignment.Left
 
 local featureRows = {}
 
@@ -1851,45 +1622,26 @@ for _, entry in ipairs(allFeatures) do
 
     local row = Instance.new("Frame", searchTabPage)
     row.Size = UDim2.new(1, 0, 0, 32)
-    row.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
-    row.BorderSizePixel = 0
-    row.Visible = false
+    row.BackgroundColor3 = Color3.fromRGB(16, 16, 16); row.BorderSizePixel = 0; row.Visible = false
     Instance.new("UICorner", row).CornerRadius = UDim.new(0, 7)
 
     local nameLbl = Instance.new("TextLabel", row)
-    nameLbl.Size = UDim2.new(0.62, -8, 1, 0)
-    nameLbl.Position = UDim2.new(0, 10, 0, 0)
-    nameLbl.BackgroundTransparency = 1
-    nameLbl.Font = Enum.Font.GothamSemibold
-    nameLbl.TextSize = 12
-    nameLbl.TextColor3 = THEME_TEXT
-    nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-    nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
-    nameLbl.Text = label
+    nameLbl.Size = UDim2.new(0.62, -8, 1, 0); nameLbl.Position = UDim2.new(0, 10, 0, 0)
+    nameLbl.BackgroundTransparency = 1; nameLbl.Font = Enum.Font.GothamSemibold; nameLbl.TextSize = 12
+    nameLbl.TextColor3 = THEME_TEXT; nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+    nameLbl.TextTruncate = Enum.TextTruncate.AtEnd; nameLbl.Text = label
 
     local tabLbl = Instance.new("TextLabel", row)
-    tabLbl.Size = UDim2.new(0.38, -10, 1, 0)
-    tabLbl.Position = UDim2.new(0.62, 0, 0, 0)
-    tabLbl.BackgroundTransparency = 1
-    tabLbl.Font = Enum.Font.Gotham
-    tabLbl.TextSize = 10
-    tabLbl.TextColor3 = Color3.fromRGB(70, 70, 70)
-    tabLbl.TextXAlignment = Enum.TextXAlignment.Right
-    tabLbl.TextTruncate = Enum.TextTruncate.AtEnd
-    tabLbl.Text = tabName:gsub("Tab", "")
+    tabLbl.Size = UDim2.new(0.38, -10, 1, 0); tabLbl.Position = UDim2.new(0.62, 0, 0, 0)
+    tabLbl.BackgroundTransparency = 1; tabLbl.Font = Enum.Font.Gotham; tabLbl.TextSize = 10
+    tabLbl.TextColor3 = Color3.fromRGB(70, 70, 70); tabLbl.TextXAlignment = Enum.TextXAlignment.Right
+    tabLbl.TextTruncate = Enum.TextTruncate.AtEnd; tabLbl.Text = tabName:gsub("Tab", "")
 
     local goBtn = Instance.new("TextButton", row)
-    goBtn.Size = UDim2.new(1, 0, 1, 0)
-    goBtn.BackgroundTransparency = 1
-    goBtn.Text = ""
-    goBtn.ZIndex = 10
-    goBtn.AutoButtonColor = false
-    goBtn.MouseEnter:Connect(function()
-        TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(26, 26, 26)}):Play()
-    end)
-    goBtn.MouseLeave:Connect(function()
-        TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play()
-    end)
+    goBtn.Size = UDim2.new(1, 0, 1, 0); goBtn.BackgroundTransparency = 1
+    goBtn.Text = ""; goBtn.ZIndex = 10; goBtn.AutoButtonColor = false
+    goBtn.MouseEnter:Connect(function() TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(26, 26, 26)}):Play() end)
+    goBtn.MouseLeave:Connect(function() TweenService:Create(row, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(16, 16, 16)}):Play() end)
     goBtn.MouseButton1Click:Connect(function()
         if _G.VH and _G.VH.switchTab then _G.VH.switchTab(tabName) end
     end)
@@ -1904,20 +1656,13 @@ stInput:GetPropertyChangedSignal("Text"):Connect(function()
     end
 end)
 
--- ════════════════════════════════════════════════════
 -- GLOBAL KEY LISTENER
--- ════════════════════════════════════════════════════
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == currentToggleKey then
-        toggleGUI()
-        return
-    end
+    if input.KeyCode == currentToggleKey then toggleGUI() end
 end)
 
--- ════════════════════════════════════════════════════
 -- SHARED GLOBALS
--- ════════════════════════════════════════════════════
 _G.VH = {
     TweenService      = TweenService,
     Players           = Players,
