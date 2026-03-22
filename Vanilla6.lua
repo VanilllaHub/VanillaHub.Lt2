@@ -298,7 +298,7 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
     selLbl.TextTruncate = Enum.TextTruncate.AtEnd
     local arrowLbl = Instance.new("TextLabel", selFrame)
     arrowLbl.Size = UDim2.new(0, 22, 1, 0); arrowLbl.Position = UDim2.new(1, -24, 0, 0)
-    arrowLbl.BackgroundTransparency = 1; arrowLbl.Text = "▾"
+    arrowLbl.BackgroundTransparency = 1; arrowLbl.Text = "▲"
     arrowLbl.Font = Enum.Font.GothamBold; arrowLbl.TextSize = 14
     arrowLbl.TextColor3 = C.TEXT_MID; arrowLbl.TextXAlignment = Enum.TextXAlignment.Center
     local headerBtn = Instance.new("TextButton", selFrame)
