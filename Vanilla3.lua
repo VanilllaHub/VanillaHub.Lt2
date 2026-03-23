@@ -675,40 +675,13 @@ end
 local SELL_POS    = Vector3.new(315.01, -0.40, 84.32)
 local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 
--- Bring All Logs: waits for a world click, then brings all owned logs to that spot
-local bringLogsBtn_ref = nil  -- filled in after UI is built, used to reset label
-
+-- Bring All Logs: snapshots the player's current position, then brings all owned logs there
 local function BringAllLogs()
-    local Mouse   = player:GetMouse()
     local OldPos  = player.Character.HumanoidRootPart.CFrame
-    print("[VanillaHub] Click anywhere in the world to bring your logs there.")
-
-    -- wait for a world click to pick destination
-    local destCF
-    local clickConn
-    local done = false
-    clickConn = Mouse.Button1Up:Connect(function()
-        if done then return end
-        local hit = Mouse.Hit
-        if hit then
-            done    = true
-            destCF  = CFrame.new(hit.p)
-            clickConn:Disconnect()
-        end
-    end)
-
-    -- timeout after 15s
-    local t = 0
-    repeat task.wait(0.1); t += 0.1 until done or t >= 15
-    if not done then
-        pcall(function() clickConn:Disconnect() end)
-        print("[VanillaHub] Bring All Logs cancelled.")
-        return
-    end
-
-    local count = 0
+    local destCF  = OldPos  -- logs come to where you're standing when you click the button
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+    local count   = 0
 
     for _, v in next, workspace.LogModels:GetChildren() do
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
@@ -1343,16 +1316,6 @@ bringTreeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Logs
-sepLine(woodPage)
-sectionLabel(woodPage, "Logs")
-
-makeBtnPair(woodPage,
-    "Bring All Logs", "Sell All Logs",
-    function() task.spawn(BringAllLogs) end,
-    function() task.spawn(SellAllLogs)  end
-)
-
 -- Options
 sepLine(woodPage)
 sectionLabel(woodPage, "Options")
@@ -1368,6 +1331,16 @@ end)
 makeToggle(woodPage, "View LoneCave Tree", false, function(val)
     ViewEndTree(val)
 end)
+
+-- Logs
+sepLine(woodPage)
+sectionLabel(woodPage, "Logs")
+
+makeBtnPair(woodPage,
+    "Bring All Logs", "Sell All Logs",
+    function() task.spawn(BringAllLogs) end,
+    function() task.spawn(SellAllLogs)  end
+)
 
 -- Tools
 sepLine(woodPage)
