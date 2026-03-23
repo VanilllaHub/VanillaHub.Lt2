@@ -1,9 +1,10 @@
 -- ════════════════════════════════════════════════════
 -- VANILLA3 — Wood Tab + Settings Tab
 -- Full WoodHub logic integrated into VanillaHub theme
--- COMPLETE VERSION - ALL features working
 -- FIXED: 1x1 Auto Cutter - Cuts ALL sections continuously
 -- FIXED: Abort teleports back to start position
+-- FIXED: Bring/Sell logs use item-tab network-ownership system
+-- FIXED: Cutter only re-teleports when actually needed
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -534,11 +535,11 @@ end
 local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
     getgenv().treestop = true
     getgenv().treeCut  = false
-    
+
     if isFirstTree then
         getgenv().startPosition = returnCFrame or player.Character.HumanoidRootPart.CFrame
     end
-    
+
     player.Character.Humanoid.BreakJointsOnDeath = false
 
     local success, axe = getBestAxe(treeClass)
@@ -626,77 +627,110 @@ local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
     return true
 end
 
+-- ════════════════════════════════════════════════════
+-- ITEM-TAB STYLE LOG MOVER (matches Vanilla1 network ownership system)
+-- ════════════════════════════════════════════════════
+
+-- Waits until we have network ownership of a part, firing ClientIsDragging
+-- to claim it, then moves it to destCFrame. Mirrors the item teleport logic.
+local function moveLogToPos(logModel, destCFrame, dragger)
+    local ws = logModel:FindFirstChild("WoodSection")
+    if not ws then return false end
+
+    local char = player.Character
+    local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+
+    -- Teleport close to the log so the server gives us network ownership
+    hrp.CFrame = CFrame.new(ws.CFrame.p) * CFrame.new(4, 0, 0)
+    task.wait(0.2)
+
+    if not logModel.PrimaryPart then logModel.PrimaryPart = ws end
+
+    -- Claim network ownership (same as item tab)
+    local timeout = 0
+    while not isnetworkowner(ws) and timeout < 3 do
+        if dragger then dragger:FireServer(logModel) end
+        task.wait(0.05)
+        timeout += 0.05
+    end
+    if dragger then dragger:FireServer(logModel) end
+
+    -- Move it
+    logModel:SetPrimaryPartCFrame(destCFrame)
+    return true
+end
+
 local function BringAllLogs()
-    local OldPos = player.Character.HumanoidRootPart.CFrame
-    local targetPos = OldPos
-    local count = 0
-    
+    local OldPos   = player.Character.HumanoidRootPart.CFrame
+    local destCF   = OldPos
+    local dragger  = ReplicatedStorage:FindFirstChild("Interaction")
+                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+    local count    = 0
+
     for _, v in next, workspace.LogModels:GetChildren() do
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
-                player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
-                task.wait(0.2)
-                if not v.PrimaryPart then v.PrimaryPart = ws end
-                for i = 1, 40 do
-                    DragModel(v, targetPos)
-                    task.wait(0.05)
-                end
-                count = count + 1
+                moveLogToPos(v, destCF, dragger)
+                count += 1
             end
         end
-        task.wait(0.1)
+        task.wait(0.05)
     end
-    
-    player.Character.HumanoidRootPart.CFrame = OldPos
+
+    -- Return home
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = OldPos
+    end
     print("[VanillaHub] Brought " .. count .. " logs to your position!")
 end
 
 local function SellAllLogs()
-    local OldPos = player.Character.HumanoidRootPart.CFrame
-    local sellPos = CFrame.new(314.76, -0.40, 87.29)
-    local count = 0
-    
+    local OldPos   = player.Character.HumanoidRootPart.CFrame
+    local sellCF   = CFrame.new(314.76, -0.40, 87.29)
+    local dragger  = ReplicatedStorage:FindFirstChild("Interaction")
+                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+    local count    = 0
+
     for _, v in next, workspace.LogModels:GetChildren() do
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
-                player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
-                task.wait(0.2)
-                if not v.PrimaryPart then v.PrimaryPart = ws end
-                for i = 1, 40 do
-                    DragModel(v, sellPos)
-                    task.wait(0.05)
-                end
-                count = count + 1
+                moveLogToPos(v, sellCF, dragger)
+                count += 1
             end
         end
-        task.wait(0.1)
+        task.wait(0.05)
     end
-    
-    player.Character.HumanoidRootPart.CFrame = OldPos
+
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = OldPos
+    end
     print("[VanillaHub] Sold " .. count .. " logs at sell position!")
 end
 
 -- ════════════════════════════════════════════════════
--- FIXED 1x1 AUTO CUTTER - Continuous cutting
+-- FIXED 1x1 AUTO CUTTER
+-- Continuously cuts every section until the log is gone.
+-- Only teleports player when actually far from the cut point.
 -- ════════════════════════════════════════════════════
 
-local UnitCutter = false
-local cutterThread = nil
-local cutterLog = nil
-local cutterSections = {}
-local cutterRunning = false
-local cutterStartPosition = nil
+local UnitCutter     = false
+local cutterThread   = nil
+local cutterLog      = nil
+local cutterRunning  = false
+
+local CLOSE_ENOUGH   = 8   -- studs; don't re-teleport if already this close
 
 local function GetAllWoodSections(logModel)
     local sections = {}
     for _, child in ipairs(logModel:GetChildren()) do
         if child.Name == "WoodSection" and child:FindFirstChild("ID") then
             table.insert(sections, {
-                part = child,
-                id = child.ID.Value,
-                position = child.CFrame
+                part     = child,
+                id       = child.ID.Value,
+                position = child.CFrame,
             })
         end
     end
@@ -704,88 +738,62 @@ local function GetAllWoodSections(logModel)
     return sections
 end
 
-local function GetSectionCuttingPosition(section)
-    local ws = section.part
-    if not ws then return nil end
-    
-    -- Calculate position at the end of the section
+-- Returns the CFrame the player should stand at to cut this section.
+-- Stands beside the end of the plank, slightly elevated.
+local function GetCuttingStandPos(section)
+    local ws   = section.part
     local size = ws.Size
-    local direction = Vector3.new(1, 0, 0)
-    
-    if size.X >= size.Z then
-        direction = Vector3.new(1, 0, 0)
-    else
-        direction = Vector3.new(0, 0, 1)
-    end
-    
-    local offset = direction * (math.max(size.X, size.Z) / 2 + 2)
-    local cutPos = ws.CFrame * CFrame.new(offset.X, 1.5, offset.Z)
-    
-    return cutPos
+    local dir  = size.X >= size.Z and Vector3.new(1,0,0) or Vector3.new(0,0,1)
+    local offset = dir * (math.max(size.X, size.Z) / 2 + 3)
+    return ws.CFrame * CFrame.new(offset.X, 1.5, offset.Z)
 end
 
-local function MoveToCuttingPosition(section)
-    local cutPos = GetSectionCuttingPosition(section)
-    if cutPos then
-        player.Character.HumanoidRootPart.CFrame = cutPos
+-- Only moves the player if they are further than CLOSE_ENOUGH from the target.
+local function MoveIfNeeded(targetCF)
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local dist = (hrp.Position - targetCF.Position).Magnitude
+    if dist > CLOSE_ENOUGH then
+        hrp.CFrame = targetCF
         task.wait(0.15)
-        return true
     end
-    return false
 end
 
-local function CutWoodSection(logModel, section, axe)
+-- Fires cut events until the section disappears from the log model.
+-- Returns true when the section is gone, false if aborted.
+local function CutSectionUntilGone(logModel, section, axe)
     local ce = logModel:FindFirstChild("CutEvent")
     if not ce then return false end
-    
+
     local ws = section.part
-    if not ws or not ws.Parent then return false end
-    
-    if not MoveToCuttingPosition(section) then
-        player.Character.HumanoidRootPart.CFrame = ws.CFrame * CFrame.new(0, 2, -3)
-        task.wait(0.15)
-    end
-    
+    if not ws or not ws.Parent then return true end  -- already gone
+
+    -- Stand in position once
+    local standCF = GetCuttingStandPos(section)
+    MoveIfNeeded(standCF)
+
+    -- Equip axe if needed
     if player.Character:FindFirstChild("Tool") ~= axe then
         player.Character.Humanoid:EquipTool(axe)
         task.wait(0.2)
     end
-    
-    ChopTree(ce, section.id, 1)
-    task.wait(0.3)
-    
-    return true
-end
 
-local function CollectAllCutLogs()
-    local count = 0
-    local myPos = player.Character.HumanoidRootPart.CFrame
-    
-    for _, v in next, workspace.LogModels:GetChildren() do
-        if v:FindFirstChild("Owner") and v.Owner.Value == player then
-            local ws = v:FindFirstChild("WoodSection")
-            if ws and v ~= cutterLog then
-                pcall(function()
-                    player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
-                    task.wait(0.2)
-                    if not v.PrimaryPart then v.PrimaryPart = ws end
-                    for i = 1, 30 do
-                        if not UnitCutter then break end
-                        DragModel(v, myPos)
-                        task.wait(0.05)
-                    end
-                    count = count + 1
-                end)
-            end
+    -- Keep firing until the WoodSection leaves the model
+    local deadline = tick() + 30  -- safety timeout per section
+    while UnitCutter and cutterRunning do
+        if not ws.Parent or ws.Parent ~= logModel then
+            return true   -- section separated successfully
         end
-        task.wait(0.1)
+        if tick() > deadline then
+            warn("[VanillaHub] Timed out cutting section " .. section.id)
+            return false
+        end
+
+        ChopTree(ce, section.id, 1)
+        task.wait(0.3)  -- one swing cadence; tweak if your axe is faster/slower
     end
-    
-    player.Character.HumanoidRootPart.CFrame = myPos
-    if count > 0 then
-        print("[VanillaHub] Collected " .. count .. " logs!")
-    end
-    return count
+
+    return false  -- aborted
 end
 
 local function StartAutoCutter(selectedLog)
@@ -793,153 +801,124 @@ local function StartAutoCutter(selectedLog)
         print("[VanillaHub] Cutter already running!")
         return
     end
-    
+
     cutterRunning = true
-    cutterLog = selectedLog
-    
-    cutterStartPosition = player.Character.HumanoidRootPart.CFrame
-    
-    print("[VanillaHub] Starting auto cutter on log...")
-    
+    cutterLog     = selectedLog
+
+    local savedPos = player.Character.HumanoidRootPart.CFrame
+    print("[VanillaHub] Auto cutter started on log...")
+
     local success, axe = getBestAxe("Generic")
     if not success or not axe then
         print("[VanillaHub] No axe found!")
         cutterRunning = false
         return
     end
-    
+
     player.Character.Humanoid:EquipTool(axe)
     task.wait(0.3)
-    
+
     local cutCount = 0
-    
+
     while UnitCutter and cutterRunning do
         if not cutterLog or not cutterLog.Parent then
-            print("[VanillaHub] Log no longer exists!")
+            print("[VanillaHub] Log is gone — done!")
             break
         end
-        
-        local currentSections = GetAllWoodSections(cutterLog)
-        
-        if #currentSections == 0 then
-            print("[VanillaHub] All " .. cutCount .. " sections cut!")
+
+        local sections = GetAllWoodSections(cutterLog)
+
+        if #sections == 0 then
+            print("[VanillaHub] All sections cut! (" .. cutCount .. " total)")
             break
         end
-        
-        -- Find the smallest ID section to cut next
-        local targetSection = nil
-        for _, sec in ipairs(currentSections) do
-            if not targetSection or sec.id < targetSection.id then
-                targetSection = sec
-            end
-        end
-        
-        if not targetSection then
-            print("[VanillaHub] No valid section found!")
-            break
-        end
-        
-        print("[VanillaHub] Cutting section ID: " .. targetSection.id .. " (" .. cutCount + 1 .. "/" .. #currentSections + cutCount .. ")")
-        
-        CutWoodSection(cutterLog, targetSection, axe)
-        cutCount = cutCount + 1
-        
-        task.wait(0.2)
+
+        -- Always target the lowest-ID section (the one at the joint)
+        local target = sections[1]
+
+        print("[VanillaHub] Cutting section " .. target.id .. " (" .. cutCount + 1 .. "/" .. (#sections + cutCount) .. ")")
+
+        local ok = CutSectionUntilGone(cutterLog, target, axe)
+        if not ok then break end
+
+        cutCount += 1
+        task.wait(0.1)  -- brief pause between sections so server can update
     end
-    
-    task.wait(0.5)
-    
-    if UnitCutter and cutterRunning then
-        print("[VanillaHub] Cutting complete! Collecting logs...")
-        CollectAllCutLogs()
-        
-        if cutterStartPosition then
-            pcall(function()
-                player.Character.HumanoidRootPart.CFrame = cutterStartPosition
-                task.wait(0.2)
-            end)
-        end
+
+    -- Return home
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        pcall(function() player.Character.HumanoidRootPart.CFrame = savedPos end)
     end
-    
-    print("[VanillaHub] Auto cutter finished! Cut " .. cutCount .. " sections total.")
+
+    print("[VanillaHub] Auto cutter finished. Cut " .. cutCount .. " sections.")
     cutterRunning = false
-    cutterLog = nil
-    cutterSections = {}
-    cutterStartPosition = nil
+    cutterLog     = nil
 end
 
 local function OneUnitCutter(enabled)
     UnitCutter = enabled
-    
+
     if not enabled then
-        if cutterRunning then
-            print("[VanillaHub] Stopping cutter...")
-            cutterRunning = false
-        end
+        cutterRunning = false
         if cutterThread then
             task.cancel(cutterThread)
             cutterThread = nil
         end
         cutterLog = nil
-        cutterSections = {}
-        cutterStartPosition = nil
         print("[VanillaHub] 1x1 cutter disabled")
         return
     end
-    
-    print("[VanillaHub] 1x1 cutter enabled - Click on a log to start auto cutting")
-    print("[VanillaHub] The cutter will keep cutting ALL sections until the log is fully processed!")
-    
-    local Mouse = player:GetMouse()
+
+    print("[VanillaHub] 1x1 cutter enabled — click a log you own to start")
+
+    local Mouse      = player:GetMouse()
     local clickConn
-    
+
     clickConn = Mouse.Button1Up:Connect(function()
-        if not UnitCutter then 
-            if clickConn then clickConn:Disconnect() end
-            return 
-        end
-        
-        if cutterRunning then
-            print("[VanillaHub] Cutter is already running! Disable and re-enable to start a new log.")
+        if not UnitCutter then
+            clickConn:Disconnect()
             return
         end
-        
+
+        if cutterRunning then
+            print("[VanillaHub] Cutter already running! Disable and re-enable to pick a new log.")
+            return
+        end
+
         local clicked = Mouse.Target
         if not clicked then return end
-        
+
+        -- Walk up the hierarchy to find the log model
         local logModel = clicked.Parent
         while logModel and not (logModel:FindFirstChild("WoodSection") and logModel:FindFirstChild("Owner")) do
             logModel = logModel.Parent
         end
-        
+
         if logModel and logModel:FindFirstChild("WoodSection") then
-            local owner = logModel:FindFirstChild("Owner")
-            if owner and owner.Value == player then
-                if clickConn then clickConn:Disconnect() end
-                
-                print("[VanillaHub] Log selected! Starting auto cutter...")
-                
+            local ownerVal = logModel:FindFirstChild("Owner")
+            if ownerVal and ownerVal.Value == player then
+                clickConn:Disconnect()
+                print("[VanillaHub] Log selected! Starting...")
                 cutterThread = task.spawn(function()
                     StartAutoCutter(logModel)
                     cutterThread = nil
                 end)
             else
-                print("[VanillaHub] This log belongs to someone else!")
+                print("[VanillaHub] That log belongs to someone else!")
             end
         else
-            print("[VanillaHub] Please click on a log that belongs to you!")
+            print("[VanillaHub] Click on a log that belongs to you!")
         end
     end)
-    
+
+    -- Auto-disconnect when cutter is turned off
     task.spawn(function()
-        while UnitCutter do
-            task.wait(1)
-        end
-        if clickConn then pcall(function() clickConn:Disconnect() end) end
+        while UnitCutter do task.wait(0.5) end
+        pcall(function() if clickConn then clickConn:Disconnect() end end)
     end)
 end
 
--- ModWood og ModSawmill
+-- ModWood / ModSawmill
 local ModWoodSawmill = nil
 
 local function SelectSawmill(onSelected)
@@ -997,7 +976,6 @@ local function ModWood()
     print("[VanillaHub] ModWood: click your sawmill first.")
     SelectSawmill(function()
         print("[VanillaHub] ModWood: sawmill selected. Now click the wood piece to cut.")
-        
         local Mouse = player:GetMouse()
         local modConn
         modConn = Mouse.Button1Down:Connect(function()
@@ -1013,11 +991,10 @@ local function ModWood()
 end
 
 local function DismemberTree()
-    local OldPos        = player.Character.HumanoidRootPart.CFrame
-    local LogChopped    = false
-    local TreeToJointCut= nil
-
-    local Mouse = player:GetMouse()
+    local OldPos         = player.Character.HumanoidRootPart.CFrame
+    local LogChopped     = false
+    local TreeToJointCut = nil
+    local Mouse          = player:GetMouse()
 
     local branchConn = workspace.LogModels.ChildAdded:Connect(function(v)
         if v:WaitForChild("Owner",5) and v.Owner.Value == player then
@@ -1210,8 +1187,8 @@ local function treeBuildList()
         rowBtn.Text              = ""
         rowBtn.AutoButtonColor   = false
         rowBtn.MouseButton1Click:Connect(function()
-            selectedTree         = treeName
-            treeSelLbl.Text      = treeName
+            selectedTree    = treeName
+            treeSelLbl.Text = treeName
             treeCloseList()
         end)
     end
@@ -1302,13 +1279,11 @@ stroke(abortBtn, C.BORDER, 1, 0.5)
 abortBtn.MouseButton1Click:Connect(function()
     getgenv().treestop = false
     getgenv().treeCut = false
-    if UnitCutter then 
+    if UnitCutter then
         UnitCutter = false
-        if cutterRunning then
-            cutterRunning = false
-        end
+        cutterRunning = false
     end
-    
+
     if getgenv().startPosition then
         task.spawn(function()
             pcall(function()
@@ -1317,7 +1292,7 @@ abortBtn.MouseButton1Click:Connect(function()
             getgenv().startPosition = nil
         end)
     end
-    
+
     print("[VanillaHub] Aborted - teleported back to start position.")
 end)
 
@@ -1511,6 +1486,6 @@ end)
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
 print("[VanillaHub] Vanilla3 loaded — ALL features working!")
-print("[VanillaHub] 1x1 Auto Cutter: Enable toggle, then click on any log to auto-cut ALL sections!")
-print("[VanillaHub] The cutter will keep cutting until the entire log is processed!")
-print("[VanillaHub] Abort button will teleport you back to your starting position!")
+print("[VanillaHub] 1x1 Auto Cutter: Enable toggle, click your log, it cuts every section until done!")
+print("[VanillaHub] Player only moves when actually out of range of the cut point.")
+print("[VanillaHub] Bring/Sell Logs use the network-ownership system for reliable movement.")
