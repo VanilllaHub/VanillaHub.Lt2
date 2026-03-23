@@ -54,6 +54,7 @@ local function sectionLabel(page, text)
     lbl.TextXAlignment         = Enum.TextXAlignment.Left
     lbl.Text                   = string.upper(text)
     Instance.new("UIPadding", lbl).PaddingLeft = UDim.new(0, 4)
+    return lbl
 end
 
 local function makeButton(page, text, cb)
@@ -425,7 +426,7 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
         TS:Create(selFrame, TweenInfo.new(0.12), {BackgroundColor3 = C.INPUT}):Play()
     end)
 
-    return {
+    return setmetatable({
         GetSelected = function() return selected end,
         Refresh = function()
             if isOpen then
@@ -435,7 +436,10 @@ local function makeFancyDropdown(page, labelText, getOptions, cb)
                 listScroll.Size = UDim2.new(1, 0, 0, listH)
             end
         end,
-    }
+    }, {
+        __newindex = function(_, k, v) outer[k] = v end,
+        __index    = function(_, k)    return outer[k] end,
+    })
 end
 
 local function makeStatus(page, initText)
@@ -477,7 +481,7 @@ local function makeStatus(page, initText)
         end)
     end
 
-    return {
+    return setmetatable({
         SetActive = function(on, msg)
             if resetThread then task.cancel(resetThread); resetThread = nil end
             TS:Create(dot, TweenInfo.new(0.2), {BackgroundColor3 = on and C.DOT_ACT or C.DOT_IDLE}):Play()
@@ -489,7 +493,10 @@ local function makeStatus(page, initText)
             TS:Create(dot, TweenInfo.new(0.3), {BackgroundColor3 = C.DOT_IDLE}):Play()
             lb.Text = initText
         end,
-    }
+    }, {
+        __newindex = function(_, k, v) f[k] = v end,
+        __index    = function(_, k)    return f[k] end,
+    })
 end
 
 -- ════════════════════════════════════════════════════
@@ -612,15 +619,20 @@ end
 
 local vh = pages["VehicleTab"]
 
-sectionLabel(vh, "Vehicle")
+local function nextOrder()
+    nextOrder._n = (nextOrder._n or 0) + 1
+    return nextOrder._n
+end
+
+sectionLabel(vh, "Vehicle").LayoutOrder = nextOrder()
 
 makeSlider(vh, "Vehicle Speed", 1, 10, 1, function(val)
     vehicleSpeed(val)
-end)
+end).LayoutOrder = nextOrder()
 
 makeSlider(vh, "Fly Speed", 1, 250, 1, function(val)
     vehicleflyspeed = val
-end)
+end).LayoutOrder = nextOrder()
 
 makeToggle(vh, "Vehicle Fly", false, function(on)
     if on then
@@ -637,7 +649,7 @@ makeToggle(vh, "Vehicle Fly", false, function(on)
     else
         NOFLY()
     end
-end)
+end).LayoutOrder = nextOrder()
 
 -- ════════════════════════════════════════════════════
 -- SPAWNER LOGIC
@@ -706,19 +718,20 @@ end
 -- SPAWNER UI — Section 2
 -- ════════════════════════════════════════════════════
 
-sectionLabel(vh, "Spawner")
+sectionLabel(vh, "Spawner").LayoutOrder = nextOrder()
 
 makeFancyDropdown(vh, "Color", function() return carColors end, function(val)
     spawnColor = val
-end)
+end).LayoutOrder = nextOrder()
 
 spawnStat = makeStatus(vh, "Pick a color, then start")
+spawnStat.LayoutOrder = nextOrder()
 
-makeButton(vh, "Start Spawner", function() task.spawn(vehicleSpawner, spawnColor) end)
+makeButton(vh, "Start Spawner", function() task.spawn(vehicleSpawner, spawnColor) end).LayoutOrder = nextOrder()
 makeButton(vh, "Stop Spawner",  function()
     abortSpawner = true
     spawnStat.SetActive(false, "Stopped")
-end)
+end).LayoutOrder = nextOrder()
 
 -- ════════════════════════════════════════════════════
 -- CLEANUP
