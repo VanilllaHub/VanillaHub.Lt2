@@ -361,7 +361,6 @@ local function CutLogSection(logModel, sectionId, tool)
 end
 
 local function GetNextSection(logModel, currentSectionId)
-    -- Find the next section to cut (ID + 1)
     for _, child in pairs(logModel:GetChildren()) do
         if child:IsA("BasePart") and child:FindFirstChild("ID") and child.ID.Value == currentSectionId + 1 then
             return child
@@ -373,7 +372,6 @@ end
 local function AutoCutLog(logModel, tool)
     if not logModel or not logModel.Parent then return false end
     
-    -- Find all wood sections
     local sections = {}
     for _, child in pairs(logModel:GetChildren()) do
         if child:IsA("BasePart") and child:FindFirstChild("ID") then
@@ -381,27 +379,22 @@ local function AutoCutLog(logModel, tool)
         end
     end
     
-    -- Sort by ID
     table.sort(sections, function(a,b) return a.id < b.id end)
     
     if #sections == 0 then return false end
     
-    -- Cut each section in order
     for _, section in ipairs(sections) do
         if not autoCutterActive then return false end
         
-        -- Move to the section
         local cutPosition = section.part.CFrame * CFrame.new(0, 3, -5)
         player.Character.HumanoidRootPart.CFrame = cutPosition
         task.wait(0.2)
         
-        -- Equip tool if needed
         if player.Character:FindFirstChild("Tool") ~= tool then
             player.Character.Humanoid:EquipTool(tool)
             task.wait(0.3)
         end
         
-        -- Cut this section
         local cutEvent = logModel:FindFirstChild("CutEvent")
         if cutEvent then
             ChopTree(cutEvent, section.id, 0.3, tool)
@@ -415,13 +408,11 @@ end
 local function BringLogToPosition(logModel, targetCFrame)
     if not logModel or not logModel.Parent then return end
     
-    -- Make sure we have ownership
     local ws = logModel:FindFirstChild("WoodSection")
     if ws then
         logModel.PrimaryPart = ws
     end
     
-    -- Drag to position
     for i = 1, 30 do
         if not autoCutterActive then break end
         DragModel(logModel, targetCFrame)
@@ -442,7 +433,6 @@ local function StartAutoCutter()
         local clicked = mouse.Target
         if not clicked or not autoCutterActive then return end
         
-        -- Find the log model
         local logModel = clicked.Parent
         while logModel and not logModel:FindFirstChild("WoodSection") do
             logModel = logModel.Parent
@@ -453,7 +443,6 @@ local function StartAutoCutter()
             if owner == player then
                 clickConn:Disconnect()
                 
-                -- Start cutting thread
                 autoCutterThread = task.spawn(function()
                     local tool = getBestAxe()
                     if not tool then
@@ -464,20 +453,16 @@ local function StartAutoCutter()
                     
                     print("[VanillaHub] Starting to cut log...")
                     
-                    -- Equip axe
                     player.Character.Humanoid:EquipTool(tool)
                     task.wait(0.3)
                     
-                    -- Auto cut the log
                     local success = AutoCutLog(logModel, tool)
                     
                     if success and autoCutterActive then
                         print("[VanillaHub] Log cut complete, bringing to sell position...")
                         
-                        -- Find all logs from this tree (the cut pieces)
                         task.wait(1)
                         
-                        -- Bring all player-owned logs to sell position
                         for _, log in pairs(workspace.LogModels:GetChildren()) do
                             if log:FindFirstChild("Owner") and log.Owner.Value == player then
                                 if log:FindFirstChild("WoodSection") then
@@ -497,7 +482,6 @@ local function StartAutoCutter()
         end
     end)
     
-    -- Store for cleanup
     task.spawn(function()
         while autoCutterActive do
             task.wait(1)
@@ -529,7 +513,6 @@ local treeClasses = {
     "Spooky","SpookyNeon","LoneCave",
 }
 
--- Cache tree regions
 task.spawn(function()
     while task.wait(5) do
         for _, v in pairs(workspace:GetChildren()) do
@@ -585,7 +568,6 @@ local function BringTreeToPosition(treeClass, targetCFrame, useGodMode)
         return false
     end
     
-    -- Check for EndTimesAxe for LoneCave
     if treeClass == "LoneCave" then
         local hasEndTimes = false
         for _, tool in pairs(getTools()) do
@@ -612,19 +594,15 @@ local function BringTreeToPosition(treeClass, targetCFrame, useGodMode)
         return false
     end
     
-    -- Equip axe
     player.Character.Humanoid:EquipTool(axe)
     task.wait(0.3)
     
-    -- God mode for LoneCave
     if useGodMode and treeClass == "LoneCave" then
         local lavaPart = GetLava()
         if lavaPart then
-            -- Teleport to volcano
             player.Character.HumanoidRootPart.CFrame = CFrame.new(-1439.45, 433.4, 1317.61)
             task.wait(0.3)
             
-            -- Touch lava
             repeat task.wait(0.5)
                 pcall(function() 
                     firetouchinterest(player.Character.HumanoidRootPart, lavaPart.Lava, 0)
@@ -637,18 +615,15 @@ local function BringTreeToPosition(treeClass, targetCFrame, useGodMode)
         end
     end
     
-    -- Teleport to tree
     player.Character.HumanoidRootPart.CFrame = tree.trunk.CFrame
     task.wait(0.3)
     
-    -- Cut the tree
     local cutEvent = tree.model:FindFirstChild("CutEvent")
     if not cutEvent then
         print("[VanillaHub] No CutEvent found!")
         return false
     end
     
-    -- Cut until it falls
     local logDropped = false
     local logConnection
     
@@ -660,7 +635,6 @@ local function BringTreeToPosition(treeClass, targetCFrame, useGodMode)
         end
     end)
     
-    -- Keep cutting
     repeat
         ChopTree(cutEvent, 1, 0.3, axe)
         task.wait(0.3)
@@ -670,13 +644,11 @@ local function BringTreeToPosition(treeClass, targetCFrame, useGodMode)
     
     if not treeBringActive then return false end
     
-    -- Wait for log to appear and bring it
     task.wait(0.5)
     
     for _, log in pairs(workspace.LogModels:GetChildren()) do
         if log:FindFirstChild("Owner") and log.Owner.Value == player then
             if log:FindFirstChild("TreeClass") and log.TreeClass.Value == treeClass then
-                -- Bring log to position
                 local ws = log:FindFirstChild("WoodSection")
                 if ws then
                     log.PrimaryPart = ws
@@ -723,7 +695,6 @@ local function StartTreeBringer(treeType, amount, targetPos)
             end
         end
         
-        -- Return to start position
         if treeBringActive then
             player.Character.HumanoidRootPart.CFrame = homeCFrame
         end
