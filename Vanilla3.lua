@@ -1,7 +1,6 @@
 -- ════════════════════════════════════════════════════
--- VANILLA3 — Wood Tab + Settings Tab
--- Full WoodHub logic integrated into VanillaHub theme
--- COMPLETE REWRITE - Fixed all wood cutting and selling
+-- VANILLA3 — Wood Tab + Settings Tab  
+-- COMPLETE REWRITE - Working wood cutting and selling
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -126,6 +125,11 @@ local function makeBtn(parent, text, cb)
     return btn
 end
 
+local SW_OFF      = Color3.fromRGB(55, 55, 55)
+local SW_ON       = Color3.fromRGB(230, 230, 230)
+local SW_KNOB_OFF = Color3.fromRGB(160, 160, 160)
+local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
+
 local function makeToggle(parent, text, default, cb)
     local frame = Instance.new("Frame", parent)
     frame.Size             = UDim2.new(1, 0, 0, 36)
@@ -182,11 +186,6 @@ local function makeToggle(parent, text, default, cb)
         }):Play()
     end
 end
-
-local SW_OFF      = Color3.fromRGB(55, 55, 55)
-local SW_ON       = Color3.fromRGB(230, 230, 230)
-local SW_KNOB_OFF = Color3.fromRGB(160, 160, 160)
-local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
 
 local function makeSlider(parent, text, minV, maxV, defV, cb)
     local frame = Instance.new("Frame", parent)
@@ -345,29 +344,12 @@ local function GetLava()
 end
 
 -- ════════════════════════════════════════════════════
--- AUTO LOG CUTTER - Full auto follow and cut
+-- AUTO LOG CUTTER
 -- ════════════════════════════════════════════════════
 
 local autoCutterActive = false
 local autoCutterThread = nil
 local sellPosition = CFrame.new(314.76, -0.40, 87.29)
-
-local function CutLogSection(logModel, sectionId, tool)
-    local cutEvent = logModel:FindFirstChild("CutEvent")
-    if not cutEvent then return false end
-    
-    ChopTree(cutEvent, sectionId, 0.3, tool)
-    return true
-end
-
-local function GetNextSection(logModel, currentSectionId)
-    for _, child in pairs(logModel:GetChildren()) do
-        if child:IsA("BasePart") and child:FindFirstChild("ID") and child.ID.Value == currentSectionId + 1 then
-            return child
-        end
-    end
-    return nil
-end
 
 local function AutoCutLog(logModel, tool)
     if not logModel or not logModel.Parent then return false end
@@ -507,7 +489,7 @@ local treeBringActive = false
 local treeBringThread = nil
 
 local treeRegions = {}
-local treeClasses = {
+local treeClassesList = {
     "Generic","Walnut","Cherry","SnowGlow","Oak","Birch","Koa","Fir",
     "Volcano","GreenSwampy","CaveCrawler","Palm","GoldSwampy","Frost",
     "Spooky","SpookyNeon","LoneCave",
@@ -839,7 +821,7 @@ local function BuildTreeList()
         if child:IsA("Frame") then child:Destroy() end
     end
     
-    for i, treeName in ipairs(treeClasses) do
+    for i, treeName in ipairs(treeClassesList) do
         local row = Instance.new("Frame", treeListScroll)
         row.Size = UDim2.new(1, -12, 0, 34)
         row.Position = UDim2.new(0, 6, 0, 0)
@@ -875,7 +857,7 @@ local function treeOpenList()
     treeDropIsOpen = true
     BuildTreeList()
     treeListScroll.Visible = true
-    local listH = math.min(#treeClasses, 6) * 37 + 8
+    local listH = math.min(#treeClassesList, 6) * 37 + 8
     TweenService:Create(treeArrowLbl, TweenInfo.new(0.18), {Rotation = 180}):Play()
     TweenService:Create(treeDropOuter, TweenInfo.new(0.22), {Size = UDim2.new(1, 0, 0, 42 + listH)}):Play()
     TweenService:Create(treeListScroll, TweenInfo.new(0.22), {Size = UDim2.new(1, 0, 0, listH)}):Play()
@@ -900,7 +882,7 @@ sepLine(woodPage)
 sectionLabel(woodPage, "Actions")
 
 -- Bring Tree button
-local bringBtn = makeBtn(woodPage, "Bring Tree", function()
+makeBtn(woodPage, "Bring Tree", function()
     if not selectedTree then
         warn("[VanillaHub] Select a tree first!")
         return
@@ -911,7 +893,7 @@ local bringBtn = makeBtn(woodPage, "Bring Tree", function()
 end)
 
 -- Abort button
-local abortBtn = makeBtn(woodPage, "Abort", function()
+makeBtn(woodPage, "Abort", function()
     StopTreeBringer()
     StopAutoCutter()
 end)
@@ -1038,4 +1020,4 @@ end)
 
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
-print("[VanillaHub] Vanilla3 loaded — Complete rewrite with working wood cutting!")
+print("[VanillaHub] Vanilla3 loaded — Working wood cutting system!")
