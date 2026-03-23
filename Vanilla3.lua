@@ -2,6 +2,9 @@
 -- VANILLA3 — Wood Tab + Settings Tab
 -- Full WoodHub logic integrated into VanillaHub theme
 -- Tree selector uses same dropdown style as player selector
+-- FIXED: Position reset between trees
+-- FIXED: LoneCave godmode and axe handling
+-- FIXED: Cut Plank 1x1 full auto with proper stop
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -475,10 +478,8 @@ local function treeListener(treeClass, callback)
     end)
 end
 
--- FIX: treestop = true means "keep going", false means "abort".
--- Initialise cleanly.
 getgenv().treeCut  = getgenv().treeCut  or false
-getgenv().treestop = getgenv().treestop or false  -- start as not-running
+getgenv().treestop = getgenv().treestop or false
 getgenv().doneend  = getgenv().doneend  or true
 
 local function calculateHitsForEndPart(part)
@@ -515,8 +516,6 @@ local function GetLava()
     end
 end
 
--- FIX: GodMode rewritten — no Clone trick, no camera freeze.
--- We just teleport the HumanoidRootPart to the target after briefly touching lava.
 local function GodMode(targetCFrame)
     local LavaPart = GetLava()
     if not LavaPart then
@@ -524,52 +523,51 @@ local function GodMode(targetCFrame)
         return
     end
 
-    -- Store old camera subject
     local oldSubject = workspace.Camera.CameraSubject
 
-    -- Teleport near volcano to reach lava
     player.Character.HumanoidRootPart.CFrame = CFrame.new(-1439.45, 433.4, 1317.61)
     task.wait(0.3)
 
-    -- Fire touch to get the fire buff
     repeat task.wait(0.5)
         pcall(function() firetouchinterest(player.Character.HumanoidRootPart, LavaPart.Lava, 0) end)
     until player.Character.HumanoidRootPart:FindFirstChild("LavaFire") or not getgenv().treestop
 
     if not player.Character.HumanoidRootPart:FindFirstChild("LavaFire") then return end
 
-    -- Destroy the fire
     player.Character.HumanoidRootPart.LavaFire:Destroy()
     task.wait(0.3)
 
-    -- Teleport character to tree — camera follows automatically since CameraSubject is Humanoid
     player.Character.HumanoidRootPart.CFrame = targetCFrame
     task.wait(0.1)
 end
 
--- FIX: bringTree now accepts an explicit returnCFrame so the caller controls
--- where each tree's log lands. LoneCave godmode fixed.
-local function bringTree(treeClass, godmodeval, returnCFrame)
+-- FIXED: bringTree with position tracking
+local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
     getgenv().treestop = true
     getgenv().treeCut  = false
     player.Character.Humanoid.BreakJointsOnDeath = false
 
     local success, axe = getBestAxe(treeClass)
-    if not success or not axe then return end
+    if not success or not axe then return false end
 
     player.Character.Humanoid:EquipTool(axe)
     task.wait(0.4)
 
     local tree = getBiggestTree(treeClass)
-    if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return end
-    if not tree.trunk then warn("[VanillaHub] Tree trunk not found!"); return end
+    if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return false end
+    if not tree.trunk then warn("[VanillaHub] Tree trunk not found!"); return false end
     if not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
         warn("[VanillaHub] Tree too small, skipping.")
-        return
+        return false
     end
 
-    -- FIX: use the caller-supplied returnCFrame (shared across all trees in a batch)
-    local destCFrame = returnCFrame or player.Character.HumanoidRootPart.CFrame
+    -- Only use returnCFrame for first tree, otherwise stay at current position
+    local destCFrame
+    if isFirstTree then
+        destCFrame = returnCFrame
+    else
+        destCFrame = player.Character.HumanoidRootPart.CFrame
+    end
 
     if godmodeval then
         GodMode(tree.trunk.CFrame)
@@ -578,11 +576,12 @@ local function bringTree(treeClass, godmodeval, returnCFrame)
     task.wait(0.5)
 
     if not getgenv().treestop then
-        player.Character.HumanoidRootPart.CFrame = destCFrame
-        return
+        if isFirstTree then
+            player.Character.HumanoidRootPart.CFrame = destCFrame
+        end
+        return false
     end
 
-    -- Listen for the log to land at destCFrame
     treeListener(treeClass, function(log)
         log.PrimaryPart = log:FindFirstChild("WoodSection")
         getgenv().treeCut = true
@@ -595,7 +594,6 @@ local function bringTree(treeClass, godmodeval, returnCFrame)
 
     task.wait(0.15)
 
-    -- Keep teleporting character to trunk until cut
     task.spawn(function()
         repeat
             if not getgenv().treestop then break end
@@ -606,28 +604,29 @@ local function bringTree(treeClass, godmodeval, returnCFrame)
 
     task.wait()
 
-    if treeClass == "LoneCave" and godmodeval then
-        local numHits = calculateHitsForEndPart(tree.trunk) - 1
-        for i = 1, numHits do
+    if treeClass == "LoneCave" then
+        if godmodeval then
+            local numHits = calculateHitsForEndPart(tree.trunk) - 1
+            for i = 1, numHits do
+                if not getgenv().treestop then break end
+                cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
+                task.wait(0.5)
+            end
+        end
+        
+        repeat
             if not getgenv().treestop then break end
             cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
-            task.wait(1)
+            task.wait(0.3)
+        until getgenv().treeCut or not getgenv().treestop
+        
+        if not getgenv().treestop then
+            DropTools()
+            task.wait(0.3)
+            GetToolsfix()
+            task.wait(0.5)
+            return bringTree("LoneCave", false, destCFrame, false)
         end
-        getgenv().treeCut  = false
-        getgenv().treestop = false
-        DropTools()
-        task.wait(0.3)
-        -- FIX: teleport back to safe spot and wait for full health before re-run
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(-1675, 261, 1284)
-        task.wait(0.5)
-        pcall(function()
-            local t = 0
-            repeat task.wait(0.1); t += 0.1 until player.Character.Humanoid.Health >= 100 or t > 15
-        end)
-        task.wait(0.3)
-        GetToolsfix()
-        task.wait(0.5)
-        bringTree("LoneCave", false, destCFrame)
     else
         repeat
             if not getgenv().treestop then break end
@@ -636,15 +635,9 @@ local function bringTree(treeClass, godmodeval, returnCFrame)
         until getgenv().treeCut or not getgenv().treestop
     end
 
-    -- Return to destination (not original position — stays persistent for next tree)
-    task.wait(1)
+    task.wait(0.5)
     getgenv().treeCut = false
-    player.Character.HumanoidRootPart.CFrame = destCFrame
-
-    if treeClass == "LoneCave" then
-        getgenv().doneend  = true
-        getgenv().treestop = false
-    end
+    return true
 end
 
 local function BringAllLogs()
@@ -697,8 +690,6 @@ end
 
 local ModWoodSawmill = nil
 
--- FIX: SelectSawmill is a standalone helper — it just waits for a sawmill click
--- and calls onSelected. It does NOT interact with wood clicks.
 local function SelectSawmill(onSelected)
     local Mouse = player:GetMouse()
     local conn
@@ -750,18 +741,14 @@ local function ModSawmill()
     end)
 end
 
--- FIX: ModWood rewritten — step 1: click sawmill, step 2: click wood.
--- No nested SelectSawmill call, no double-listener race condition.
 local function ModWood()
     local treelimbblist = {}
     local childbranch, parentbranch
 
-    -- Step 1: select sawmill
     print("[VanillaHub] ModWood: click your sawmill first.")
     SelectSawmill(function()
         print("[VanillaHub] ModWood: sawmill selected. Now click the wood piece to cut.")
 
-        -- Step 2: listen for wood click
         local Mouse    = player:GetMouse()
         local modConn
         modConn = Mouse.Button1Down:Connect(function()
@@ -806,7 +793,6 @@ local function ModWood()
                         player.Character.HumanoidRootPart.CFrame = firstpart.CFrame
                         task.wait(0.2)
 
-                        -- Burn parent branch in lava
                         repeat task.wait()
                             while not isnetworkowner(parentbranch) do
                                 ReplicatedStorage.Interaction.ClientIsDragging:FireServer(parentbranch.Parent)
@@ -849,14 +835,12 @@ local function ModWood()
                         player.Character.HumanoidRootPart.CFrame = parentbranch.CFrame
                         task.wait(0.1)
 
-                        -- Drag parent to sawmill sell point
                         repeat
                             ReplicatedStorage.Interaction.ClientIsDragging:FireServer(parentbranch.Parent)
                             parentbranch:PivotTo(CFrame.new(314.54, -0.5, 86.823))
                             task.wait()
                         until not parentbranch.Parent
 
-                        -- Watch for new log to appear (confirms sell/split worked)
                         local addedConn
                         worked = false
                         addedConn = workspace.LogModels.ChildAdded:Connect(function(v)
@@ -865,7 +849,6 @@ local function ModWood()
                             end
                         end)
 
-                        -- Keep character near child branch while cutting
                         task.spawn(function()
                             repeat task.wait()
                                 player.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
@@ -894,7 +877,6 @@ local function ModWood()
                         end
 
                         task.wait(0.3)
-                        -- Place child branch at sawmill
                         player.Character.HumanoidRootPart.CFrame = childbranch.CFrame * CFrame.new(5,0,0)
                         while not isnetworkowner(childbranch) do
                             player.Character.HumanoidRootPart.CFrame = childbranch.CFrame * CFrame.new(5,0,0)
@@ -965,42 +947,81 @@ local function DismemberTree()
     end)
 end
 
-local UnitCutter      = false
-local PlankReAdded    = nil
-local UnitCutterClick = nil
+-- FIXED: Full auto OneUnitCutter with proper stop
+local UnitCutter = false
+local cutterConnection = nil
+local cutterTree = nil
 
-local function OneUnitCutter(val)
-    UnitCutter = val
-    local Mouse = player:GetMouse()
-    if not val then
-        if PlankReAdded    then PlankReAdded:Disconnect()    end
-        if UnitCutterClick then UnitCutterClick:Disconnect() end
+local function OneUnitCutter(enabled)
+    UnitCutter = enabled
+    
+    if not enabled then
+        if cutterConnection then
+            task.cancel(cutterConnection)
+            cutterConnection = nil
+        end
+        cutterTree = nil
+        print("[VanillaHub] Unit cutter disabled")
         return
     end
-    local SelTree = nil
-    PlankReAdded = workspace.PlayerModels.ChildAdded:Connect(function(v)
-        if v:WaitForChild("TreeClass",5) and v:WaitForChild("WoodSection",5) then
-            SelTree = v; task.wait()
+    
+    print("[VanillaHub] Unit cutter enabled - click on a wood section to start auto-cutting")
+    
+    local Mouse = player:GetMouse()
+    local clickConn
+    
+    clickConn = Mouse.Button1Up:Connect(function()
+        local clicked = Mouse.Target
+        if not clicked then return end
+        
+        local treeModel = clicked.Parent
+        while treeModel and not treeModel:FindFirstChild("TreeClass") do
+            treeModel = treeModel.Parent
+        end
+        
+        if treeModel and treeModel:FindFirstChild("TreeClass") and treeModel:FindFirstChild("WoodSection") then
+            local owner = treeModel:FindFirstChild("Owner")
+            if owner and owner.Value == player then
+                clickConn:Disconnect()
+                cutterTree = treeModel
+                
+                print("[VanillaHub] Auto-cutting started on " .. treeModel.TreeClass.Value)
+                
+                cutterConnection = task.spawn(function()
+                    while UnitCutter and cutterTree and cutterTree.Parent do
+                        local ws = cutterTree:FindFirstChild("WoodSection")
+                        if not ws then break end
+                        
+                        if ws.Size.X <= 1.88 and ws.Size.Y <= 1.88 and ws.Size.Z <= 1.88 then
+                            print("[VanillaHub] Tree is now 1x1, stopping")
+                            break
+                        end
+                        
+                        player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.Position + Vector3.new(0, 3, -3))
+                        task.wait(0.2)
+                        
+                        local ce = cutterTree:FindFirstChild("CutEvent")
+                        local tc = cutterTree:FindFirstChild("TreeClass")
+                        if ce and tc then
+                            ChopTree(ce, 1, 1)
+                        end
+                        
+                        task.wait(0.3)
+                    end
+                    
+                    print("[VanillaHub] Unit cutter finished")
+                    cutterTree = nil
+                    cutterConnection = nil
+                end)
+            end
         end
     end)
-    UnitCutterClick = Mouse.Button1Up:Connect(function()
-        local Clicked = Mouse.Target
-        if not (player.Backpack:FindFirstChild("Tool") or player.Character:FindFirstChild("Tool")) then return end
-        if Clicked and Clicked.Name == "WoodSection" then
-            SelTree = Clicked.Parent
-            player.Character:MoveTo(Clicked.Position + Vector3.new(0,3,-3))
-            repeat
-                if not UnitCutter then break end
-                local ce = SelTree.CutEvent
-                local tc = SelTree.TreeClass
-                if ce and tc then ChopTree(ce, 1, 1) end
-                local ws = SelTree:FindFirstChild("WoodSection")
-                if ws then player.Character:MoveTo(ws.Position + Vector3.new(0,3,-3)) end
-                task.wait()
-            until SelTree.WoodSection.Size.X <= 1.88
-                  and SelTree.WoodSection.Size.Y <= 1.88
-                  and SelTree.WoodSection.Size.Z <= 1.88
+    
+    task.spawn(function()
+        while UnitCutter do
+            task.wait(1)
         end
+        clickConn:Disconnect()
     end)
 end
 
@@ -1232,8 +1253,7 @@ stroke(bringBtn, C.BORDER, 1, 0.5)
 bringBtn.MouseEnter:Connect(function() TweenService:Create(bringBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
 bringBtn.MouseLeave:Connect(function() TweenService:Create(bringBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
 
--- FIX: capture the home position ONCE before looping, so all trees in the batch
--- deliver to the same spot and the character never drifts the return point.
+-- FIXED: Bring button with NO position reset between trees
 bringBtn.MouseButton1Click:Connect(function()
     if not selectedTree or selectedTree == "" then
         warn("[VanillaHub] Select a tree first!")
@@ -1242,22 +1262,31 @@ bringBtn.MouseButton1Click:Connect(function()
     if not hasSingleAxe() then return end
 
     task.spawn(function()
-        -- Snapshot the standing position right when the button is pressed.
         local homeCFrame = player.Character.HumanoidRootPart.CFrame
-
+        getgenv().treestop = true
+        
         if selectedTree == "LoneCave" then
-            bringTree(selectedTree, true, homeCFrame)
+            bringTree(selectedTree, true, homeCFrame, true)
         else
             for i = 1, treeAmount do
-                -- Check abort between trees
-                if not getgenv().treestop and i > 1 then break end
-                bringTree(selectedTree, false, homeCFrame)
-                task.wait(0.5)
+                if not getgenv().treestop then 
+                    print("[VanillaHub] Aborted at tree " .. i)
+                    break 
+                end
+                local success = bringTree(selectedTree, false, homeCFrame, i == 1)
+                if not success then
+                    warn("[VanillaHub] Failed to bring tree " .. i)
+                    break
+                end
+                if i < treeAmount then
+                    task.wait(0.8)
+                end
             end
         end
 
-        -- After all trees done, return home
-        player.Character.HumanoidRootPart.CFrame = homeCFrame
+        if getgenv().treestop then
+            player.Character.HumanoidRootPart.CFrame = homeCFrame
+        end
         getgenv().treestop = false
     end)
 end)
@@ -1276,12 +1305,15 @@ corner(abortBtn, 8)
 stroke(abortBtn, C.BORDER, 1, 0.5)
 abortBtn.MouseEnter:Connect(function() TweenService:Create(abortBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
 abortBtn.MouseLeave:Connect(function() TweenService:Create(abortBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
--- FIX: simply set treestop to false. The loops check this flag and will exit.
--- No auto-reset — the next Bring Tree press sets it to true again.
+
+-- FIXED: Abort button stops everything
 abortBtn.MouseButton1Click:Connect(function()
     getgenv().treestop = false
-    getgenv().treeCut  = false
-    print("[VanillaHub] Aborted.")
+    getgenv().treeCut = false
+    if UnitCutter then
+        OneUnitCutter(false)
+    end
+    print("[VanillaHub] Aborted all operations")
 end)
 
 -- ── Logs ─────────────────────────────────────────────────────────────────────
@@ -1344,7 +1376,8 @@ sectionLabel(woodPage, "Advanced")
 
 makeBtn(woodPage, "Dismember Tree", function() DismemberTree() end)
 
-makeToggle(woodPage, "Cut Plank 1x1", false, function(val)
+-- FIXED: Cut Plank 1x1 toggle
+makeToggle(woodPage, "Cut Plank 1x1 (Auto)", false, function(val)
     OneUnitCutter(val)
 end)
 
@@ -1489,11 +1522,15 @@ end)
 
 table.insert(cleanupTasks, function()
     if inputConn then inputConn:Disconnect(); inputConn = nil end
-    if UnitCutterClick then UnitCutterClick:Disconnect(); UnitCutterClick = nil end
-    if PlankReAdded    then PlankReAdded:Disconnect();    PlankReAdded    = nil end
+    if UnitCutter then OneUnitCutter(false) end
+    if cutterConnection then
+        task.cancel(cutterConnection)
+        cutterConnection = nil
+    end
     getgenv().treestop = false
+    getgenv().treeCut = false
 end)
 
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
-print("[VanillaHub] Vanilla3 loaded — Wood tab ready")
+print("[VanillaHub] Vanilla3 loaded — Wood tab ready (FIXED version)")
