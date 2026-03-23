@@ -817,9 +817,9 @@ local function OneUnitCutter(enabled)
                 or not SelTree.Parent
                 or not SelTree:FindFirstChild("WoodSection")
                 or (
-                    SelTree.WoodSection.Size.X <= 1.88
-                    and SelTree.WoodSection.Size.Y <= 1.88
-                    and SelTree.WoodSection.Size.Z <= 1.88
+                    SelTree.WoodSection.Size.X <= 2.5
+                    and SelTree.WoodSection.Size.Y <= 2.5
+                    and SelTree.WoodSection.Size.Z <= 2.5
                 )
 
             pcall(function()
@@ -1268,6 +1268,101 @@ makeBtn(woodPage, "Dismember Tree", function() DismemberTree() end)
 -- 1x1 cutter toggle
 makeToggle(woodPage, "Cut Plank 1x1", false, function(val)
     OneUnitCutter(val)
+end)
+
+-- ── Click Sell ───────────────────────────────────────────────────────────────
+local clickSellEnabled   = false
+local clickSellConn      = nil
+local clickSellCooldown  = false
+local SELL_CF            = CFrame.new(314.76, -0.40, 87.29)
+
+local function doClickSell(logModel)
+    local ws = logModel:FindFirstChild("WoodSection")
+    if not ws then return end
+
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
+                    and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+
+    local oldPos = hrp.CFrame
+
+    -- Step 1: teleport to the log
+    hrp.CFrame = CFrame.new(ws.CFrame.p) * CFrame.new(4, 0, 0)
+    task.wait(0.2)
+
+    -- Step 2: claim network ownership (item tab method)
+    if not logModel.PrimaryPart then logModel.PrimaryPart = ws end
+    local timeout = 0
+    while not isnetworkowner(ws) and timeout < 3 do
+        if dragger then dragger:FireServer(logModel) end
+        task.wait(0.05)
+        timeout += 0.05
+    end
+    if dragger then dragger:FireServer(logModel) end
+
+    -- Step 3: teleport the log to sell point
+    logModel:SetPrimaryPartCFrame(SELL_CF)
+
+    -- Step 4: return player home
+    task.wait(0.1)
+    hrp.CFrame = oldPos
+end
+
+local function enableClickSell(val)
+    clickSellEnabled = val
+
+    if clickSellConn then
+        pcall(function() clickSellConn:Disconnect() end)
+        clickSellConn = nil
+    end
+
+    if not val then
+        print("[VanillaHub] Click Sell disabled")
+        return
+    end
+
+    print("[VanillaHub] Click Sell enabled — click a log to sell it")
+
+    local Mouse = player:GetMouse()
+
+    clickSellConn = Mouse.Button1Up:Connect(function()
+        if not clickSellEnabled then return end
+        if clickSellCooldown    then return end
+
+        local clicked = Mouse.Target
+        if not clicked then return end
+
+        -- Walk up to find the log model
+        local logModel = clicked.Parent
+        while logModel and not (logModel:FindFirstChild("WoodSection") and logModel:FindFirstChild("Owner")) do
+            logModel = logModel.Parent
+        end
+        if not logModel then return end
+
+        local ownerVal = logModel:FindFirstChild("Owner")
+        if not ownerVal or ownerVal.Value ~= player then
+            print("[VanillaHub] That log isn't yours!")
+            return
+        end
+
+        -- 1 second cooldown so clicks don't stack
+        clickSellCooldown = true
+        task.spawn(function()
+            doClickSell(logModel)
+            task.wait(1)
+            clickSellCooldown = false
+        end)
+    end)
+end
+
+makeToggle(woodPage, "Click Sell", false, function(val)
+    enableClickSell(val)
+end)
+
+table.insert(cleanupTasks, function()
+    enableClickSell(false)
 end)
 
 makeToggle(woodPage, "View LoneCave Tree", false, function(val)
