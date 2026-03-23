@@ -759,6 +759,13 @@ local function OneUnitCutter(enabled)
         local swings   = 0
 
         task.spawn(function()
+            -- Auto-equip the best axe before cutting
+            local ok, axe = getBestAxe("Generic")
+            if ok and axe then
+                player.Character.Humanoid:EquipTool(axe)
+                task.wait(0.3)
+            end
+
             repeat
                 if not UnitCutter then break end
                 if not SelTree or not SelTree.Parent then break end
