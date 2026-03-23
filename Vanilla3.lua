@@ -721,79 +721,130 @@ local cutterThread   = nil
 local cutterLog      = nil
 local cutterRunning  = false
 
-local CLOSE_ENOUGH   = 8   -- studs; don't re-teleport if already this close
+local CLOSE_ENOUGH = 8  -- studs; skip teleport if already within this distance
 
 local function GetAllWoodSections(logModel)
     local sections = {}
     for _, child in ipairs(logModel:GetChildren()) do
         if child.Name == "WoodSection" and child:FindFirstChild("ID") then
             table.insert(sections, {
-                part     = child,
-                id       = child.ID.Value,
-                position = child.CFrame,
+                part = child,
+                id   = child.ID.Value,
             })
         end
     end
+    -- Sort ascending: lowest ID = the joint end we cut first
     table.sort(sections, function(a, b) return a.id < b.id end)
     return sections
 end
 
--- Returns the CFrame the player should stand at to cut this section.
--- Stands beside the end of the plank, slightly elevated.
-local function GetCuttingStandPos(section)
-    local ws   = section.part
+-- In LT2 the cut happens at the NEGATIVE end of the log's long axis (the joint end).
+-- We stand a few studs off that end so the server accepts the hit.
+local function GetCuttingStandPos(ws)
     local size = ws.Size
-    local dir  = size.X >= size.Z and Vector3.new(1,0,0) or Vector3.new(0,0,1)
-    local offset = dir * (math.max(size.X, size.Z) / 2 + 3)
-    return ws.CFrame * CFrame.new(offset.X, 1.5, offset.Z)
+    -- Figure out which axis is the long one
+    local longAxis
+    if size.X >= size.Y and size.X >= size.Z then
+        longAxis = ws.CFrame.RightVector          -- local X
+    elseif size.Z >= size.X and size.Z >= size.Y then
+        longAxis = ws.CFrame.LookVector            -- local Z
+    else
+        longAxis = ws.CFrame.UpVector              -- local Y (shouldn't happen for flat planks)
+    end
+    local halfLen = math.max(size.X, size.Y, size.Z) / 2
+    -- Stand at the NEGATIVE end (joint side) offset by 3 studs, 1.5 up
+    local cutEnd = ws.Position - longAxis * halfLen
+    return CFrame.new(cutEnd - longAxis * 3 + Vector3.new(0, 1.5, 0))
 end
 
--- Only moves the player if they are further than CLOSE_ENOUGH from the target.
 local function MoveIfNeeded(targetCF)
     local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    local dist = (hrp.Position - targetCF.Position).Magnitude
-    if dist > CLOSE_ENOUGH then
+    if (hrp.Position - targetCF.Position).Magnitude > CLOSE_ENOUGH then
         hrp.CFrame = targetCF
         task.wait(0.15)
     end
 end
 
--- Fires cut events until the section disappears from the log model.
--- Returns true when the section is gone, false if aborted.
-local function CutSectionUntilGone(logModel, section, axe)
+-- KEY INSIGHT: when LT2 cuts a section off, the ORIGINAL log model is destroyed
+-- and a NEW model is added to workspace.LogModels for the remaining trunk.
+-- So we listen for the new model, update cutterLog, then continue.
+local function CutSectionAndWaitForNewLog(logModel, section, axe)
     local ce = logModel:FindFirstChild("CutEvent")
-    if not ce then return false end
+    if not ce then return nil end
 
     local ws = section.part
-    if not ws or not ws.Parent then return true end  -- already gone
+    if not ws or not ws.Parent then return logModel end  -- already gone, nothing to do
 
-    -- Stand in position once
-    local standCF = GetCuttingStandPos(section)
-    MoveIfNeeded(standCF)
+    -- Position player at the cut end of this section
+    MoveIfNeeded(GetCuttingStandPos(ws))
 
-    -- Equip axe if needed
     if player.Character:FindFirstChild("Tool") ~= axe then
         player.Character.Humanoid:EquipTool(axe)
         task.wait(0.2)
     end
 
-    -- Keep firing until the WoodSection leaves the model
-    local deadline = tick() + 30  -- safety timeout per section
+    -- Track the tree class so we can identify the new log
+    local treeClass = logModel:FindFirstChild("TreeClass") and logModel.TreeClass.Value or ""
+    local originalName = logModel.Name
+
+    -- Listen for the new log model spawning (fired when the cut completes server-side)
+    local newLog = nil
+    local spawnConn = workspace.LogModels.ChildAdded:Connect(function(child)
+        -- The new piece will have an Owner == player and same TreeClass
+        task.spawn(function()
+            local ok, ownerVal = pcall(function()
+                return child:WaitForChild("Owner", 3)
+            end)
+            if ok and ownerVal and ownerVal.Value == player then
+                -- Make sure it's the trunk piece (has more than 1 section or is the main body)
+                -- We just accept the first matching new model
+                if newLog == nil then
+                    newLog = child
+                end
+            end
+        end)
+    end)
+
+    local deadline = tick() + 25
+    local sectionGone = false
+
     while UnitCutter and cutterRunning do
-        if not ws.Parent or ws.Parent ~= logModel then
-            return true   -- section separated successfully
+        -- Check if this section's part is gone (cut happened)
+        if not ws.Parent then
+            sectionGone = true
+            break
+        end
+        -- Also check if the whole original log vanished (server replaced it)
+        if not logModel.Parent then
+            sectionGone = true
+            break
         end
         if tick() > deadline then
-            warn("[VanillaHub] Timed out cutting section " .. section.id)
-            return false
+            warn("[VanillaHub] Timed out on section " .. section.id)
+            break
         end
 
-        ChopTree(ce, section.id, 1)
-        task.wait(0.3)  -- one swing cadence; tweak if your axe is faster/slower
+        -- Fire the cut event using cutPart so damage/cooldown are correct
+        cutPart(ce, section.id, 0.3, axe, treeClass)
+        task.wait(0.35)
     end
 
-    return false  -- aborted
+    spawnConn:Disconnect()
+
+    if not sectionGone then
+        return nil  -- aborted or timed out
+    end
+
+    -- Wait a moment for the new log to appear if it hasn't yet
+    local waited = 0
+    while newLog == nil and waited < 2 do
+        task.wait(0.05)
+        waited += 0.05
+    end
+
+    -- If no new log appeared, the log is fully done (last section)
+    return newLog  -- may be nil = finished
 end
 
 local function StartAutoCutter(selectedLog)
@@ -806,7 +857,7 @@ local function StartAutoCutter(selectedLog)
     cutterLog     = selectedLog
 
     local savedPos = player.Character.HumanoidRootPart.CFrame
-    print("[VanillaHub] Auto cutter started on log...")
+    print("[VanillaHub] Auto cutter started...")
 
     local success, axe = getBestAxe("Generic")
     if not success or not axe then
@@ -819,38 +870,40 @@ local function StartAutoCutter(selectedLog)
     task.wait(0.3)
 
     local cutCount = 0
+    local currentLog = cutterLog
 
     while UnitCutter and cutterRunning do
-        if not cutterLog or not cutterLog.Parent then
-            print("[VanillaHub] Log is gone — done!")
+        if not currentLog or not currentLog.Parent then
+            print("[VanillaHub] Done! Cut " .. cutCount .. " sections total.")
             break
         end
 
-        local sections = GetAllWoodSections(cutterLog)
-
+        local sections = GetAllWoodSections(currentLog)
         if #sections == 0 then
-            print("[VanillaHub] All sections cut! (" .. cutCount .. " total)")
+            print("[VanillaHub] No more sections found. Done! (" .. cutCount .. " cut)")
             break
         end
 
-        -- Always target the lowest-ID section (the one at the joint)
+        -- Always cut the lowest-ID section (the joint end)
         local target = sections[1]
+        print("[VanillaHub] Cutting section ID " .. target.id .. " | " .. #sections .. " section(s) remaining")
 
-        print("[VanillaHub] Cutting section " .. target.id .. " (" .. cutCount + 1 .. "/" .. (#sections + cutCount) .. ")")
+        -- Cut the section; returns the NEW log model (or nil if last section / aborted)
+        local nextLog = CutSectionAndWaitForNewLog(currentLog, target, axe)
 
-        local ok = CutSectionUntilGone(cutterLog, target, axe)
-        if not ok then break end
+        if not UnitCutter or not cutterRunning then break end
 
         cutCount += 1
-        task.wait(0.1)  -- brief pause between sections so server can update
+        currentLog = nextLog  -- nil = log is fully processed
+
+        task.wait(0.2)  -- small pause between cuts for server to settle
     end
 
-    -- Return home
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         pcall(function() player.Character.HumanoidRootPart.CFrame = savedPos end)
     end
 
-    print("[VanillaHub] Auto cutter finished. Cut " .. cutCount .. " sections.")
+    print("[VanillaHub] Auto cutter finished. " .. cutCount .. " sections cut.")
     cutterRunning = false
     cutterLog     = nil
 end
