@@ -1274,7 +1274,7 @@ end)
 local clickSellEnabled   = false
 local clickSellConn      = nil
 local clickSellCooldown  = false
-local SELL_CF            = CFrame.new(314.76, -0.40, 87.29)
+local SELL_CF            = CFrame.new(314.76, -0.40, 87.29) * CFrame.Angles(math.rad(90), 0, 0)
 
 local function doClickSell(logModel)
     local ws = logModel:FindFirstChild("WoodSection")
