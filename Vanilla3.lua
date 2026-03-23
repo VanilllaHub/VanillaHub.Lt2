@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════
--- VANILLA3 — Wood Tab + Settings Tab (FIXED & IMPROVED)
+-- VANILLA3 — Wood Tab + Settings Tab
 -- Full WoodHub logic integrated into VanillaHub theme
 -- Tree selector uses same dropdown style as player selector
 -- ════════════════════════════════════════════════════
@@ -42,13 +42,6 @@ local function setCurrentToggleKey(v)  if _G.VH then _G.VH.currentToggleKey = v 
 local function getFlyToggleEnabled()   return _G.VH and _G.VH.flyToggleEnabled end
 local function getIsFlyEnabled()       return _G.VH and _G.VH.isFlyEnabled end
 
--- Global abort and position variables
-getgenv().treeCut      = getgenv().treeCut      or false
-getgenv().treestop     = getgenv().treestop     or false
-getgenv().doneend      = getgenv().doneend      or true
-getgenv().shouldAbort  = getgenv().shouldAbort  or false
-getgenv().savedPosition = nil
-
 -- ════════════════════════════════════════════════════
 -- THEME
 -- ════════════════════════════════════════════════════
@@ -66,9 +59,6 @@ local C = {
     BTN        = Color3.fromRGB(14,  14,  14),
     BTN_HV     = Color3.fromRGB(32,  32,  32),
     SEP        = Color3.fromRGB(40,  40,  40),
-    SUCCESS    = Color3.fromRGB(80,  200, 80),
-    DANGER     = Color3.fromRGB(200, 80,  80),
-    WARNING    = Color3.fromRGB(200, 160, 80),
 }
 
 -- ════════════════════════════════════════════════════
@@ -88,19 +78,19 @@ local function stroke(p, col, thick, trans)
     return s
 end
 
-local function sectionLabel(parent, text, icon)
+local function sectionLabel(parent, text)
     local w = Instance.new("Frame", parent)
-    w.Size = UDim2.new(1, 0, 0, 32)
+    w.Size = UDim2.new(1, 0, 0, 22)
     w.BackgroundTransparency = 1
     local lbl = Instance.new("TextLabel", w)
     lbl.Size = UDim2.new(1, -4, 1, 0)
     lbl.Position = UDim2.new(0, 4, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 11
+    lbl.TextSize = 10
     lbl.TextColor3 = C.TEXT_DIM
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = (icon and icon .. " " or "") .. string.upper(text)
+    lbl.Text = "  " .. string.upper(text)
     return w
 end
 
@@ -112,179 +102,151 @@ local function sepLine(parent)
     return s
 end
 
--- Modern action button with gradient effect
-local function makeBtn(parent, text, cb, colorType)
+-- Standard action button
+local function makeBtn(parent, text, cb)
     local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(1, 0, 0, 38)
-    btn.BackgroundColor3 = colorType == "danger" and C.DANGER or (colorType == "success" and C.SUCCESS or C.CARD)
-    btn.BorderSizePixel = 0
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 13
-    btn.TextColor3 = C.TEXT
-    btn.Text = text
-    btn.AutoButtonColor = false
+    btn.Size             = UDim2.new(1, 0, 0, 34)
+    btn.BackgroundColor3 = C.CARD
+    btn.BorderSizePixel  = 0
+    btn.Font             = Enum.Font.GothamSemibold
+    btn.TextSize         = 13
+    btn.TextColor3       = C.TEXT
+    btn.Text             = text
+    btn.AutoButtonColor  = false
     corner(btn, 8)
     stroke(btn, C.BORDER, 1, 0.5)
     local pad = Instance.new("UIPadding", btn)
     pad.PaddingLeft = UDim.new(0, 12)
-    
-    local originalColor = btn.BackgroundColor3
     btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = colorType == "danger" and Color3.fromRGB(180, 70, 70) or (colorType == "success" and Color3.fromRGB(70, 180, 70) or C.BTN_HV)}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play()
     end)
     btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = originalColor}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play()
     end)
     if cb then btn.MouseButton1Click:Connect(function() task.spawn(cb) end) end
     return btn
 end
 
--- Modern toggle switch
+-- Toggle switch
 local SW_OFF      = Color3.fromRGB(55, 55, 55)
 local SW_ON       = Color3.fromRGB(230, 230, 230)
 local SW_KNOB_OFF = Color3.fromRGB(160, 160, 160)
 local SW_KNOB_ON  = Color3.fromRGB(30, 30, 30)
 
-local function makeToggle(parent, text, default, cb, description)
+local function makeToggle(parent, text, default, cb)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 48)
+    frame.Size             = UDim2.new(1, 0, 0, 36)
     frame.BackgroundColor3 = C.CARD
-    frame.BorderSizePixel = 0
+    frame.BorderSizePixel  = 0
     corner(frame, 8)
     stroke(frame, C.BORDER, 1, 0.5)
-    
     local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -54, 0, 20)
-    lbl.Position = UDim2.new(0, 12, 0, 8)
+    lbl.Size              = UDim2.new(1, -54, 1, 0)
+    lbl.Position          = UDim2.new(0, 12, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextSize = 13
-    lbl.TextColor3 = C.TEXT
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    
-    if description then
-        local descLbl = Instance.new("TextLabel", frame)
-        descLbl.Size = UDim2.new(1, -54, 0, 16)
-        descLbl.Position = UDim2.new(0, 12, 0, 28)
-        descLbl.BackgroundTransparency = 1
-        descLbl.Text = description
-        descLbl.Font = Enum.Font.Gotham
-        descLbl.TextSize = 10
-        descLbl.TextColor3 = C.TEXT_DIM
-        descLbl.TextXAlignment = Enum.TextXAlignment.Left
-    end
-    
+    lbl.Text              = text
+    lbl.Font              = Enum.Font.GothamSemibold
+    lbl.TextSize          = 13
+    lbl.TextColor3        = C.TEXT
+    lbl.TextXAlignment    = Enum.TextXAlignment.Left
     local track = Instance.new("Frame", frame)
-    track.Size = UDim2.new(0, 44, 0, 24)
-    track.Position = UDim2.new(1, -56, 0.5, -12)
+    track.Size             = UDim2.new(0, 36, 0, 20)
+    track.Position         = UDim2.new(1, -46, 0.5, -10)
     track.BackgroundColor3 = default and SW_ON or SW_OFF
-    track.BorderSizePixel = 0
-    corner(track, 12)
-    
+    track.BorderSizePixel  = 0
+    corner(track, 10)
     local knob = Instance.new("Frame", track)
-    knob.Size = UDim2.new(0, 18, 0, 18)
-    knob.Position = UDim2.new(0, default and 24 or 3, 0.5, -9)
+    knob.Size             = UDim2.new(0, 14, 0, 14)
+    knob.Position         = UDim2.new(0, default and 20 or 2, 0.5, -7)
     knob.BackgroundColor3 = default and SW_KNOB_ON or SW_KNOB_OFF
-    knob.BorderSizePixel = 0
-    corner(knob, 9)
-    
+    knob.BorderSizePixel  = 0
+    corner(knob, 7)
     local toggled = default or false
     local clickBtn = Instance.new("TextButton", frame)
-    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.Size              = UDim2.new(1, 0, 1, 0)
     clickBtn.BackgroundTransparency = 1
-    clickBtn.Text = ""
-    clickBtn.ZIndex = 5
-    
+    clickBtn.Text              = ""
+    clickBtn.ZIndex            = 5
     clickBtn.MouseButton1Click:Connect(function()
         toggled = not toggled
         TweenService:Create(track, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
             BackgroundColor3 = toggled and SW_ON or SW_OFF
         }):Play()
         TweenService:Create(knob, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            Position = UDim2.new(0, toggled and 24 or 3, 0.5, -9),
+            Position = UDim2.new(0, toggled and 20 or 2, 0.5, -7),
             BackgroundColor3 = toggled and SW_KNOB_ON or SW_KNOB_OFF
         }):Play()
         if cb then task.spawn(cb, toggled) end
     end)
-    
     return frame, function(v)
         toggled = v
         TweenService:Create(track, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
             BackgroundColor3 = toggled and SW_ON or SW_OFF
         }):Play()
         TweenService:Create(knob, TweenInfo.new(0.2, Enum.EasingStyle.Quint), {
-            Position = UDim2.new(0, toggled and 24 or 3, 0.5, -9),
+            Position = UDim2.new(0, toggled and 20 or 2, 0.5, -7),
             BackgroundColor3 = toggled and SW_KNOB_ON or SW_KNOB_OFF
         }):Play()
     end
 end
 
--- Modern slider
-local function makeSlider(parent, text, minV, maxV, defV, cb, suffix)
+-- Slider
+local function makeSlider(parent, text, minV, maxV, defV, cb)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 70)
+    frame.Size             = UDim2.new(1, 0, 0, 54)
     frame.BackgroundColor3 = C.CARD
-    frame.BorderSizePixel = 0
+    frame.BorderSizePixel  = 0
     corner(frame, 8)
     stroke(frame, C.BORDER, 1, 0.5)
-    
     local topRow = Instance.new("Frame", frame)
-    topRow.Size = UDim2.new(1, -16, 0, 28)
-    topRow.Position = UDim2.new(0, 8, 0, 8)
+    topRow.Size = UDim2.new(1, -16, 0, 22)
+    topRow.Position = UDim2.new(0, 8, 0, 7)
     topRow.BackgroundTransparency = 1
-    
     local lbl = Instance.new("TextLabel", topRow)
-    lbl.Size = UDim2.new(0.6, 0, 1, 0)
+    lbl.Size = UDim2.new(0.72, 0, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.Font = Enum.Font.GothamSemibold
     lbl.TextSize = 13
     lbl.TextColor3 = C.TEXT
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Text = text
-    
     local valLbl = Instance.new("TextLabel", topRow)
-    valLbl.Size = UDim2.new(0.4, 0, 1, 0)
-    valLbl.Position = UDim2.new(0.6, 0, 0, 0)
+    valLbl.Size = UDim2.new(0.28, 0, 1, 0)
+    valLbl.Position = UDim2.new(0.72, 0, 0, 0)
     valLbl.BackgroundTransparency = 1
     valLbl.Font = Enum.Font.GothamBold
     valLbl.TextSize = 13
     valLbl.TextColor3 = C.ACCENT_DIM
     valLbl.TextXAlignment = Enum.TextXAlignment.Right
-    valLbl.Text = tostring(defV) .. (suffix or "")
-    
+    valLbl.Text = tostring(defV)
     local track = Instance.new("Frame", frame)
-    track.Size = UDim2.new(1, -16, 0, 6)
-    track.Position = UDim2.new(0, 8, 0, 46)
+    track.Size             = UDim2.new(1, -16, 0, 5)
+    track.Position         = UDim2.new(0, 8, 0, 38)
     track.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    track.BorderSizePixel = 0
+    track.BorderSizePixel  = 0
     corner(track, 3)
-    
     local fill = Instance.new("Frame", track)
-    fill.Size = UDim2.new((defV-minV)/(maxV-minV), 0, 1, 0)
+    fill.Size             = UDim2.new((defV-minV)/(maxV-minV), 0, 1, 0)
     fill.BackgroundColor3 = C.ACCENT_DIM
-    fill.BorderSizePixel = 0
+    fill.BorderSizePixel  = 0
     corner(fill, 3)
-    
     local knob = Instance.new("TextButton", track)
-    knob.Size = UDim2.new(0, 16, 0, 16)
-    knob.AnchorPoint = Vector2.new(0.5, 0.5)
-    knob.Position = UDim2.new((defV-minV)/(maxV-minV), 0, 0.5, 0)
+    knob.Size             = UDim2.new(0, 14, 0, 14)
+    knob.AnchorPoint      = Vector2.new(0.5, 0.5)
+    knob.Position         = UDim2.new((defV-minV)/(maxV-minV), 0, 0.5, 0)
     knob.BackgroundColor3 = C.ACCENT
-    knob.Text = ""
-    knob.BorderSizePixel = 0
-    corner(knob, 8)
-    
+    knob.Text             = ""
+    knob.BorderSizePixel  = 0
+    corner(knob, 7)
     local ds = false
     local function upd(absX)
         local r = math.clamp((absX - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-        local v = math.floor(minV + r * (maxV - minV) + 0.5)
+        local v = math.round(minV + r * (maxV - minV))
         fill.Size = UDim2.new(r, 0, 1, 0)
         knob.Position = UDim2.new(r, 0, 0.5, 0)
-        valLbl.Text = tostring(v) .. (suffix or "")
+        valLbl.Text = tostring(v)
         if cb then cb(v) end
     end
-    
     knob.MouseButton1Down:Connect(function() ds = true end)
     track.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then ds = true; upd(i.Position.X) end
@@ -295,41 +257,11 @@ local function makeSlider(parent, text, minV, maxV, defV, cb, suffix)
     UserInputService.InputEnded:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then ds = false end
     end)
-    
     return frame
 end
 
--- Status indicator
-local function makeStatusIndicator(parent, text, defaultColor)
-    local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 36)
-    frame.BackgroundColor3 = C.CARD
-    frame.BorderSizePixel = 0
-    corner(frame, 8)
-    stroke(frame, C.BORDER, 1, 0.5)
-    
-    local indicator = Instance.new("Frame", frame)
-    indicator.Size = UDim2.new(0, 10, 0, 10)
-    indicator.Position = UDim2.new(0, 12, 0.5, -5)
-    indicator.BackgroundColor3 = defaultColor or C.ACCENT
-    indicator.BorderSizePixel = 0
-    corner(indicator, 5)
-    
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(1, -32, 1, 0)
-    lbl.Position = UDim2.new(0, 28, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextColor3 = C.TEXT
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    
-    return frame, indicator
-end
-
 -- ════════════════════════════════════════════════════
--- AXE / TREE LOGIC (from WoodHub)
+-- AXE / TREE LOGIC
 -- ════════════════════════════════════════════════════
 
 local HitPoints = {
@@ -543,6 +475,12 @@ local function treeListener(treeClass, callback)
     end)
 end
 
+-- FIX: treestop = true means "keep going", false means "abort".
+-- Initialise cleanly.
+getgenv().treeCut  = getgenv().treeCut  or false
+getgenv().treestop = getgenv().treestop or false  -- start as not-running
+getgenv().doneend  = getgenv().doneend  or true
+
 local function calculateHitsForEndPart(part)
     return math.round((math.sqrt(part.Size.X * part.Size.Z)^2 * 8e7) / 1e7)
 end
@@ -577,90 +515,93 @@ local function GetLava()
     end
 end
 
+-- FIX: GodMode rewritten — no Clone trick, no camera freeze.
+-- We just teleport the HumanoidRootPart to the target after briefly touching lava.
 local function GodMode(targetCFrame)
     local LavaPart = GetLava()
-    if not LavaPart then return end
+    if not LavaPart then
+        warn("[VanillaHub] GodMode: lava part not found, skipping.")
+        return
+    end
+
+    -- Store old camera subject
+    local oldSubject = workspace.Camera.CameraSubject
+
+    -- Teleport near volcano to reach lava
     player.Character.HumanoidRootPart.CFrame = CFrame.new(-1439.45, 433.4, 1317.61)
-    repeat task.wait(1)
+    task.wait(0.3)
+
+    -- Fire touch to get the fire buff
+    repeat task.wait(0.5)
         pcall(function() firetouchinterest(player.Character.HumanoidRootPart, LavaPart.Lava, 0) end)
-    until player.Character.HumanoidRootPart:FindFirstChild("LavaFire")
+    until player.Character.HumanoidRootPart:FindFirstChild("LavaFire") or not getgenv().treestop
+
+    if not player.Character.HumanoidRootPart:FindFirstChild("LavaFire") then return end
+
+    -- Destroy the fire
     player.Character.HumanoidRootPart.LavaFire:Destroy()
-    task.wait(1)
-    local Clone = player.Character.Torso:Clone()
-    Clone.Name = "HumanoidRootPart"
-    Clone.Transparency = 1
-    Clone.Parent = player.Character
+    task.wait(0.3)
+
+    -- Teleport character to tree — camera follows automatically since CameraSubject is Humanoid
     player.Character.HumanoidRootPart.CFrame = targetCFrame
-    Clone.CFrame = targetCFrame
+    task.wait(0.1)
 end
 
--- FIXED bringTree function with position memory and abort functionality
-local function bringTree(treeClass, godmodeval, skipPositionSave)
-    getgenv().treestop     = true
-    getgenv().treeCut      = false
-    getgenv().shouldAbort  = false
-    
+-- FIX: bringTree now accepts an explicit returnCFrame so the caller controls
+-- where each tree's log lands. LoneCave godmode fixed.
+local function bringTree(treeClass, godmodeval, returnCFrame)
+    getgenv().treestop = true
+    getgenv().treeCut  = false
     player.Character.Humanoid.BreakJointsOnDeath = false
-    
-    if not skipPositionSave and not getgenv().savedPosition then
-        getgenv().savedPosition = player.Character.HumanoidRootPart.CFrame
-    end
-    
-    local oldPosition = getgenv().savedPosition or player.Character.HumanoidRootPart.CFrame
 
     local success, axe = getBestAxe(treeClass)
-    if not success or not axe then 
-        getgenv().treestop = false
-        return 
-    end
+    if not success or not axe then return end
 
     player.Character.Humanoid:EquipTool(axe)
     task.wait(0.4)
 
     local tree = getBiggestTree(treeClass)
-    if not tree then 
-        warn("[VanillaHub] No "..treeClass.." tree found!")
-        getgenv().treestop = false
-        return 
-    end
-    if not tree.trunk then 
-        warn("[VanillaHub] Tree trunk not found!")
-        getgenv().treestop = false
-        return 
-    end
+    if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return end
+    if not tree.trunk then warn("[VanillaHub] Tree trunk not found!"); return end
     if not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
         warn("[VanillaHub] Tree too small, skipping.")
-        getgenv().treestop = false
         return
     end
 
+    -- FIX: use the caller-supplied returnCFrame (shared across all trees in a batch)
+    local destCFrame = returnCFrame or player.Character.HumanoidRootPart.CFrame
+
     if godmodeval then
-        workspace.Camera.CameraType = Enum.CameraType.Fixed
         GodMode(tree.trunk.CFrame)
-        workspace.Camera.CameraType = Enum.CameraType.Custom
-        player.Character.HumanoidRootPart.CFrame = tree.trunk.CFrame
     end
 
     task.wait(0.5)
 
+    if not getgenv().treestop then
+        player.Character.HumanoidRootPart.CFrame = destCFrame
+        return
+    end
+
+    -- Listen for the log to land at destCFrame
     treeListener(treeClass, function(log)
         log.PrimaryPart = log:FindFirstChild("WoodSection")
         getgenv().treeCut = true
         for i = 1, 100 do
-            if getgenv().shouldAbort then break end
-            DragModel(log, oldPosition)
+            if not getgenv().treestop then break end
+            DragModel(log, destCFrame)
             task.wait()
         end
     end)
 
     task.wait(0.15)
 
+    -- Keep teleporting character to trunk until cut
     task.spawn(function()
         repeat
-            if getgenv().shouldAbort or not getgenv().treestop then break end
+            if not getgenv().treestop then break end
             player.Character.HumanoidRootPart.CFrame = tree.trunk.CFrame
             task.wait()
-        until getgenv().treeCut
+        until getgenv().treeCut or not getgenv().treestop
     end)
 
     task.wait()
@@ -668,50 +609,41 @@ local function bringTree(treeClass, godmodeval, skipPositionSave)
     if treeClass == "LoneCave" and godmodeval then
         local numHits = calculateHitsForEndPart(tree.trunk) - 1
         for i = 1, numHits do
-            if getgenv().shouldAbort then break end
+            if not getgenv().treestop then break end
             cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
             task.wait(1)
         end
         getgenv().treeCut  = false
         getgenv().treestop = false
-        
-        if not getgenv().shouldAbort then
-            DropTools()
-            task.wait(0.3)
-            workspace[player.Name].HumanoidRootPart.CFrame = CFrame.new(-1675, 261, 1284)
-            task.wait(0.5)
-            pcall(function()
-                repeat task.wait() until player.Character.Humanoid.Health == 100
-            end)
-            task.wait(0.3)
-            GetToolsfix()
-            task.wait(0.5)
-            if not getgenv().shouldAbort then
-                bringTree("LoneCave", false, true)
-            end
-        end
+        DropTools()
+        task.wait(0.3)
+        -- FIX: teleport back to safe spot and wait for full health before re-run
+        player.Character.HumanoidRootPart.CFrame = CFrame.new(-1675, 261, 1284)
+        task.wait(0.5)
+        pcall(function()
+            local t = 0
+            repeat task.wait(0.1); t += 0.1 until player.Character.Humanoid.Health >= 100 or t > 15
+        end)
+        task.wait(0.3)
+        GetToolsfix()
+        task.wait(0.5)
+        bringTree("LoneCave", false, destCFrame)
     else
         repeat
-            if getgenv().shouldAbort or not getgenv().treestop then break end
+            if not getgenv().treestop then break end
             cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
             task.wait()
-        until getgenv().treeCut
+        until getgenv().treeCut or not getgenv().treestop
     end
 
+    -- Return to destination (not original position — stays persistent for next tree)
+    task.wait(1)
+    getgenv().treeCut = false
+    player.Character.HumanoidRootPart.CFrame = destCFrame
+
     if treeClass == "LoneCave" then
-        task.wait(1)
-        if not getgenv().shouldAbort then
-            player.Character.HumanoidRootPart.CFrame = oldPosition
-        end
         getgenv().doneend  = true
-        getgenv().treeCut  = false
         getgenv().treestop = false
-    else
-        task.wait(1)
-        getgenv().treeCut = false
-        if not getgenv().shouldAbort then
-            player.Character.HumanoidRootPart.CFrame = oldPosition
-        end
     end
 end
 
@@ -765,7 +697,9 @@ end
 
 local ModWoodSawmill = nil
 
-local function SelectSawmill(Type, onSelected)
+-- FIX: SelectSawmill is a standalone helper — it just waits for a sawmill click
+-- and calls onSelected. It does NOT interact with wood clicks.
+local function SelectSawmill(onSelected)
     local Mouse = player:GetMouse()
     local conn
     conn = Mouse.Button1Down:Connect(function()
@@ -785,7 +719,7 @@ end
 
 local function ModSawmill()
     ModWoodSawmill = nil
-    SelectSawmill("mod", function()
+    SelectSawmill(function()
         local Conveyors   = ModWoodSawmill.Conveyor.Model:GetChildren()
         local Orientation = ModWoodSawmill.Main.Orientation.Y
         local Conveyor
@@ -816,88 +750,171 @@ local function ModSawmill()
     end)
 end
 
--- FIXED ModWood function
+-- FIX: ModWood rewritten — step 1: click sawmill, step 2: click wood.
+-- No nested SelectSawmill call, no double-listener race condition.
 local function ModWood()
-    local worked        = false
     local treelimbblist = {}
-    local childbranch, parentbranch, firstpart
+    local childbranch, parentbranch
 
-    SelectSawmill("mod wood", function()
-        local Mouse = player:GetMouse()
+    -- Step 1: select sawmill
+    print("[VanillaHub] ModWood: click your sawmill first.")
+    SelectSawmill(function()
+        print("[VanillaHub] ModWood: sawmill selected. Now click the wood piece to cut.")
+
+        -- Step 2: listen for wood click
+        local Mouse    = player:GetMouse()
         local modConn
         modConn = Mouse.Button1Down:Connect(function()
             local Clicked = Mouse.Target
             if Clicked and Clicked.Parent:FindFirstAncestor("LogModels") then
                 if Clicked.Parent:FindFirstChild("Owner") and Clicked.Parent.Owner.Value == player then
+                    modConn:Disconnect()
+
                     for _, v in pairs(Clicked.Parent:GetDescendants()) do
                         if v.Name == "ChildIDs" and #v:GetChildren() == 0 then
                             table.insert(treelimbblist, v.Parent.ID.Value)
                         end
                     end
-                    if #treelimbblist > 0 then
-                        table.sort(treelimbblist)
-                        for _, v in pairs(Clicked.Parent:GetDescendants()) do
-                            if v.Name == "ChildIDs" then
-                                for _, v2 in pairs(v:GetChildren()) do
-                                    if v2.Value == treelimbblist[#treelimbblist] then
-                                        parentbranch = v2.Parent.Parent
-                                        Instance.new("Highlight", parentbranch)
-                                    end
+                    table.sort(treelimbblist)
+
+                    for _, v in pairs(Clicked.Parent:GetDescendants()) do
+                        if v.Name == "ChildIDs" then
+                            for _, v2 in pairs(v:GetChildren()) do
+                                if v2.Value == treelimbblist[#treelimbblist] then
+                                    parentbranch = v2.Parent.Parent
+                                    Instance.new("Highlight", parentbranch)
                                 end
-                            elseif v.Name == "ID" and v.Value == treelimbblist[#treelimbblist] then
-                                local hl = Instance.new("Highlight", v.Parent)
-                                hl.FillColor = Color3.new(0,1,0)
-                                childbranch = v.Parent
                             end
+                        elseif v.Name == "ID" and v.Value == treelimbblist[#treelimbblist] then
+                            local hl = Instance.new("Highlight", v.Parent)
+                            hl.FillColor = Color3.new(0,1,0)
+                            childbranch = v.Parent
                         end
                     end
-                end
-            end
-        end)
 
-        task.spawn(function()
-            repeat task.wait(0.5) until childbranch or not modConn
-            if not childbranch then 
-                modConn:Disconnect()
-                return 
-            end
-            modConn:Disconnect()
-
-            local oldpos   = player.Character.HumanoidRootPart.CFrame
-            local LavaPart = GetLava()
-            firstpart      = childbranch.Parent:FindFirstChild("WoodSection")
-
-            if not firstpart then return end
-            
-            player.Character.HumanoidRootPart.CFrame = firstpart.CFrame
-            task.wait(0.2)
-
-            repeat task.wait()
-                if not parentbranch then break end
-                while parentbranch and not isnetworkowner(parentbranch) do
-                    ReplicatedStorage.Interaction.ClientIsDragging:FireServer(parentbranch.Parent)
-                    task.wait()
-                end
-                if parentbranch then
-                    ReplicatedStorage.Interaction.ClientIsDragging:FireServer(parentbranch.Parent)
-                    parentbranch:PivotTo(CFrame.new(-1425, 489, 1244))
-                    if LavaPart then
-                        pcall(function()
-                            firetouchinterest(parentbranch, LavaPart.Lava, 0)
-                            firetouchinterest(parentbranch, LavaPart.Lava, 1)
-                        end)
+                    if not childbranch or not parentbranch then
+                        warn("[VanillaHub] ModWood: could not identify branch/parent.")
+                        return
                     end
+
+                    task.spawn(function()
+                        local worked   = false
+                        local oldpos   = player.Character.HumanoidRootPart.CFrame
+                        local LavaPart = GetLava()
+                        local firstpart = childbranch.Parent:FindFirstChild("WoodSection")
+
+                        player.Character.HumanoidRootPart.CFrame = firstpart.CFrame
+                        task.wait(0.2)
+
+                        -- Burn parent branch in lava
+                        repeat task.wait()
+                            while not isnetworkowner(parentbranch) do
+                                ReplicatedStorage.Interaction.ClientIsDragging:FireServer(parentbranch.Parent)
+                                task.wait()
+                            end
+                            ReplicatedStorage.Interaction.ClientIsDragging:FireServer(parentbranch.Parent)
+                            parentbranch:PivotTo(CFrame.new(-1425, 489, 1244))
+                            if LavaPart then
+                                pcall(function()
+                                    firetouchinterest(parentbranch, LavaPart.Lava, 0)
+                                    firetouchinterest(parentbranch, LavaPart.Lava, 1)
+                                end)
+                            end
+                        until parentbranch:FindFirstChild("LavaFire")
+
+                        firstpart = childbranch.Parent:FindFirstChild("WoodSection")
+                        player.Character.HumanoidRootPart.CFrame = firstpart.CFrame
+                        task.wait(0.3)
+
+                        while not isnetworkowner(firstpart) do
+                            ReplicatedStorage.Interaction.ClientIsDragging:FireServer(firstpart.Parent)
+                            task.wait()
+                        end
+                        ReplicatedStorage.Interaction.ClientIsDragging:FireServer(firstpart.Parent)
+                        firstpart:PivotTo(CFrame.new(-1055, 291, -458))
+                        task.wait(0.3)
+
+                        player.Character.HumanoidRootPart.CFrame = childbranch.CFrame * CFrame.new(5,0,0)
+                        while not isnetworkowner(childbranch) do
+                            ReplicatedStorage.Interaction.ClientIsDragging:FireServer(childbranch.Parent)
+                            task.wait()
+                        end
+                        ReplicatedStorage.Interaction.ClientIsDragging:FireServer(childbranch.Parent)
+                        childbranch:PivotTo(CFrame.new(-1055, 291, -458))
+
+                        parentbranch:FindFirstChild("LavaFire"):Destroy()
+                        pcall(function() parentbranch:FindFirstChild("BodyAngularVelocity"):Destroy() end)
+                        pcall(function() parentbranch:FindFirstChild("BodyVelocity"):Destroy() end)
+
+                        player.Character.HumanoidRootPart.CFrame = parentbranch.CFrame
+                        task.wait(0.1)
+
+                        -- Drag parent to sawmill sell point
+                        repeat
+                            ReplicatedStorage.Interaction.ClientIsDragging:FireServer(parentbranch.Parent)
+                            parentbranch:PivotTo(CFrame.new(314.54, -0.5, 86.823))
+                            task.wait()
+                        until not parentbranch.Parent
+
+                        -- Watch for new log to appear (confirms sell/split worked)
+                        local addedConn
+                        worked = false
+                        addedConn = workspace.LogModels.ChildAdded:Connect(function(v)
+                            if v:WaitForChild("Owner",5) and v.Owner.Value == player then
+                                if v:WaitForChild("WoodSection",5) then worked = true end
+                            end
+                        end)
+
+                        -- Keep character near child branch while cutting
+                        task.spawn(function()
+                            repeat task.wait()
+                                player.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+                                local fp = childbranch.Parent and childbranch.Parent:FindFirstChild("WoodSection")
+                                if fp then
+                                    player.Character.HumanoidRootPart.CFrame = fp.CFrame * CFrame.new(5,0,0)
+                                end
+                            until worked
+                        end)
+
+                        local tClass = childbranch.Parent:FindFirstChild("TreeClass")
+                        local ok2, bestAxe = getBestAxe(tClass and tClass.Value or "Generic")
+                        if ok2 and bestAxe then
+                            repeat task.wait()
+                                local ce = childbranch.Parent:FindFirstChild("CutEvent")
+                                if ce then
+                                    local treeC = tClass and tClass.Value or "Generic"
+                                    local dmg   = HitPoints[bestAxe.ToolName.Value] or 1
+                                    ReplicatedStorage.Interaction.RemoteProxy:FireServer(ce, {
+                                        tool=bestAxe, faceVector=Vector3.new(1,0,0),
+                                        height=0.3, sectionId=1, hitPoints=dmg,
+                                        cooldown=0.25837870788574, cuttingClass="Axe"
+                                    })
+                                end
+                            until worked
+                        end
+
+                        task.wait(0.3)
+                        -- Place child branch at sawmill
+                        player.Character.HumanoidRootPart.CFrame = childbranch.CFrame * CFrame.new(5,0,0)
+                        while not isnetworkowner(childbranch) do
+                            player.Character.HumanoidRootPart.CFrame = childbranch.CFrame * CFrame.new(5,0,0)
+                            ReplicatedStorage.Interaction.ClientIsDragging:FireServer(childbranch.Parent)
+                            task.wait()
+                        end
+                        task.wait(0.2)
+                        ReplicatedStorage.Interaction.ClientIsDragging:FireServer(childbranch.Parent)
+                        task.wait(0.3)
+                        if ModWoodSawmill then
+                            childbranch:PivotTo(ModWoodSawmill.Particles.CFrame + Vector3.new(0,0.5,0))
+                        end
+
+                        player.Character.HumanoidRootPart.CFrame = oldpos
+                        addedConn:Disconnect()
+                        ModWoodSawmill = nil
+                        print("[VanillaHub] ModWood: done.")
+                    end)
                 end
-            until not parentbranch or parentbranch:FindFirstChild("LavaFire")
-
-            if parentbranch and parentbranch:FindFirstChild("LavaFire") then
-                parentbranch:FindFirstChild("LavaFire"):Destroy()
             end
-            pcall(function() if parentbranch then parentbranch:FindFirstChild("BodyAngularVelocity"):Destroy() end end)
-            pcall(function() if parentbranch then parentbranch:FindFirstChild("BodyVelocity"):Destroy() end end)
-
-            player.Character.HumanoidRootPart.CFrame = oldpos
-            ModWoodSawmill = nil
         end)
     end)
 end
@@ -1004,30 +1021,18 @@ local function ViewEndTree(val)
 end
 
 -- ════════════════════════════════════════════════════
--- IMPROVED WOOD TAB UI
+-- WOOD TAB UI
 -- ════════════════════════════════════════════════════
 
 local woodPage = pages["WoodTab"]
 
--- Clear any existing children
 for _, child in ipairs(woodPage:GetChildren()) do
     if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
         child:Destroy()
     end
 end
 
--- Add main layout
-local mainLayout = Instance.new("UIListLayout", woodPage)
-mainLayout.SortOrder = Enum.SortOrder.LayoutOrder
-mainLayout.Padding = UDim.new(0, 8)
-
-local mainPadding = Instance.new("UIPadding", woodPage)
-mainPadding.PaddingTop = UDim.new(0, 8)
-mainPadding.PaddingBottom = UDim.new(0, 8)
-mainPadding.PaddingLeft = UDim.new(0, 8)
-mainPadding.PaddingRight = UDim.new(0, 8)
-
--- ── TREE SELECTOR SECTION ────────────────────────────────────────────────────
+-- ── TREE SELECTOR ────────────────────────────────────────────────────────────
 
 local TREE_LIST = {
     "Generic","Walnut","Cherry","SnowGlow","Oak","Birch","Koa","Fir",
@@ -1038,114 +1043,105 @@ local TREE_LIST = {
 local selectedTree    = "Generic"
 local treeDropIsOpen  = false
 
-local TD_HEADER_H = 48
-local TD_ITEM_H   = 38
-local TD_MAX_SHOW = 8
+local TD_HEADER_H = 42
+local TD_ITEM_H   = 34
+local TD_MAX_SHOW = 6
 
-sectionLabel(woodPage, "Tree Selection", "🌲")
+sectionLabel(woodPage, "Tree Selection")
 
-local treeCard = Instance.new("Frame", woodPage)
-treeCard.Size = UDim2.new(1, 0, 0, 0)
-treeCard.BackgroundColor3 = C.CARD
-treeCard.BorderSizePixel = 0
-treeCard.LayoutOrder = 1
-corner(treeCard, 12)
-stroke(treeCard, C.BORDER, 1, 0.4)
-
-local treeDropOuter = Instance.new("Frame", treeCard)
-treeDropOuter.Size = UDim2.new(1, -16, 0, TD_HEADER_H)
-treeDropOuter.Position = UDim2.new(0, 8, 0, 8)
-treeDropOuter.BackgroundColor3 = C.ROW
-treeDropOuter.BorderSizePixel = 0
+local treeDropOuter = Instance.new("Frame", woodPage)
+treeDropOuter.Size             = UDim2.new(1, 0, 0, TD_HEADER_H)
+treeDropOuter.BackgroundColor3 = C.CARD
+treeDropOuter.BorderSizePixel  = 0
 treeDropOuter.ClipsDescendants = true
-corner(treeDropOuter, 10)
-stroke(treeDropOuter, C.BORDER_DIM, 1, 0.3)
+corner(treeDropOuter, 9)
+local treeDropStroke = stroke(treeDropOuter, C.BORDER, 1.2, 0.3)
 
 local treeDropHeader = Instance.new("Frame", treeDropOuter)
-treeDropHeader.Size = UDim2.new(1, 0, 0, TD_HEADER_H)
+treeDropHeader.Size              = UDim2.new(1, 0, 0, TD_HEADER_H)
 treeDropHeader.BackgroundTransparency = 1
 
-local treeIcon = Instance.new("TextLabel", treeDropHeader)
-treeIcon.Size = UDim2.new(0, 32, 1, 0)
-treeIcon.Position = UDim2.new(0, 8, 0, 0)
-treeIcon.BackgroundTransparency = 1
-treeIcon.Text = "🌳"
-treeIcon.Font = Enum.Font.GothamBold
-treeIcon.TextSize = 18
-treeIcon.TextColor3 = C.TEXT
+local treeDropLbl = Instance.new("TextLabel", treeDropHeader)
+treeDropLbl.Size               = UDim2.new(0, 70, 1, 0)
+treeDropLbl.Position           = UDim2.new(0, 12, 0, 0)
+treeDropLbl.BackgroundTransparency = 1
+treeDropLbl.Text               = "Tree"
+treeDropLbl.Font               = Enum.Font.GothamBold
+treeDropLbl.TextSize           = 12
+treeDropLbl.TextColor3         = C.TEXT
+treeDropLbl.TextXAlignment     = Enum.TextXAlignment.Left
 
 local treeSelFrame = Instance.new("Frame", treeDropHeader)
-treeSelFrame.Size = UDim2.new(1, -100, 0, 34)
-treeSelFrame.Position = UDim2.new(0, 48, 0.5, -17)
+treeSelFrame.Size             = UDim2.new(1, -88, 0, 28)
+treeSelFrame.Position         = UDim2.new(0, 80, 0.5, -14)
 treeSelFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-treeSelFrame.BorderSizePixel = 0
-corner(treeSelFrame, 8)
+treeSelFrame.BorderSizePixel  = 0
+corner(treeSelFrame, 7)
 stroke(treeSelFrame, C.BORDER, 1, 0.35)
 
 local treeSelLbl = Instance.new("TextLabel", treeSelFrame)
-treeSelLbl.Size = UDim2.new(1, -40, 1, 0)
-treeSelLbl.Position = UDim2.new(0, 12, 0, 0)
+treeSelLbl.Size              = UDim2.new(1, -32, 1, 0)
+treeSelLbl.Position          = UDim2.new(0, 10, 0, 0)
 treeSelLbl.BackgroundTransparency = 1
-treeSelLbl.Text = "Generic"
-treeSelLbl.Font = Enum.Font.GothamSemibold
-treeSelLbl.TextSize = 13
-treeSelLbl.TextColor3 = C.TEXT
-treeSelLbl.TextXAlignment = Enum.TextXAlignment.Left
-treeSelLbl.TextTruncate = Enum.TextTruncate.AtEnd
+treeSelLbl.Text              = "Generic"
+treeSelLbl.Font              = Enum.Font.GothamSemibold
+treeSelLbl.TextSize          = 12
+treeSelLbl.TextColor3        = C.TEXT
+treeSelLbl.TextXAlignment    = Enum.TextXAlignment.Left
+treeSelLbl.TextTruncate      = Enum.TextTruncate.AtEnd
 
 local treeArrowLbl = Instance.new("TextLabel", treeSelFrame)
-treeArrowLbl.Size = UDim2.new(0, 28, 1, 0)
-treeArrowLbl.Position = UDim2.new(1, -32, 0, 0)
+treeArrowLbl.Size              = UDim2.new(0, 22, 1, 0)
+treeArrowLbl.Position          = UDim2.new(1, -24, 0, 0)
 treeArrowLbl.BackgroundTransparency = 1
-treeArrowLbl.Text = "▼"
-treeArrowLbl.Font = Enum.Font.GothamBold
-treeArrowLbl.TextSize = 12
-treeArrowLbl.TextColor3 = C.TEXT_MID
-treeArrowLbl.TextXAlignment = Enum.TextXAlignment.Center
+treeArrowLbl.Text              = "v"
+treeArrowLbl.Font              = Enum.Font.GothamBold
+treeArrowLbl.TextSize          = 11
+treeArrowLbl.TextColor3        = C.TEXT_MID
+treeArrowLbl.TextXAlignment    = Enum.TextXAlignment.Center
 
 local treeHeaderBtn = Instance.new("TextButton", treeSelFrame)
-treeHeaderBtn.Size = UDim2.new(1, 0, 1, 0)
+treeHeaderBtn.Size              = UDim2.new(1, 0, 1, 0)
 treeHeaderBtn.BackgroundTransparency = 1
-treeHeaderBtn.Text = ""
-treeHeaderBtn.AutoButtonColor = false
-treeHeaderBtn.ZIndex = 5
+treeHeaderBtn.Text              = ""
+treeHeaderBtn.AutoButtonColor   = false
+treeHeaderBtn.ZIndex            = 5
 
 local treeDropDivider = Instance.new("Frame", treeDropOuter)
-treeDropDivider.Size = UDim2.new(1, -14, 0, 1)
-treeDropDivider.Position = UDim2.new(0, 7, 0, TD_HEADER_H)
+treeDropDivider.Size             = UDim2.new(1, -14, 0, 1)
+treeDropDivider.Position         = UDim2.new(0, 7, 0, TD_HEADER_H)
 treeDropDivider.BackgroundColor3 = C.BORDER
-treeDropDivider.BorderSizePixel = 0
-treeDropDivider.Visible = false
+treeDropDivider.BorderSizePixel  = 0
+treeDropDivider.Visible          = false
 
 local treeListScroll = Instance.new("ScrollingFrame", treeDropOuter)
-treeListScroll.Position = UDim2.new(0, 0, 0, TD_HEADER_H + 2)
-treeListScroll.Size = UDim2.new(1, 0, 0, 0)
+treeListScroll.Position              = UDim2.new(0, 0, 0, TD_HEADER_H + 2)
+treeListScroll.Size                  = UDim2.new(1, 0, 0, 0)
 treeListScroll.BackgroundTransparency = 1
-treeListScroll.BorderSizePixel = 0
-treeListScroll.ScrollBarThickness = 3
-treeListScroll.ScrollBarImageColor3 = C.BORDER
-treeListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-treeListScroll.ClipsDescendants = true
+treeListScroll.BorderSizePixel       = 0
+treeListScroll.ScrollBarThickness    = 3
+treeListScroll.ScrollBarImageColor3  = C.BORDER
+treeListScroll.CanvasSize            = UDim2.new(0, 0, 0, 0)
+treeListScroll.ClipsDescendants      = true
 
 local treeListLayout = Instance.new("UIListLayout", treeListScroll)
 treeListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-treeListLayout.Padding = UDim.new(0, 4)
+treeListLayout.Padding   = UDim.new(0, 3)
 treeListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     treeListScroll.CanvasSize = UDim2.new(0, 0, 0, treeListLayout.AbsoluteContentSize.Y + 8)
 end)
 local treeListPad = Instance.new("UIPadding", treeListScroll)
-treeListPad.PaddingTop = UDim.new(0, 4)
+treeListPad.PaddingTop    = UDim.new(0, 4)
 treeListPad.PaddingBottom = UDim.new(0, 4)
-treeListPad.PaddingLeft = UDim.new(0, 6)
-treeListPad.PaddingRight = UDim.new(0, 6)
+treeListPad.PaddingLeft   = UDim.new(0, 6)
+treeListPad.PaddingRight  = UDim.new(0, 6)
 
 local function treeCloseList()
     treeDropIsOpen = false
-    TweenService:Create(treeArrowLbl, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 0}):Play()
-    TweenService:Create(treeDropOuter, TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1, -16, 0, TD_HEADER_H)}):Play()
+    TweenService:Create(treeArrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 0}):Play()
+    TweenService:Create(treeDropOuter,  TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, TD_HEADER_H)}):Play()
     TweenService:Create(treeListScroll, TweenInfo.new(0.20, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, 0)}):Play()
     treeDropDivider.Visible = false
-    treeCard.Size = UDim2.new(1, 0, 0, TD_HEADER_H + 16)
 end
 
 local function treeBuildList()
@@ -1154,29 +1150,26 @@ local function treeBuildList()
     end
     for i, treeName in ipairs(TREE_LIST) do
         local row = Instance.new("Frame", treeListScroll)
-        row.Size = UDim2.new(1, 0, 0, TD_ITEM_H)
+        row.Size             = UDim2.new(1, 0, 0, TD_ITEM_H)
         row.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-        row.BorderSizePixel = 0
-        row.LayoutOrder = i
+        row.BorderSizePixel  = 0
+        row.LayoutOrder      = i
         corner(row, 7)
-        
         local rowLbl = Instance.new("TextLabel", row)
-        rowLbl.Size = UDim2.new(1, -16, 1, 0)
-        rowLbl.Position = UDim2.new(0, 12, 0, 0)
+        rowLbl.Size              = UDim2.new(1, -16, 1, 0)
+        rowLbl.Position          = UDim2.new(0, 12, 0, 0)
         rowLbl.BackgroundTransparency = 1
-        rowLbl.Text = treeName
-        rowLbl.Font = Enum.Font.GothamSemibold
-        rowLbl.TextSize = 12
-        rowLbl.TextColor3 = treeName == selectedTree and C.ACCENT or C.TEXT
-        rowLbl.TextXAlignment = Enum.TextXAlignment.Left
-        
+        rowLbl.Text              = treeName
+        rowLbl.Font              = Enum.Font.GothamSemibold
+        rowLbl.TextSize          = 12
+        rowLbl.TextColor3        = treeName == selectedTree and C.ACCENT or C.TEXT
+        rowLbl.TextXAlignment    = Enum.TextXAlignment.Left
         local rowBtn = Instance.new("TextButton", row)
-        rowBtn.Size = UDim2.new(1, 0, 1, 0)
+        rowBtn.Size              = UDim2.new(1, 0, 1, 0)
         rowBtn.BackgroundTransparency = 1
-        rowBtn.Text = ""
-        rowBtn.AutoButtonColor = false
-        rowBtn.ZIndex = 5
-        
+        rowBtn.Text              = ""
+        rowBtn.AutoButtonColor   = false
+        rowBtn.ZIndex            = 5
         rowBtn.MouseEnter:Connect(function()
             TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(34,34,34)}):Play()
         end)
@@ -1184,8 +1177,9 @@ local function treeBuildList()
             TweenService:Create(row, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(20,20,20)}):Play()
         end)
         rowBtn.MouseButton1Click:Connect(function()
-            selectedTree = treeName
-            treeSelLbl.Text = treeName
+            selectedTree         = treeName
+            treeSelLbl.Text      = treeName
+            treeSelLbl.TextColor3 = C.TEXT
             treeCloseList()
         end)
     end
@@ -1194,310 +1188,214 @@ end
 local function treeOpenList()
     treeDropIsOpen = true
     treeBuildList()
-    local listH = math.min(#TREE_LIST, TD_MAX_SHOW) * (TD_ITEM_H + 4) + 10
+    local listH = math.min(#TREE_LIST, TD_MAX_SHOW) * (TD_ITEM_H + 3) + 10
     treeDropDivider.Visible = true
-    TweenService:Create(treeArrowLbl, TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 180}):Play()
-    TweenService:Create(treeDropOuter, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1, -16, 0, TD_HEADER_H + 2 + listH)}):Play()
+    TweenService:Create(treeArrowLbl,   TweenInfo.new(0.18, Enum.EasingStyle.Quint), {Rotation = 180}):Play()
+    TweenService:Create(treeDropOuter,  TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, TD_HEADER_H + 2 + listH)}):Play()
     TweenService:Create(treeListScroll, TweenInfo.new(0.22, Enum.EasingStyle.Quint), {Size = UDim2.new(1, 0, 0, listH)}):Play()
-    treeCard.Size = UDim2.new(1, 0, 0, TD_HEADER_H + 2 + listH + 16)
 end
 
 treeHeaderBtn.MouseButton1Click:Connect(function()
     if treeDropIsOpen then treeCloseList() else treeOpenList() end
 end)
-
-treeCard.Size = UDim2.new(1, 0, 0, TD_HEADER_H + 16)
-
--- Amount slider
-sectionLabel(woodPage, "Amount", "🔢")
-makeSlider(woodPage, "Trees to bring", 1, 50, 1, function(v) treeAmount = v end, "x")
+treeHeaderBtn.MouseEnter:Connect(function()
+    TweenService:Create(treeSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(30,30,30)}):Play()
+end)
+treeHeaderBtn.MouseLeave:Connect(function()
+    TweenService:Create(treeSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(22,22,22)}):Play()
+end)
 
 local treeAmount = 1
+makeSlider(woodPage, "Amount", 1, 50, 1, function(v) treeAmount = v end)
 
--- ── STATUS INDICATOR ─────────────────────────────────────────────────────────
-sectionLabel(woodPage, "Status", "📊")
-local statusFrame, statusIndicator = makeStatusIndicator(woodPage, "Idle - Ready to chop", C.ACCENT_DIM)
+-- ── Tree Actions ─────────────────────────────────────────────────────────────
 
--- ── ACTION BUTTONS ──────────────────────────────────────────────────────────
-sectionLabel(woodPage, "Actions", "⚡")
+sepLine(woodPage)
+sectionLabel(woodPage, "Actions")
 
-local actionGrid = Instance.new("Frame", woodPage)
-actionGrid.Size = UDim2.new(1, 0, 0, 90)
-actionGrid.BackgroundTransparency = 1
-actionGrid.LayoutOrder = 4
+local bringAbortRow = Instance.new("Frame", woodPage)
+bringAbortRow.Size             = UDim2.new(1, 0, 0, 34)
+bringAbortRow.BackgroundTransparency = 1
 
-local gridLayout = Instance.new("UIGridLayout", actionGrid)
-gridLayout.CellSize = UDim2.new(0.5, -6, 0, 38)
-gridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-gridLayout.FillDirection = Enum.FillDirection.Horizontal
-gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local bringBtn = Instance.new("TextButton", actionGrid)
-bringBtn.Size = UDim2.new(1, 0, 1, 0)
-bringBtn.BackgroundColor3 = C.SUCCESS
-bringBtn.BorderSizePixel = 0
-bringBtn.Font = Enum.Font.GothamSemibold
-bringBtn.TextSize = 14
-bringBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-bringBtn.Text = "🌲 BRING TREE"
-bringBtn.AutoButtonColor = false
-corner(bringBtn, 10)
+local bringBtn = Instance.new("TextButton", bringAbortRow)
+bringBtn.Size             = UDim2.new(0.5, -4, 1, 0)
+bringBtn.Position         = UDim2.new(0, 0, 0, 0)
+bringBtn.BackgroundColor3 = C.CARD
+bringBtn.BorderSizePixel  = 0
+bringBtn.Font             = Enum.Font.GothamSemibold
+bringBtn.TextSize         = 13
+bringBtn.TextColor3       = C.TEXT
+bringBtn.Text             = "Bring Tree"
+bringBtn.AutoButtonColor  = false
+corner(bringBtn, 8)
 stroke(bringBtn, C.BORDER, 1, 0.5)
+bringBtn.MouseEnter:Connect(function() TweenService:Create(bringBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
+bringBtn.MouseLeave:Connect(function() TweenService:Create(bringBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
 
-local abortBtn = Instance.new("TextButton", actionGrid)
-abortBtn.Size = UDim2.new(1, 0, 1, 0)
-abortBtn.BackgroundColor3 = C.DANGER
-abortBtn.BorderSizePixel = 0
-abortBtn.Font = Enum.Font.GothamSemibold
-abortBtn.TextSize = 14
-abortBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-abortBtn.Text = "⛔ ABORT"
-abortBtn.AutoButtonColor = false
-corner(abortBtn, 10)
-stroke(abortBtn, C.BORDER, 1, 0.5)
-
-bringBtn.MouseEnter:Connect(function()
-    TweenService:Create(bringBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(100, 220, 100)}):Play()
-end)
-bringBtn.MouseLeave:Connect(function()
-    TweenService:Create(bringBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.SUCCESS}):Play()
-end)
-
-abortBtn.MouseEnter:Connect(function()
-    TweenService:Create(abortBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(220, 100, 100)}):Play()
-end)
-abortBtn.MouseLeave:Connect(function()
-    TweenService:Create(abortBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.DANGER}):Play()
-end)
-
+-- FIX: capture the home position ONCE before looping, so all trees in the batch
+-- deliver to the same spot and the character never drifts the return point.
 bringBtn.MouseButton1Click:Connect(function()
     if not selectedTree or selectedTree == "" then
         warn("[VanillaHub] Select a tree first!")
         return
     end
     if not hasSingleAxe() then return end
-    
-    getgenv().shouldAbort = false
-    getgenv().savedPosition = nil
-    
-    statusIndicator.BackgroundColor3 = C.WARNING
-    statusFrame:FindFirstChildOfClass("TextLabel").Text = "🌲 Bringing " .. treeAmount .. "x " .. selectedTree .. " trees..."
-    
+
     task.spawn(function()
+        -- Snapshot the standing position right when the button is pressed.
+        local homeCFrame = player.Character.HumanoidRootPart.CFrame
+
         if selectedTree == "LoneCave" then
-            bringTree(selectedTree, true, false)
+            bringTree(selectedTree, true, homeCFrame)
         else
             for i = 1, treeAmount do
-                if getgenv().shouldAbort then break end
-                statusFrame:FindFirstChildOfClass("TextLabel").Text = "🌲 Bringing tree " .. i .. "/" .. treeAmount
+                -- Check abort between trees
+                if not getgenv().treestop and i > 1 then break end
+                bringTree(selectedTree, false, homeCFrame)
                 task.wait(0.5)
-                bringTree(selectedTree, false, false)
             end
         end
-        getgenv().savedPosition = nil
-        statusIndicator.BackgroundColor3 = C.ACCENT_DIM
-        statusFrame:FindFirstChildOfClass("TextLabel").Text = "Idle - Ready to chop"
-        if getgenv().shouldAbort then
-            statusFrame:FindFirstChildOfClass("TextLabel").Text = "Aborted - Ready to chop"
-        end
+
+        -- After all trees done, return home
+        player.Character.HumanoidRootPart.CFrame = homeCFrame
+        getgenv().treestop = false
     end)
 end)
 
+local abortBtn = Instance.new("TextButton", bringAbortRow)
+abortBtn.Size             = UDim2.new(0.5, -4, 1, 0)
+abortBtn.Position         = UDim2.new(0.5, 4, 0, 0)
+abortBtn.BackgroundColor3 = C.CARD
+abortBtn.BorderSizePixel  = 0
+abortBtn.Font             = Enum.Font.GothamSemibold
+abortBtn.TextSize         = 13
+abortBtn.TextColor3       = C.TEXT
+abortBtn.Text             = "Abort"
+abortBtn.AutoButtonColor  = false
+corner(abortBtn, 8)
+stroke(abortBtn, C.BORDER, 1, 0.5)
+abortBtn.MouseEnter:Connect(function() TweenService:Create(abortBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
+abortBtn.MouseLeave:Connect(function() TweenService:Create(abortBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
+-- FIX: simply set treestop to false. The loops check this flag and will exit.
+-- No auto-reset — the next Bring Tree press sets it to true again.
 abortBtn.MouseButton1Click:Connect(function()
     getgenv().treestop = false
-    getgenv().shouldAbort = true
-    statusIndicator.BackgroundColor3 = C.DANGER
-    statusFrame:FindFirstChildOfClass("TextLabel").Text = "⚠️ Aborting operations..."
-    task.delay(2, function()
-        if not getgenv().treeCut and not getgenv().treestop then
-            statusIndicator.BackgroundColor3 = C.ACCENT_DIM
-            statusFrame:FindFirstChildOfClass("TextLabel").Text = "Idle - Ready to chop"
-        end
-    end)
+    getgenv().treeCut  = false
+    print("[VanillaHub] Aborted.")
 end)
 
--- ── LOGS SECTION ─────────────────────────────────────────────────────────────
-sectionLabel(woodPage, "Logs", "📦")
+-- ── Logs ─────────────────────────────────────────────────────────────────────
 
-local logsGrid = Instance.new("Frame", woodPage)
-logsGrid.Size = UDim2.new(1, 0, 0, 90)
-logsGrid.BackgroundTransparency = 1
-logsGrid.LayoutOrder = 5
+sepLine(woodPage)
+sectionLabel(woodPage, "Logs")
 
-local logsGridLayout = Instance.new("UIGridLayout", logsGrid)
-logsGridLayout.CellSize = UDim2.new(0.5, -6, 0, 38)
-logsGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-logsGridLayout.FillDirection = Enum.FillDirection.Horizontal
+local bringLogsRow = Instance.new("Frame", woodPage)
+bringLogsRow.Size             = UDim2.new(1, 0, 0, 34)
+bringLogsRow.BackgroundTransparency = 1
 
-local bringLogsBtn = Instance.new("TextButton", logsGrid)
-bringLogsBtn.Size = UDim2.new(1, 0, 1, 0)
+local bringLogsBtn = Instance.new("TextButton", bringLogsRow)
+bringLogsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
+bringLogsBtn.Position         = UDim2.new(0, 0, 0, 0)
 bringLogsBtn.BackgroundColor3 = C.CARD
-bringLogsBtn.BorderSizePixel = 0
-bringLogsBtn.Font = Enum.Font.GothamSemibold
-bringLogsBtn.TextSize = 13
-bringLogsBtn.TextColor3 = C.TEXT
-bringLogsBtn.Text = "📦 Bring All Logs"
-bringLogsBtn.AutoButtonColor = false
-corner(bringLogsBtn, 10)
+bringLogsBtn.BorderSizePixel  = 0
+bringLogsBtn.Font             = Enum.Font.GothamSemibold
+bringLogsBtn.TextSize         = 13
+bringLogsBtn.TextColor3       = C.TEXT
+bringLogsBtn.Text             = "Bring All Logs"
+bringLogsBtn.AutoButtonColor  = false
+corner(bringLogsBtn, 8)
 stroke(bringLogsBtn, C.BORDER, 1, 0.5)
+bringLogsBtn.MouseEnter:Connect(function() TweenService:Create(bringLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
+bringLogsBtn.MouseLeave:Connect(function() TweenService:Create(bringLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
+bringLogsBtn.MouseButton1Click:Connect(function()
+    task.spawn(BringAllLogs)
+end)
 
-local sellLogsBtn = Instance.new("TextButton", logsGrid)
-sellLogsBtn.Size = UDim2.new(1, 0, 1, 0)
+local sellLogsBtn = Instance.new("TextButton", bringLogsRow)
+sellLogsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
+sellLogsBtn.Position         = UDim2.new(0.5, 4, 0, 0)
 sellLogsBtn.BackgroundColor3 = C.CARD
-sellLogsBtn.BorderSizePixel = 0
-sellLogsBtn.Font = Enum.Font.GothamSemibold
-sellLogsBtn.TextSize = 13
-sellLogsBtn.TextColor3 = C.TEXT
-sellLogsBtn.Text = "💰 Sell All Logs"
-sellLogsBtn.AutoButtonColor = false
-corner(sellLogsBtn, 10)
+sellLogsBtn.BorderSizePixel  = 0
+sellLogsBtn.Font             = Enum.Font.GothamSemibold
+sellLogsBtn.TextSize         = 13
+sellLogsBtn.TextColor3       = C.TEXT
+sellLogsBtn.Text             = "Sell All Logs"
+sellLogsBtn.AutoButtonColor  = false
+corner(sellLogsBtn, 8)
 stroke(sellLogsBtn, C.BORDER, 1, 0.5)
+sellLogsBtn.MouseEnter:Connect(function() TweenService:Create(sellLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
+sellLogsBtn.MouseLeave:Connect(function() TweenService:Create(sellLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
+sellLogsBtn.MouseButton1Click:Connect(function()
+    task.spawn(SellAllLogs)
+end)
 
-bringLogsBtn.MouseEnter:Connect(function() TweenService:Create(bringLogsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play() end)
-bringLogsBtn.MouseLeave:Connect(function() TweenService:Create(bringLogsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play() end)
-sellLogsBtn.MouseEnter:Connect(function() TweenService:Create(sellLogsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play() end)
-sellLogsBtn.MouseLeave:Connect(function() TweenService:Create(sellLogsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play() end)
+-- ── Sawmill ───────────────────────────────────────────────────────────────────
 
-bringLogsBtn.MouseButton1Click:Connect(function() task.spawn(BringAllLogs) end)
-sellLogsBtn.MouseButton1Click:Connect(function() task.spawn(SellAllLogs) end)
+sepLine(woodPage)
+sectionLabel(woodPage, "Sawmill")
 
--- ── SAWMILL SECTION ─────────────────────────────────────────────────────────
-sectionLabel(woodPage, "Sawmill", "⚙️")
+makeBtn(woodPage, "Mod Sawmill", function() ModSawmill() end)
+makeBtn(woodPage, "Mod Wood", function() ModWood() end)
 
-local sawmillGrid = Instance.new("Frame", woodPage)
-sawmillGrid.Size = UDim2.new(1, 0, 0, 90)
-sawmillGrid.BackgroundTransparency = 1
-sawmillGrid.LayoutOrder = 6
+-- ── Advanced ──────────────────────────────────────────────────────────────────
 
-local sawmillGridLayout = Instance.new("UIGridLayout", sawmillGrid)
-sawmillGridLayout.CellSize = UDim2.new(0.5, -6, 0, 38)
-sawmillGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-sawmillGridLayout.FillDirection = Enum.FillDirection.Horizontal
+sepLine(woodPage)
+sectionLabel(woodPage, "Advanced")
 
-local modSawmillBtn = Instance.new("TextButton", sawmillGrid)
-modSawmillBtn.Size = UDim2.new(1, 0, 1, 0)
-modSawmillBtn.BackgroundColor3 = C.CARD
-modSawmillBtn.BorderSizePixel = 0
-modSawmillBtn.Font = Enum.Font.GothamSemibold
-modSawmillBtn.TextSize = 13
-modSawmillBtn.TextColor3 = C.TEXT
-modSawmillBtn.Text = "🔧 Mod Sawmill"
-modSawmillBtn.AutoButtonColor = false
-corner(modSawmillBtn, 10)
-stroke(modSawmillBtn, C.BORDER, 1, 0.5)
+makeBtn(woodPage, "Dismember Tree", function() DismemberTree() end)
 
-local modWoodBtn = Instance.new("TextButton", sawmillGrid)
-modWoodBtn.Size = UDim2.new(1, 0, 1, 0)
-modWoodBtn.BackgroundColor3 = C.CARD
-modWoodBtn.BorderSizePixel = 0
-modWoodBtn.Font = Enum.Font.GothamSemibold
-modWoodBtn.TextSize = 13
-modWoodBtn.TextColor3 = C.TEXT
-modWoodBtn.Text = "🪵 Mod Wood"
-modWoodBtn.AutoButtonColor = false
-corner(modWoodBtn, 10)
-stroke(modWoodBtn, C.BORDER, 1, 0.5)
+makeToggle(woodPage, "Cut Plank 1x1", false, function(val)
+    OneUnitCutter(val)
+end)
 
-modSawmillBtn.MouseEnter:Connect(function() TweenService:Create(modSawmillBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play() end)
-modSawmillBtn.MouseLeave:Connect(function() TweenService:Create(modSawmillBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play() end)
-modWoodBtn.MouseEnter:Connect(function() TweenService:Create(modWoodBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play() end)
-modWoodBtn.MouseLeave:Connect(function() TweenService:Create(modWoodBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play() end)
+makeToggle(woodPage, "View LoneCave Tree", false, function(val)
+    ViewEndTree(val)
+end)
 
-modSawmillBtn.MouseButton1Click:Connect(function() ModSawmill() end)
-modWoodBtn.MouseButton1Click:Connect(function() ModWood() end)
+-- ── Tools ─────────────────────────────────────────────────────────────────────
 
--- ── ADVANCED SECTION ────────────────────────────────────────────────────────
-sectionLabel(woodPage, "Advanced", "🔧")
+sepLine(woodPage)
+sectionLabel(woodPage, "Tools")
 
-local advancedGrid = Instance.new("Frame", woodPage)
-advancedGrid.Size = UDim2.new(1, 0, 0, 90)
-advancedGrid.BackgroundTransparency = 1
-advancedGrid.LayoutOrder = 7
+local toolRow = Instance.new("Frame", woodPage)
+toolRow.Size             = UDim2.new(1, 0, 0, 34)
+toolRow.BackgroundTransparency = 1
 
-local advancedGridLayout = Instance.new("UIGridLayout", advancedGrid)
-advancedGridLayout.CellSize = UDim2.new(0.5, -6, 0, 38)
-advancedGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-advancedGridLayout.FillDirection = Enum.FillDirection.Horizontal
-
-local dismemberBtn = Instance.new("TextButton", advancedGrid)
-dismemberBtn.Size = UDim2.new(1, 0, 1, 0)
-dismemberBtn.BackgroundColor3 = C.CARD
-dismemberBtn.BorderSizePixel = 0
-dismemberBtn.Font = Enum.Font.GothamSemibold
-dismemberBtn.TextSize = 13
-dismemberBtn.TextColor3 = C.TEXT
-dismemberBtn.Text = "🔪 Dismember Tree"
-dismemberBtn.AutoButtonColor = false
-corner(dismemberBtn, 10)
-stroke(dismemberBtn, C.BORDER, 1, 0.5)
-
-local emptyBtn = Instance.new("TextButton", advancedGrid)
-emptyBtn.Size = UDim2.new(1, 0, 1, 0)
-emptyBtn.BackgroundColor3 = C.CARD
-emptyBtn.BorderSizePixel = 0
-emptyBtn.Font = Enum.Font.GothamSemibold
-emptyBtn.TextSize = 13
-emptyBtn.TextColor3 = C.TEXT
-emptyBtn.Text = ""
-emptyBtn.AutoButtonColor = false
-corner(emptyBtn, 10)
-stroke(emptyBtn, C.BORDER, 1, 0.5)
-emptyBtn.Visible = false
-
-dismemberBtn.MouseEnter:Connect(function() TweenService:Create(dismemberBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play() end)
-dismemberBtn.MouseLeave:Connect(function() TweenService:Create(dismemberBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play() end)
-dismemberBtn.MouseButton1Click:Connect(function() DismemberTree() end)
-
--- ── TOGGLE OPTIONS ──────────────────────────────────────────────────────────
-sectionLabel(woodPage, "Options", "⚙️")
-
-makeToggle(woodPage, "Cut Plank 1x1", false, function(val) OneUnitCutter(val) end, "Auto-cut planks to 1x1 size")
-makeToggle(woodPage, "View LoneCave Tree", false, function(val) ViewEndTree(val) end, "Camera focus on LoneCave tree")
-
--- ── TOOLS SECTION ───────────────────────────────────────────────────────────
-sectionLabel(woodPage, "Tools", "🛠️")
-
-local toolsGrid = Instance.new("Frame", woodPage)
-toolsGrid.Size = UDim2.new(1, 0, 0, 90)
-toolsGrid.BackgroundTransparency = 1
-toolsGrid.LayoutOrder = 9
-
-local toolsGridLayout = Instance.new("UIGridLayout", toolsGrid)
-toolsGridLayout.CellSize = UDim2.new(0.5, -6, 0, 38)
-toolsGridLayout.CellPadding = UDim2.new(0, 8, 0, 8)
-toolsGridLayout.FillDirection = Enum.FillDirection.Horizontal
-
-local getToolsBtn = Instance.new("TextButton", toolsGrid)
-getToolsBtn.Size = UDim2.new(1, 0, 1, 0)
+local getToolsBtn = Instance.new("TextButton", toolRow)
+getToolsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
+getToolsBtn.Position         = UDim2.new(0, 0, 0, 0)
 getToolsBtn.BackgroundColor3 = C.CARD
-getToolsBtn.BorderSizePixel = 0
-getToolsBtn.Font = Enum.Font.GothamSemibold
-getToolsBtn.TextSize = 13
-getToolsBtn.TextColor3 = C.TEXT
-getToolsBtn.Text = "🔧 Get Tools Fix"
-getToolsBtn.AutoButtonColor = false
-corner(getToolsBtn, 10)
+getToolsBtn.BorderSizePixel  = 0
+getToolsBtn.Font             = Enum.Font.GothamSemibold
+getToolsBtn.TextSize         = 13
+getToolsBtn.TextColor3       = C.TEXT
+getToolsBtn.Text             = "Get Tools Fix"
+getToolsBtn.AutoButtonColor  = false
+corner(getToolsBtn, 8)
 stroke(getToolsBtn, C.BORDER, 1, 0.5)
+getToolsBtn.MouseEnter:Connect(function() TweenService:Create(getToolsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
+getToolsBtn.MouseLeave:Connect(function() TweenService:Create(getToolsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
+getToolsBtn.MouseButton1Click:Connect(function()
+    GetToolsfix()
+end)
 
-local dropToolsBtn = Instance.new("TextButton", toolsGrid)
-dropToolsBtn.Size = UDim2.new(1, 0, 1, 0)
+local dropToolsBtn = Instance.new("TextButton", toolRow)
+dropToolsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
+dropToolsBtn.Position         = UDim2.new(0.5, 4, 0, 0)
 dropToolsBtn.BackgroundColor3 = C.CARD
-dropToolsBtn.BorderSizePixel = 0
-dropToolsBtn.Font = Enum.Font.GothamSemibold
-dropToolsBtn.TextSize = 13
-dropToolsBtn.TextColor3 = C.TEXT
-dropToolsBtn.Text = "📤 Drop All Tools"
-dropToolsBtn.AutoButtonColor = false
-corner(dropToolsBtn, 10)
+dropToolsBtn.BorderSizePixel  = 0
+dropToolsBtn.Font             = Enum.Font.GothamSemibold
+dropToolsBtn.TextSize         = 13
+dropToolsBtn.TextColor3       = C.TEXT
+dropToolsBtn.Text             = "Drop All Tools"
+dropToolsBtn.AutoButtonColor  = false
+corner(dropToolsBtn, 8)
 stroke(dropToolsBtn, C.BORDER, 1, 0.5)
-
-getToolsBtn.MouseEnter:Connect(function() TweenService:Create(getToolsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play() end)
-getToolsBtn.MouseLeave:Connect(function() TweenService:Create(getToolsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play() end)
-dropToolsBtn.MouseEnter:Connect(function() TweenService:Create(dropToolsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play() end)
-dropToolsBtn.MouseLeave:Connect(function() TweenService:Create(dropToolsBtn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play() end)
-
-getToolsBtn.MouseButton1Click:Connect(function() GetToolsfix() end)
-dropToolsBtn.MouseButton1Click:Connect(function() task.spawn(DropTools) end)
+dropToolsBtn.MouseEnter:Connect(function() TweenService:Create(dropToolsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
+dropToolsBtn.MouseLeave:Connect(function() TweenService:Create(dropToolsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
+dropToolsBtn.MouseButton1Click:Connect(function()
+    task.spawn(DropTools)
+end)
 
 -- ════════════════════════════════════════════════════
 -- SETTINGS TAB
@@ -1506,62 +1404,40 @@ dropToolsBtn.MouseButton1Click:Connect(function() task.spawn(DropTools) end)
 local keybindButtonGUI
 local settingsPage = pages["SettingsTab"]
 
--- Clear settings page
-for _, child in ipairs(settingsPage:GetChildren()) do
-    if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
-        child:Destroy()
-    end
-end
-
-local settingsLayout = Instance.new("UIListLayout", settingsPage)
-settingsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-settingsLayout.Padding = UDim.new(0, 8)
-
-local settingsPadding = Instance.new("UIPadding", settingsPage)
-settingsPadding.PaddingTop = UDim.new(0, 8)
-settingsPadding.PaddingBottom = UDim.new(0, 8)
-settingsPadding.PaddingLeft = UDim.new(0, 8)
-settingsPadding.PaddingRight = UDim.new(0, 8)
-
-sectionLabel(settingsPage, "Keybinds", "⌨️")
-
 local kbFrame = Instance.new("Frame", settingsPage)
-kbFrame.Size = UDim2.new(1, 0, 0, 80)
+kbFrame.Size             = UDim2.new(1, 0, 0, 70)
 kbFrame.BackgroundColor3 = C.CARD
-kbFrame.BorderSizePixel = 0
-kbFrame.LayoutOrder = 1
-corner(kbFrame, 12)
+kbFrame.BorderSizePixel  = 0
+corner(kbFrame, 10)
 stroke(kbFrame, C.BORDER, 1, 0.4)
 
 local kbTitle = Instance.new("TextLabel", kbFrame)
-kbTitle.Size = UDim2.new(1, -20, 0, 28)
-kbTitle.Position = UDim2.new(0, 12, 0, 12)
+kbTitle.Size               = UDim2.new(1, -20, 0, 28)
+kbTitle.Position           = UDim2.new(0, 10, 0, 8)
 kbTitle.BackgroundTransparency = 1
-kbTitle.Font = Enum.Font.GothamBold
-kbTitle.TextSize = 14
-kbTitle.TextColor3 = C.TEXT
-kbTitle.TextXAlignment = Enum.TextXAlignment.Left
-kbTitle.Text = "GUI Toggle Keybind"
+kbTitle.Font               = Enum.Font.GothamBold
+kbTitle.TextSize           = 15
+kbTitle.TextColor3         = C.TEXT
+kbTitle.TextXAlignment     = Enum.TextXAlignment.Left
+kbTitle.Text               = "GUI Toggle Keybind"
 
 keybindButtonGUI = Instance.new("TextButton", kbFrame)
-keybindButtonGUI.Size = UDim2.new(0, 220, 0, 36)
-keybindButtonGUI.Position = UDim2.new(0, 12, 0, 44)
+keybindButtonGUI.Size             = UDim2.new(0, 200, 0, 28)
+keybindButtonGUI.Position         = UDim2.new(0, 10, 0, 36)
 keybindButtonGUI.BackgroundColor3 = C.BTN
-keybindButtonGUI.BorderSizePixel = 0
-keybindButtonGUI.Font = Enum.Font.GothamSemibold
-keybindButtonGUI.TextSize = 14
-keybindButtonGUI.TextColor3 = C.TEXT
-keybindButtonGUI.AutoButtonColor = false
-keybindButtonGUI.Text = "Toggle Key: " .. getCurrentToggleKey().Name
+keybindButtonGUI.BorderSizePixel  = 0
+keybindButtonGUI.Font             = Enum.Font.Gotham
+keybindButtonGUI.TextSize         = 14
+keybindButtonGUI.TextColor3       = C.TEXT
+keybindButtonGUI.AutoButtonColor  = false
+keybindButtonGUI.Text             = "Toggle Key: " .. getCurrentToggleKey().Name
 corner(keybindButtonGUI, 8)
-stroke(keybindButtonGUI, C.BORDER, 1, 0.3)
 
 keybindButtonGUI.MouseButton1Click:Connect(function()
     if getWaitingForKeyGUI() then return end
     keybindButtonGUI.Text = "Press any key..."
     setWaitingForKeyGUI(true)
 end)
-
 keybindButtonGUI.MouseEnter:Connect(function()
     TweenService:Create(keybindButtonGUI, TweenInfo.new(0.15), {BackgroundColor3 = C.BTN_HV}):Play()
 end)
@@ -1594,7 +1470,7 @@ local inputConn = UserInputService.InputBegan:Connect(function(input, gameProces
         setWaitingForFlyKey(false)
         setCurrentFlyKey(input.KeyCode)
         if flyKeyBtn and flyKeyBtn.Parent then
-            flyKeyBtn.Text = input.KeyCode.Name
+            flyKeyBtn.Text             = input.KeyCode.Name
             flyKeyBtn.BackgroundColor3 = BTN_COLOR
         end
         return
@@ -1616,9 +1492,8 @@ table.insert(cleanupTasks, function()
     if UnitCutterClick then UnitCutterClick:Disconnect(); UnitCutterClick = nil end
     if PlankReAdded    then PlankReAdded:Disconnect();    PlankReAdded    = nil end
     getgenv().treestop = false
-    getgenv().shouldAbort = false
 end)
 
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
-print("[VanillaHub] Vanilla3 loaded — Wood tab ready with improved layout and fixes!")
+print("[VanillaHub] Vanilla3 loaded — Wood tab ready")
