@@ -283,13 +283,6 @@ local HitPoints = {
     AxeTwitter      = 1.65,
 }
 
-local function notify(title, desc)
-    pcall(function()
-        local StarterGui = game:GetService("StarterGui")
-        StarterGui:SetCore("SendNotification", {Title = title, Text = desc or "", Duration = 4})
-    end)
-end
-
 local function table_foreach(t, cb)
     for i = 1, #t do cb(i, t[i]) end
 end
@@ -305,6 +298,28 @@ local function getTools()
     return tools
 end
 
+-- ── Axe count guard ──────────────────────────────────────────────────────────
+-- Returns true only when exactly 1 axe (tool with a ToolName child) is found.
+-- Prints a warning and returns false if the count is 0 or more than 1.
+local function hasSingleAxe()
+    local tools = getTools()
+    local axes = {}
+    for _, v in ipairs(tools) do
+        if v:FindFirstChild("ToolName") then
+            table.insert(axes, v)
+        end
+    end
+    if #axes == 0 then
+        warn("[VanillaHub] No axe found in backpack.")
+        return false
+    end
+    if #axes > 1 then
+        warn("[VanillaHub] More than 1 axe in inventory (" .. #axes .. "). Remove extras before bringing a tree.")
+        return false
+    end
+    return true
+end
+
 local function getToolStats(toolName)
     if typeof(toolName) ~= "string" then
         toolName = toolName.ToolName.Value
@@ -315,7 +330,7 @@ end
 local function getBestAxe(treeClass)
     local tools = getTools()
     if #tools == 0 then
-        notify("VanillaHub", "Need an axe in your backpack!")
+        warn("[VanillaHub] Need an axe in your backpack!")
         return false, nil
     end
     local toolStats = {}
@@ -333,15 +348,13 @@ local function getBestAxe(treeClass)
         end
     end
     if not tool and treeClass == "LoneCave" then
-        notify("VanillaHub", "Need EndTimes Axe for LoneCave!")
+        warn("[VanillaHub] Need EndTimes Axe for LoneCave!")
         return false, nil
     end
     table.sort(toolStats, function(a,b) return a.damage > b.damage end)
     local bestTool = tool or (toolStats[1] and toolStats[1].tool)
     if not bestTool then
         bestTool = tools[1]
-        local toolName = (bestTool:FindFirstChild("ToolName") and bestTool.ToolName.Value) or bestTool.Name
-        notify("VanillaHub", "Using fallback axe: "..toolName)
     end
     return true, bestTool
 end
@@ -532,10 +545,10 @@ local function bringTree(treeClass, godmodeval)
     task.wait(0.4)
 
     local tree = getBiggestTree(treeClass)
-    if not tree then notify("VanillaHub", "No "..treeClass.." tree found!"); return end
-    if not tree.trunk then notify("VanillaHub", "Tree trunk not found!"); return end
+    if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return end
+    if not tree.trunk then warn("[VanillaHub] Tree trunk not found!"); return end
     if not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
-        notify("VanillaHub", "Tree too small, skipping.")
+        warn("[VanillaHub] Tree too small, skipping.")
         return
     end
 
@@ -631,7 +644,6 @@ local function BringAllLogs()
         task.wait()
     end
     player.Character.HumanoidRootPart.CFrame = OldPos
-    notify("VanillaHub", "Brought "..count.." log(s) home.")
 end
 
 local function SellAllLogs()
@@ -658,13 +670,11 @@ local function SellAllLogs()
         task.wait()
     end
     player.Character.HumanoidRootPart.CFrame = OldPos
-    notify("VanillaHub", "Selling "..count.." log(s).")
 end
 
 local ModWoodSawmill = nil
 
 local function SelectSawmill(Type, onSelected)
-    notify("VanillaHub", "Click a sawmill to " .. Type)
     local Mouse = player:GetMouse()
     local conn
     conn = Mouse.Button1Down:Connect(function()
@@ -676,7 +686,6 @@ local function SelectSawmill(Type, onSelected)
             (Target.Parent:FindFirstChild("Settings") and Target.Parent.Settings:FindFirstChild("DimZ"))
         if Sawmill then
             ModWoodSawmill = Sawmill.Parent.Parent
-            notify("VanillaHub", "Sawmill selected!")
             conn:Disconnect()
             if onSelected then onSelected() end
         end
@@ -712,7 +721,6 @@ local function ModSawmill()
             )
             task.wait(1.5)
         end
-        notify("VanillaHub", "Fill blueprints to complete!")
         ModWoodSawmill = nil
     end)
 end
@@ -723,7 +731,6 @@ local function ModWood()
     local childbranch, parentbranch, firstpart
 
     SelectSawmill("mod wood", function()
-        notify("VanillaHub", "Click a tree or log to mod")
         local Mouse = player:GetMouse()
         local modConn
         modConn = Mouse.Button1Down:Connect(function()
@@ -861,7 +868,6 @@ local function ModWood()
             end
 
             player.Character.HumanoidRootPart.CFrame = oldpos
-            notify("VanillaHub", "Mod Wood complete!")
             addedConn:Disconnect()
             ModWoodSawmill = nil
         end)
@@ -873,7 +879,6 @@ local function DismemberTree()
     local LogChopped    = false
     local TreeToJointCut= nil
 
-    notify("VanillaHub", "Click a log to dismember")
     local Mouse = player:GetMouse()
 
     local branchConn = workspace.LogModels.ChildAdded:Connect(function(v)
@@ -912,7 +917,6 @@ local function DismemberTree()
         end
         branchConn:Disconnect()
         player.Character.HumanoidRootPart.CFrame = OldPos
-        notify("VanillaHub", "Tree dismembered!")
     end)
 end
 
@@ -977,14 +981,14 @@ end
 
 local woodPage = pages["WoodTab"]
 
--- Clear any existing children (e.g. "coming soon" card from a previous load)
+-- Clear any existing children
 for _, child in ipairs(woodPage:GetChildren()) do
     if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
         child:Destroy()
     end
 end
 
--- ── TREE SELECTOR  (mirrors player dropdown from Vanilla1) ──────────────────
+-- ── TREE SELECTOR ────────────────────────────────────────────────────────────
 
 local TREE_LIST = {
     "Generic","Walnut","Cherry","SnowGlow","Oak","Birch","Koa","Fir",
@@ -1001,7 +1005,6 @@ local TD_MAX_SHOW = 6
 
 sectionLabel(woodPage, "Tree Selection")
 
--- Outer container  (matches tpDropOuter style exactly)
 local treeDropOuter = Instance.new("Frame", woodPage)
 treeDropOuter.Size             = UDim2.new(1, 0, 0, TD_HEADER_H)
 treeDropOuter.BackgroundColor3 = C.CARD
@@ -1010,7 +1013,6 @@ treeDropOuter.ClipsDescendants = true
 corner(treeDropOuter, 9)
 local treeDropStroke = stroke(treeDropOuter, C.BORDER, 1.2, 0.3)
 
--- Header row
 local treeDropHeader = Instance.new("Frame", treeDropOuter)
 treeDropHeader.Size              = UDim2.new(1, 0, 0, TD_HEADER_H)
 treeDropHeader.BackgroundTransparency = 1
@@ -1025,7 +1027,6 @@ treeDropLbl.TextSize           = 12
 treeDropLbl.TextColor3         = C.TEXT
 treeDropLbl.TextXAlignment     = Enum.TextXAlignment.Left
 
--- Selector pill
 local treeSelFrame = Instance.new("Frame", treeDropHeader)
 treeSelFrame.Size             = UDim2.new(1, -88, 0, 28)
 treeSelFrame.Position         = UDim2.new(0, 80, 0.5, -14)
@@ -1062,7 +1063,6 @@ treeHeaderBtn.Text              = ""
 treeHeaderBtn.AutoButtonColor   = false
 treeHeaderBtn.ZIndex            = 5
 
--- Divider
 local treeDropDivider = Instance.new("Frame", treeDropOuter)
 treeDropDivider.Size             = UDim2.new(1, -14, 0, 1)
 treeDropDivider.Position         = UDim2.new(0, 7, 0, TD_HEADER_H)
@@ -1070,7 +1070,6 @@ treeDropDivider.BackgroundColor3 = C.BORDER
 treeDropDivider.BorderSizePixel  = 0
 treeDropDivider.Visible          = false
 
--- Scrolling list
 local treeListScroll = Instance.new("ScrollingFrame", treeDropOuter)
 treeListScroll.Position              = UDim2.new(0, 0, 0, TD_HEADER_H + 2)
 treeListScroll.Size                  = UDim2.new(1, 0, 0, 0)
@@ -1162,16 +1161,15 @@ treeHeaderBtn.MouseLeave:Connect(function()
     TweenService:Create(treeSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(22,22,22)}):Play()
 end)
 
--- Amount slider
+-- Amount slider  — max raised to 50
 local treeAmount = 1
-makeSlider(woodPage, "Amount", 1, 30, 1, function(v) treeAmount = v end)
+makeSlider(woodPage, "Amount", 1, 50, 1, function(v) treeAmount = v end)
 
 -- ── Tree Actions ─────────────────────────────────────────────────────────────
 
 sepLine(woodPage)
 sectionLabel(woodPage, "Actions")
 
--- Two-column button row: Bring Tree | Abort
 local bringAbortRow = Instance.new("Frame", woodPage)
 bringAbortRow.Size             = UDim2.new(1, 0, 0, 34)
 bringAbortRow.BackgroundTransparency = 1
@@ -1192,10 +1190,12 @@ bringBtn.MouseEnter:Connect(function() TweenService:Create(bringBtn,TweenInfo.ne
 bringBtn.MouseLeave:Connect(function() TweenService:Create(bringBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
 bringBtn.MouseButton1Click:Connect(function()
     if not selectedTree or selectedTree == "" then
-        notify("VanillaHub","Select a tree first!"); return
+        warn("[VanillaHub] Select a tree first!")
+        return
     end
+    -- Guard: refuse if player has more than 1 axe in inventory
+    if not hasSingleAxe() then return end
     task.spawn(function()
-        notify("VanillaHub","Bringing " .. treeAmount .. "x " .. selectedTree .. "...")
         if selectedTree == "LoneCave" then
             bringTree(selectedTree, true)
         else
@@ -1204,7 +1204,6 @@ bringBtn.MouseButton1Click:Connect(function()
                 bringTree(selectedTree, false)
             end
         end
-        notify("VanillaHub","Done.")
     end)
 end)
 
@@ -1225,7 +1224,6 @@ abortBtn.MouseLeave:Connect(function() TweenService:Create(abortBtn,TweenInfo.ne
 abortBtn.MouseButton1Click:Connect(function()
     getgenv().treestop = false
     task.delay(5, function() getgenv().treestop = true end)
-    notify("VanillaHub","Aborted.")
 end)
 
 -- ── Logs ─────────────────────────────────────────────────────────────────────
@@ -1252,7 +1250,6 @@ stroke(bringLogsBtn, C.BORDER, 1, 0.5)
 bringLogsBtn.MouseEnter:Connect(function() TweenService:Create(bringLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
 bringLogsBtn.MouseLeave:Connect(function() TweenService:Create(bringLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
 bringLogsBtn.MouseButton1Click:Connect(function()
-    notify("VanillaHub","Bringing all logs...")
     task.spawn(BringAllLogs)
 end)
 
@@ -1271,7 +1268,6 @@ stroke(sellLogsBtn, C.BORDER, 1, 0.5)
 sellLogsBtn.MouseEnter:Connect(function() TweenService:Create(sellLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.BTN_HV}):Play() end)
 sellLogsBtn.MouseLeave:Connect(function() TweenService:Create(sellLogsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
 sellLogsBtn.MouseButton1Click:Connect(function()
-    notify("VanillaHub","Selling all logs...")
     task.spawn(SellAllLogs)
 end)
 
@@ -1292,12 +1288,10 @@ makeBtn(woodPage, "Dismember Tree", function() DismemberTree() end)
 
 makeToggle(woodPage, "Cut Plank 1x1", false, function(val)
     OneUnitCutter(val)
-    notify("VanillaHub", val and "Click a plank to cut it 1x1" or "1x1 cutter off")
 end)
 
 makeToggle(woodPage, "View LoneCave Tree", false, function(val)
     ViewEndTree(val)
-    notify("VanillaHub", val and "Camera locked on LoneCave tree" or "Camera restored")
 end)
 
 -- ── Tools ─────────────────────────────────────────────────────────────────────
@@ -1325,7 +1319,6 @@ getToolsBtn.MouseEnter:Connect(function() TweenService:Create(getToolsBtn,TweenI
 getToolsBtn.MouseLeave:Connect(function() TweenService:Create(getToolsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
 getToolsBtn.MouseButton1Click:Connect(function()
     GetToolsfix()
-    notify("VanillaHub","Attempting to pick up EndTimes axe...")
 end)
 
 local dropToolsBtn = Instance.new("TextButton", toolRow)
@@ -1344,7 +1337,6 @@ dropToolsBtn.MouseEnter:Connect(function() TweenService:Create(dropToolsBtn,Twee
 dropToolsBtn.MouseLeave:Connect(function() TweenService:Create(dropToolsBtn,TweenInfo.new(0.12),{BackgroundColor3=C.CARD}):Play() end)
 dropToolsBtn.MouseButton1Click:Connect(function()
     task.spawn(DropTools)
-    notify("VanillaHub","Dropping all tools...")
 end)
 
 -- ════════════════════════════════════════════════════
