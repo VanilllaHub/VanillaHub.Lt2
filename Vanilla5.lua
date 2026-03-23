@@ -818,6 +818,37 @@ end)
 makeWorldSep()
 makeWorldSectionLabel("World")
 
+-- ════════════════════════════════════════════════════
+-- LOWER BRIDGE
+-- Moves every part inside workspace.Bridge.VerticalLiftBridge.Lift
+-- down 26 studs on enable, restores on disable.
+-- ════════════════════════════════════════════════════
+local bridgeLowered = false
+
+local function setBridge(lower)
+    pcall(function()
+        local lift = workspace.Bridge.VerticalLiftBridge.Lift
+        for _, v in next, lift:GetChildren() do
+            if v:IsA("BasePart") then
+                v.CFrame = v.CFrame + Vector3.new(0, lower and -26 or 26, 0)
+            end
+        end
+    end)
+end
+
+makeWorldToggle("Lower Bridge", false, function(v)
+    if v == bridgeLowered then return end
+    setBridge(v)
+    bridgeLowered = v
+end)
+
+table.insert(cleanupTasks, function()
+    if bridgeLowered then
+        setBridge(false)
+        bridgeLowered = false
+    end
+end)
+
 table.insert(cleanupTasks, function()
     stopDayNight()
     if fogConn then fogConn:Disconnect(); fogConn = nil end
