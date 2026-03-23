@@ -680,12 +680,6 @@ end
 
 -- ════════════════════════════════════════════════════
 -- 1x1 AUTO CUTTER
--- Based on Butterhub's proven approach:
---   - Click any WoodSection you own to start
---   - Loops ChopTree every frame, MoveTo tracks the shrinking piece
---   - PlayerModels.ChildAdded updates SelTree so each cut piece
---     becomes the next target automatically
---   - Stops when piece size <= 1.88 on all axes (fully 1x1)
 -- ════════════════════════════════════════════════════
 
 local UnitCutter      = false
@@ -702,7 +696,6 @@ end
 local function OneUnitCutter(enabled)
     UnitCutter = enabled
 
-    -- Always clean up old connections first
     if PlankReAdded    then pcall(function() PlankReAdded:Disconnect()    end); PlankReAdded    = nil end
     if UnitCutterClick then pcall(function() UnitCutterClick:Disconnect() end); UnitCutterClick = nil end
 
@@ -715,7 +708,6 @@ local function OneUnitCutter(enabled)
 
     print("[VanillaHub] 1x1 cutter enabled — click a WoodSection to start")
 
-    -- When a cut piece lands in PlayerModels, make it the new target
     PlankReAdded = workspace.PlayerModels.ChildAdded:Connect(function(v)
         if v:WaitForChild("WoodSection", 3) then
             if v:FindFirstChild("Owner") and v.Owner.Value == player then
@@ -734,7 +726,6 @@ local function OneUnitCutter(enabled)
         end
 
         local clicked = Mouse.Target
-        -- Accept clicks on WoodSection or any child of a log model
         if not clicked then return end
 
         local logModel = clicked.Parent
@@ -759,18 +750,14 @@ local function OneUnitCutter(enabled)
         local swings   = 0
 
         task.spawn(function()
-            -- Find best axe from backpack OR already equipped in character
-            -- Uses HitPoints table as damage fallback, same as ChopTree does
             local function findBestAxe()
                 local candidates = {}
-                -- Check backpack
                 for _, v in ipairs(player.Backpack:GetChildren()) do
                     if v:FindFirstChild("ToolName") then
                         local dmg = HitPoints[v.ToolName.Value] or 0
                         table.insert(candidates, {tool = v, dmg = dmg})
                     end
                 end
-                -- Check already equipped
                 local equipped = player.Character:FindFirstChildWhichIsA("Tool")
                 if equipped and equipped:FindFirstChild("ToolName") then
                     local dmg = HitPoints[equipped.ToolName.Value] or 0
@@ -801,7 +788,6 @@ local function OneUnitCutter(enabled)
                 local ws = SelTree:FindFirstChild("WoodSection")
                 if not ws then break end
 
-                -- Track the piece every swing (Butterhub does this too)
                 player.Character:MoveTo(ws.Position + Vector3.new(0, 3, -3))
 
                 local ce = SelTree:FindFirstChild("CutEvent")
@@ -810,7 +796,7 @@ local function OneUnitCutter(enabled)
                 end
 
                 swings += 1
-                task.wait()  -- one frame per swing
+                task.wait()
 
             until not UnitCutter
                 or not SelTree
@@ -1274,7 +1260,7 @@ end)
 local clickSellEnabled   = false
 local clickSellConn      = nil
 local clickSellCooldown  = false
-local SELL_CF            = CFrame.new(314.76, -0.40, 87.29) * CFrame.Angles(math.rad(90), 0, 0)
+local SELL_CF            = CFrame.new(314.76, -0.40, 87.29)  -- flat/laying down, no rotation
 
 local function doClickSell(logModel)
     local ws = logModel:FindFirstChild("WoodSection")
@@ -1334,7 +1320,6 @@ local function enableClickSell(val)
         local clicked = Mouse.Target
         if not clicked then return end
 
-        -- Walk up to find the log model
         local logModel = clicked.Parent
         while logModel and not (logModel:FindFirstChild("WoodSection") and logModel:FindFirstChild("Owner")) do
             logModel = logModel.Parent
@@ -1347,7 +1332,6 @@ local function enableClickSell(val)
             return
         end
 
-        -- 1 second cooldown so clicks don't stack
         clickSellCooldown = true
         task.spawn(function()
             doClickSell(logModel)
