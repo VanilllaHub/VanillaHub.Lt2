@@ -84,22 +84,15 @@ local function stroke(p, col, thick, trans)
     return s
 end
 
--- Clean section header with tinted left accent bar
+-- Clean section header — plain label, no symbols
 local function sectionLabel(parent, text)
     local w = Instance.new("Frame", parent)
     w.Size = UDim2.new(1, 0, 0, 24)
     w.BackgroundTransparency = 1
 
-    local bar = Instance.new("Frame", w)
-    bar.Size             = UDim2.new(0, 3, 0.6, 0)
-    bar.Position         = UDim2.new(0, 0, 0.2, 0)
-    bar.BackgroundColor3 = C.ACCENT_DIM
-    bar.BorderSizePixel  = 0
-    corner(bar, 2)
-
     local lbl = Instance.new("TextLabel", w)
-    lbl.Size              = UDim2.new(1, -10, 1, 0)
-    lbl.Position          = UDim2.new(0, 10, 0, 0)
+    lbl.Size              = UDim2.new(1, -4, 1, 0)
+    lbl.Position          = UDim2.new(0, 4, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Font              = Enum.Font.GothamBold
     lbl.TextSize          = 10
@@ -680,7 +673,7 @@ end
 -- around Z so the log lays flat on the sell platform.
 -- ════════════════════════════════════════════════════
 local SELL_POS    = Vector3.new(315.01, -0.40, 84.32)
-local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(90))
+local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 
 local function BringAllLogs()
     local OldPos = player.Character.HumanoidRootPart.CFrame
@@ -1175,9 +1168,9 @@ local treeArrowLbl = Instance.new("TextLabel", treeSelFrame)
 treeArrowLbl.Size              = UDim2.new(0, 22, 1, 0)
 treeArrowLbl.Position          = UDim2.new(1, -24, 0, 0)
 treeArrowLbl.BackgroundTransparency = 1
-treeArrowLbl.Text              = "▾"
+treeArrowLbl.Text              = "v"
 treeArrowLbl.Font              = Enum.Font.GothamBold
-treeArrowLbl.TextSize          = 13
+treeArrowLbl.TextSize          = 11
 treeArrowLbl.TextColor3        = C.TEXT_MID
 
 local treeHeaderBtn = Instance.new("TextButton", treeSelFrame)
@@ -1272,7 +1265,7 @@ sepLine(woodPage)
 sectionLabel(woodPage, "Bring Tree")
 
 makeBtnPair(woodPage,
-    "▶  Bring Tree", "✕  Abort",
+    "Bring Tree", "Abort",
     function()
         if not selectedTree or selectedTree == "" then
             warn("[VanillaHub] Select a tree first!") return
@@ -1323,7 +1316,7 @@ sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
 makeBtnPair(woodPage,
-    "⬇  Bring All Logs", "💰  Sell All Logs",
+    "Bring All Logs", "Sell All Logs",
     function() task.spawn(BringAllLogs) end,
     function() task.spawn(SellAllLogs)  end
 )
@@ -1332,11 +1325,11 @@ makeBtnPair(woodPage,
 sepLine(woodPage)
 sectionLabel(woodPage, "Automation")
 
-makeToggle(woodPage, "1×1 Auto Cutter  (click log to start)", false, function(val)
+makeToggle(woodPage, "Auto Cutter", false, function(val)
     OneUnitCutter(val)
 end)
 
-makeToggle(woodPage, "Click Sell  (click any log to sell it)", false, function(val)
+makeToggle(woodPage, "Click Sell", false, function(val)
     enableClickSell(val)
 end)
 
@@ -1354,7 +1347,7 @@ makeBtnPair(woodPage,
 sepLine(woodPage)
 sectionLabel(woodPage, "Extras")
 
-makeBtn(woodPage, "Dismember Tree  (click log to start)", function() DismemberTree() end)
+makeBtn(woodPage, "Dismember Tree", function() DismemberTree() end)
 
 makeToggle(woodPage, "View LoneCave Tree", false, function(val)
     ViewEndTree(val)
