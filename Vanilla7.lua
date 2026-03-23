@@ -619,9 +619,10 @@ end
 
 local vh = pages["VehicleTab"]
 
+local _orderN = 0
 local function nextOrder()
-    nextOrder._n = (nextOrder._n or 0) + 1
-    return nextOrder._n
+    _orderN = _orderN + 1
+    return _orderN
 end
 
 sectionLabel(vh, "Vehicle").LayoutOrder = nextOrder()
