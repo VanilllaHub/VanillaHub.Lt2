@@ -747,7 +747,6 @@ local function OneUnitCutter(Val)
 
     if not Val then
         cutterRunning = false
-        cutterLog     = nil
         SelTree       = nil
         print("[VanillaHub] 1x1 cutter disabled")
         return
@@ -839,69 +838,6 @@ local function OneUnitCutter(Val)
             cutterRunning = false
             SelTree = nil
         end)
-    end)
-end
-
-local function OneUnitCutter(enabled)
-    UnitCutter = enabled
-
-    if not enabled then
-        cutterRunning = false
-        if cutterThread then
-            task.cancel(cutterThread)
-            cutterThread = nil
-        end
-        cutterLog = nil
-        print("[VanillaHub] 1x1 cutter disabled")
-        return
-    end
-
-    print("[VanillaHub] 1x1 cutter enabled — click a log you own to start")
-
-    local Mouse      = player:GetMouse()
-    local clickConn
-
-    clickConn = Mouse.Button1Up:Connect(function()
-        if not UnitCutter then
-            clickConn:Disconnect()
-            return
-        end
-
-        if cutterRunning then
-            print("[VanillaHub] Cutter already running! Disable and re-enable to pick a new log.")
-            return
-        end
-
-        local clicked = Mouse.Target
-        if not clicked then return end
-
-        -- Walk up the hierarchy to find the log model
-        local logModel = clicked.Parent
-        while logModel and not (logModel:FindFirstChild("WoodSection") and logModel:FindFirstChild("Owner")) do
-            logModel = logModel.Parent
-        end
-
-        if logModel and logModel:FindFirstChild("WoodSection") then
-            local ownerVal = logModel:FindFirstChild("Owner")
-            if ownerVal and ownerVal.Value == player then
-                clickConn:Disconnect()
-                print("[VanillaHub] Log selected! Starting...")
-                cutterThread = task.spawn(function()
-                    StartAutoCutter(logModel)
-                    cutterThread = nil
-                end)
-            else
-                print("[VanillaHub] That log belongs to someone else!")
-            end
-        else
-            print("[VanillaHub] Click on a log that belongs to you!")
-        end
-    end)
-
-    -- Auto-disconnect when cutter is turned off
-    task.spawn(function()
-        while UnitCutter do task.wait(0.5) end
-        pcall(function() if clickConn then clickConn:Disconnect() end end)
     end)
 end
 
