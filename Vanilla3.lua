@@ -675,42 +675,45 @@ end
 local SELL_POS    = Vector3.new(315.01, -0.40, 84.32)
 local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 
-local function BringAllLogs()
-    local OldPos = player.Character.HumanoidRootPart.CFrame
-    local count  = 0
+-- Bring All Logs: waits for a world click, then brings all owned logs to that spot
+local bringLogsBtn_ref = nil  -- filled in after UI is built, used to reset label
 
-    for _, v in next, workspace.LogModels:GetChildren() do
-        if v:FindFirstChild("Owner") and v.Owner.Value == player then
-            local ws = v:FindFirstChild("WoodSection")
-            if ws then
-                player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
-                task.wait(0.2)
-                if not v.PrimaryPart then v.PrimaryPart = ws end
-                for i = 1, 40 do
-                    DragModel(v, OldPos)
-                    task.wait(0.05)
-                end
-                count = count + 1
-            end
+local function BringAllLogs()
+    local Mouse   = player:GetMouse()
+    local OldPos  = player.Character.HumanoidRootPart.CFrame
+    print("[VanillaHub] Click anywhere in the world to bring your logs there.")
+
+    -- wait for a world click to pick destination
+    local destCF
+    local clickConn
+    local done = false
+    clickConn = Mouse.Button1Up:Connect(function()
+        if done then return end
+        local hit = Mouse.Hit
+        if hit then
+            done    = true
+            destCF  = CFrame.new(hit.p)
+            clickConn:Disconnect()
         end
-        task.wait(0.1)
+    end)
+
+    -- timeout after 15s
+    local t = 0
+    repeat task.wait(0.1); t += 0.1 until done or t >= 15
+    if not done then
+        pcall(function() clickConn:Disconnect() end)
+        print("[VanillaHub] Bring All Logs cancelled.")
+        return
     end
 
-    player.Character.HumanoidRootPart.CFrame = OldPos
-    print("[VanillaHub] Brought " .. count .. " logs to your position!")
-end
-
-local function SellAllLogs()
-    local OldPos = player.Character.HumanoidRootPart.CFrame
+    local count = 0
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
-    local count  = 0
 
     for _, v in next, workspace.LogModels:GetChildren() do
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
-                -- Claim network ownership
                 player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
                 task.wait(0.15)
                 if not v.PrimaryPart then v.PrimaryPart = ws end
@@ -721,7 +724,37 @@ local function SellAllLogs()
                     timeout += 0.05
                 end
                 if dragger then dragger:FireServer(v) end
-                -- Instant lay-flat placement at sell point
+                v:SetPrimaryPartCFrame(destCF)
+                count = count + 1
+            end
+        end
+        task.wait(0.1)
+    end
+
+    player.Character.HumanoidRootPart.CFrame = OldPos
+    print("[VanillaHub] Brought " .. count .. " logs.")
+end
+
+local function SellAllLogs()
+    local OldPos  = player.Character.HumanoidRootPart.CFrame
+    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
+                    and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+    local count   = 0
+
+    for _, v in next, workspace.LogModels:GetChildren() do
+        if v:FindFirstChild("Owner") and v.Owner.Value == player then
+            local ws = v:FindFirstChild("WoodSection")
+            if ws then
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
+                task.wait(0.15)
+                if not v.PrimaryPart then v.PrimaryPart = ws end
+                local timeout = 0
+                while not isnetworkowner(ws) and timeout < 2 do
+                    if dragger then dragger:FireServer(v) end
+                    task.wait(0.05)
+                    timeout += 0.05
+                end
+                if dragger then dragger:FireServer(v) end
                 v:SetPrimaryPartCFrame(SELL_CF)
                 count = count + 1
             end
@@ -730,7 +763,7 @@ local function SellAllLogs()
     end
 
     player.Character.HumanoidRootPart.CFrame = OldPos
-    print("[VanillaHub] Sold " .. count .. " logs at sell position!")
+    print("[VanillaHub] Sent " .. count .. " logs to the sell point.")
 end
 
 -- ════════════════════════════════════════════════════
@@ -1260,20 +1293,35 @@ end)
 local treeAmount = 1
 makeSlider(woodPage, "Amount", 1, 50, 1, function(v) treeAmount = v end)
 
--- ── 2. BRING TREE / ABORT ────────────────────────────
-sepLine(woodPage)
-sectionLabel(woodPage, "Bring Tree")
+-- Bring Tree / Abort toggle button
+local bringTreeActive = false
+local bringTreeBtn = makeBtn(woodPage, "Bring Tree", nil)
 
-makeBtnPair(woodPage,
-    "Bring Tree", "Abort",
-    function()
+bringTreeBtn.MouseButton1Click:Connect(function()
+    if bringTreeActive then
+        -- ABORT
+        bringTreeActive = false
+        getgenv().treestop = false
+        getgenv().treeCut  = false
+        if getgenv().startPosition then
+            pcall(function()
+                player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
+            end)
+            getgenv().startPosition = nil
+        end
+        bringTreeBtn.Text = "Bring Tree"
+        print("[VanillaHub] Aborted.")
+    else
+        -- START
         if not selectedTree or selectedTree == "" then
             warn("[VanillaHub] Select a tree first!") return
         end
         if not hasSingleAxe() then return end
+        bringTreeActive = true
+        bringTreeBtn.Text = "Abort"
         task.spawn(function()
             local homeCFrame = player.Character.HumanoidRootPart.CFrame
-            getgenv().treestop   = true
+            getgenv().treestop      = true
             getgenv().startPosition = homeCFrame
             if selectedTree == "LoneCave" then
                 bringTree(selectedTree, true, homeCFrame, true)
@@ -1289,29 +1337,13 @@ makeBtnPair(woodPage,
             end
             getgenv().treestop      = false
             getgenv().startPosition = nil
+            bringTreeActive   = false
+            bringTreeBtn.Text = "Bring Tree"
         end)
-    end,
-    function()
-        getgenv().treestop = false
-        getgenv().treeCut  = false
-        if UnitCutter then
-            UnitCutter    = false
-            cutterRunning = false
-        end
-        if getgenv().startPosition then
-            task.spawn(function()
-                pcall(function()
-                    player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
-                end)
-                getgenv().startPosition = nil
-            end)
-        end
-        print("[VanillaHub] Aborted — teleported back to start.")
-    end,
-    true  -- red abort button
-)
+    end
+end)
 
--- ── 3. LOG MANAGEMENT ───────────────────────────────
+-- Logs
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
@@ -1321,39 +1353,23 @@ makeBtnPair(woodPage,
     function() task.spawn(SellAllLogs)  end
 )
 
--- ── 4. AUTOMATION TOGGLES ────────────────────────────
+-- Options
 sepLine(woodPage)
-sectionLabel(woodPage, "Automation")
-
-makeToggle(woodPage, "Auto Cutter", false, function(val)
-    OneUnitCutter(val)
-end)
+sectionLabel(woodPage, "Options")
 
 makeToggle(woodPage, "Click Sell", false, function(val)
     enableClickSell(val)
 end)
 
--- ── 5. SAWMILL ───────────────────────────────────────
-sepLine(woodPage)
-sectionLabel(woodPage, "Sawmill")
-
-makeBtnPair(woodPage,
-    "Mod Sawmill", "Mod Wood",
-    function() ModSawmill() end,
-    function() ModWood()    end
-)
-
--- ── 6. EXTRAS ────────────────────────────────────────
-sepLine(woodPage)
-sectionLabel(woodPage, "Extras")
-
-makeBtn(woodPage, "Dismember Tree", function() DismemberTree() end)
+makeToggle(woodPage, "1x1 Cutter", false, function(val)
+    OneUnitCutter(val)
+end)
 
 makeToggle(woodPage, "View LoneCave Tree", false, function(val)
     ViewEndTree(val)
 end)
 
--- ── 7. TOOLS ─────────────────────────────────────────
+-- Tools
 sepLine(woodPage)
 sectionLabel(woodPage, "Tools")
 
