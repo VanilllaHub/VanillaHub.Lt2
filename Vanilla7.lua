@@ -540,52 +540,43 @@ local function sFLY()
         flyKeyUp:Disconnect()
     end
 
-    local T       = LP.Character.HumanoidRootPart
-    local CONTROL = {F=0, B=0, L=0, R=0, Q=0, E=0}
-    local lCONTROL= {F=0, B=0, L=0, R=0, Q=0, E=0}
-    local SPEED   = 0
+    local T    = LP.Character.HumanoidRootPart
+    -- Boolean key states — speed is read live from vehicleflyspeed each tick
+    local keys = {w=false, s=false, a=false, d=false, e=false, q=false}
 
     local function FLY()
         FLYING = true
         local BG = Instance.new("BodyGyro")
         local BV = Instance.new("BodyVelocity")
-        BG.P          = 9e4
-        BG.maxTorque  = Vector3.new(9e9, 9e9, 9e9)
-        BG.cframe     = T.CFrame
-        BG.Parent     = T
-        BV.velocity   = Vector3.new(0, 0, 0)
-        BV.maxForce   = Vector3.new(9e9, 9e9, 9e9)
-        BV.Parent     = T
+        BG.P         = 9e4
+        BG.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        BG.cframe    = T.CFrame
+        BG.Parent    = T
+        BV.velocity  = Vector3.new(0, 0, 0)
+        BV.maxForce  = Vector3.new(9e9, 9e9, 9e9)
+        BV.Parent    = T
 
         task.spawn(function()
             repeat
                 task.wait()
-                if CONTROL.L+CONTROL.R ~= 0 or CONTROL.F+CONTROL.B ~= 0 or CONTROL.Q+CONTROL.E ~= 0 then
-                    SPEED = 50
-                elseif SPEED ~= 0 then
-                    SPEED = 0
-                end
-                if (CONTROL.L+CONTROL.R) ~= 0 or (CONTROL.F+CONTROL.B) ~= 0 or (CONTROL.Q+CONTROL.E) ~= 0 then
+                -- Rebuild CONTROL each frame using live vehicleflyspeed
+                local spd = vehicleflyspeed
+                local F =  (keys.w and spd or 0) + (keys.s and -spd or 0)
+                local L =  (keys.a and -spd or 0) + (keys.d and spd or 0)
+                local V =  (keys.e and spd*2 or 0) + (keys.q and -spd*2 or 0)
+                local moving = F ~= 0 or L ~= 0 or V ~= 0
+                if moving then
                     BV.velocity = (
-                        (workspace.CurrentCamera.CoordinateFrame.lookVector * (CONTROL.F + CONTROL.B))
-                        + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(CONTROL.L+CONTROL.R, (CONTROL.F+CONTROL.B+CONTROL.Q+CONTROL.E)*0.2, 0).p)
+                        (workspace.CurrentCamera.CoordinateFrame.lookVector * F)
+                        + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(L, (F + V) * 0.2, 0).p)
                         - workspace.CurrentCamera.CoordinateFrame.p)
-                    ) * SPEED
-                    lCONTROL = {F=CONTROL.F, B=CONTROL.B, L=CONTROL.L, R=CONTROL.R}
-                elseif (CONTROL.L+CONTROL.R) == 0 and (CONTROL.F+CONTROL.B) == 0 and (CONTROL.Q+CONTROL.E) == 0 and SPEED ~= 0 then
-                    BV.velocity = (
-                        (workspace.CurrentCamera.CoordinateFrame.lookVector * (lCONTROL.F + lCONTROL.B))
-                        + ((workspace.CurrentCamera.CoordinateFrame * CFrame.new(lCONTROL.L+lCONTROL.R, (lCONTROL.F+lCONTROL.B+CONTROL.Q+CONTROL.E)*0.2, 0).p)
-                        - workspace.CurrentCamera.CoordinateFrame.p)
-                    ) * SPEED
+                    ) * 50
                 else
                     BV.velocity = Vector3.new(0, 0, 0)
                 end
                 BG.cframe = workspace.CurrentCamera.CoordinateFrame
             until not FLYING
-            CONTROL  = {F=0, B=0, L=0, R=0, Q=0, E=0}
-            lCONTROL = {F=0, B=0, L=0, R=0, Q=0, E=0}
-            SPEED    = 0
+            keys = {w=false, s=false, a=false, d=false, e=false, q=false}
             BG:Destroy()
             BV:Destroy()
         end)
@@ -593,24 +584,12 @@ local function sFLY()
 
     flyKeyDown = Mouse.KeyDown:Connect(function(key)
         key = key:lower()
-        if     key == "w" then CONTROL.F =  vehicleflyspeed
-        elseif key == "s" then CONTROL.B = -vehicleflyspeed
-        elseif key == "a" then CONTROL.L = -vehicleflyspeed
-        elseif key == "d" then CONTROL.R =  vehicleflyspeed
-        elseif key == "e" then CONTROL.Q =  vehicleflyspeed * 2
-        elseif key == "q" then CONTROL.E = -vehicleflyspeed * 2
-        end
+        if keys[key] ~= nil then keys[key] = true end
         pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Track end)
     end)
     flyKeyUp = Mouse.KeyUp:Connect(function(key)
         key = key:lower()
-        if     key == "w" then CONTROL.F = 0
-        elseif key == "s" then CONTROL.B = 0
-        elseif key == "a" then CONTROL.L = 0
-        elseif key == "d" then CONTROL.R = 0
-        elseif key == "e" then CONTROL.Q = 0
-        elseif key == "q" then CONTROL.E = 0
-        end
+        if keys[key] ~= nil then keys[key] = false end
     end)
     FLY()
 end
@@ -639,6 +618,10 @@ makeSlider(vh, "Vehicle Speed", 1, 10, 1, function(val)
     vehicleSpeed(val)
 end)
 
+makeSlider(vh, "Fly Speed", 1, 250, 1, function(val)
+    vehicleflyspeed = val
+end)
+
 makeToggle(vh, "Vehicle Fly", false, function(on)
     if on then
         local char = LP.Character; if not char then return end
@@ -654,10 +637,6 @@ makeToggle(vh, "Vehicle Fly", false, function(on)
     else
         NOFLY()
     end
-end)
-
-makeSlider(vh, "Fly Speed", 1, 250, 1, function(val)
-    vehicleflyspeed = val
 end)
 
 -- ════════════════════════════════════════════════════
