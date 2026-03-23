@@ -528,7 +528,7 @@ end
 
 -- Vehicle fly (port of Butterhub's sFLY with vfly=true)
 local FLYING         = false
-local vehicleflyspeed = 16
+local vehicleflyspeed = 1
 local flyKeyDown, flyKeyUp
 
 local function sFLY()
@@ -627,15 +627,6 @@ local function NOFLY()
     pcall(function() workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end)
 end
 
--- Helper: player name list (excluding self)
-local function getPlayerNames()
-    local list = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then table.insert(list, p.Name) end
-    end
-    return list
-end
-
 -- ════════════════════════════════════════════════════
 -- VEHICLE UI — Section 1
 -- ════════════════════════════════════════════════════
@@ -646,26 +637,6 @@ sectionLabel(vh, "Vehicle")
 
 makeSlider(vh, "Vehicle Speed", 1, 10, 1, function(val)
     vehicleSpeed(val)
-end)
-
-makeFancyDropdown(vh, "TP Car → Player", getPlayerNames, function(name)
-    local target = Players:FindFirstChild(name)
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        carTP(target.Character.HumanoidRootPart.CFrame)
-    end
-end)
-
-makeFancyDropdown(vh, "TP Car → Plot", getPlayerNames, function(name)
-    local target = Players:FindFirstChild(name)
-    if not target then return end
-    for _, v in next, workspace.Properties:GetChildren() do
-        if v:FindFirstChild("Owner") and v.Owner.Value == target then
-            if v:FindFirstChild("OriginSquare") then
-                carTP(v.OriginSquare.CFrame)
-            end
-            break
-        end
-    end
 end)
 
 makeToggle(vh, "Vehicle Fly", false, function(on)
@@ -685,7 +656,7 @@ makeToggle(vh, "Vehicle Fly", false, function(on)
     end
 end)
 
-makeSlider(vh, "Fly Speed", 16, 250, 16, function(val)
+makeSlider(vh, "Fly Speed", 1, 250, 1, function(val)
     vehicleflyspeed = val
 end)
 
