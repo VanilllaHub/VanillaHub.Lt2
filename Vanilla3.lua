@@ -759,11 +759,39 @@ local function OneUnitCutter(enabled)
         local swings   = 0
 
         task.spawn(function()
-            -- Auto-equip the best axe before cutting
-            local ok, axe = getBestAxe("Generic")
-            if ok and axe then
-                player.Character.Humanoid:EquipTool(axe)
-                task.wait(0.3)
+            -- Find best axe from backpack OR already equipped in character
+            -- Uses HitPoints table as damage fallback, same as ChopTree does
+            local function findBestAxe()
+                local candidates = {}
+                -- Check backpack
+                for _, v in ipairs(player.Backpack:GetChildren()) do
+                    if v:FindFirstChild("ToolName") then
+                        local dmg = HitPoints[v.ToolName.Value] or 0
+                        table.insert(candidates, {tool = v, dmg = dmg})
+                    end
+                end
+                -- Check already equipped
+                local equipped = player.Character:FindFirstChildWhichIsA("Tool")
+                if equipped and equipped:FindFirstChild("ToolName") then
+                    local dmg = HitPoints[equipped.ToolName.Value] or 0
+                    table.insert(candidates, {tool = equipped, dmg = dmg})
+                end
+                if #candidates == 0 then return nil end
+                table.sort(candidates, function(a, b) return a.dmg > b.dmg end)
+                return candidates[1].tool
+            end
+
+            local axe = findBestAxe()
+            if axe then
+                if player.Character:FindFirstChildWhichIsA("Tool") ~= axe then
+                    player.Character.Humanoid:EquipTool(axe)
+                    task.wait(0.35)
+                end
+            else
+                warn("[VanillaHub] No axe found — equip one and try again")
+                cutterRunning = false
+                SelTree = nil
+                return
             end
 
             repeat
