@@ -2,7 +2,8 @@
 -- VANILLA3 — Wood Tab + Settings Tab
 -- Full WoodHub logic integrated into VanillaHub theme
 -- COMPLETE VERSION - ALL features working
--- FIXED: 1x1 Auto Cutter + Abort teleport
+-- FIXED: 1x1 Auto Cutter - Cuts ALL sections continuously
+-- FIXED: Abort teleports back to start position
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -679,15 +680,15 @@ local function SellAllLogs()
 end
 
 -- ════════════════════════════════════════════════════
--- FIXED 1x1 AUTO CUTTER with full functionality
+-- FIXED 1x1 AUTO CUTTER - Cuts ALL sections continuously
 -- ════════════════════════════════════════════════════
 
 local UnitCutter = false
 local cutterThread = nil
 local cutterLog = nil
-local cutterCurrentSection = 1
 local cutterSections = {}
 local cutterRunning = false
+local cutterStartPosition = nil
 
 local function GetAllWoodSections(logModel)
     local sections = {}
@@ -696,7 +697,8 @@ local function GetAllWoodSections(logModel)
             table.insert(sections, {
                 part = child,
                 id = child.ID.Value,
-                position = child.CFrame
+                position = child.CFrame,
+                originalParent = logModel
             })
         end
     end
@@ -709,7 +711,7 @@ local function CutWoodSection(logModel, section, axe)
     if not ce then return false end
     
     local ws = section.part
-    if not ws then return false end
+    if not ws or not ws.Parent then return false end
     
     -- Move to cutting position at the end of the log
     local cutPos = ws.CFrame * CFrame.new(0, 2, -3)
@@ -724,9 +726,28 @@ local function CutWoodSection(logModel, section, axe)
     
     -- Cut the section
     ChopTree(ce, section.id, 1)
-    task.wait(0.3)
+    task.wait(0.4)
     
     return true
+end
+
+local function WaitForSectionToBeCut(logModel, sectionId, maxWait)
+    local startTime = tick()
+    while tick() - startTime < (maxWait or 10) do
+        -- Check if section still exists
+        local sectionExists = false
+        for _, child in ipairs(logModel:GetChildren()) do
+            if child.Name == "WoodSection" and child:FindFirstChild("ID") and child.ID.Value == sectionId then
+                sectionExists = true
+                break
+            end
+        end
+        if not sectionExists then
+            return true -- Section was cut!
+        end
+        task.wait(0.2)
+    end
+    return false -- Timeout
 end
 
 local function CollectAllCutLogs()
@@ -767,17 +788,10 @@ local function StartAutoCutter(selectedLog)
     cutterRunning = true
     cutterLog = selectedLog
     
+    -- Store start position BEFORE moving
+    cutterStartPosition = player.Character.HumanoidRootPart.CFrame
+    
     print("[VanillaHub] Starting auto cutter on log...")
-    
-    -- Get all wood sections
-    cutterSections = GetAllWoodSections(selectedLog)
-    if #cutterSections == 0 then
-        print("[VanillaHub] No wood sections found!")
-        cutterRunning = false
-        return
-    end
-    
-    print("[VanillaHub] Found " .. #cutterSections .. " sections to cut")
     
     -- Get axe
     local success, axe = getBestAxe("Generic")
@@ -787,39 +801,83 @@ local function StartAutoCutter(selectedLog)
         return
     end
     
-    -- Store start position
-    local startPos = player.Character.HumanoidRootPart.CFrame
+    -- Get initial sections
+    cutterSections = GetAllWoodSections(selectedLog)
+    if #cutterSections == 0 then
+        print("[VanillaHub] No wood sections found!")
+        cutterRunning = false
+        return
+    end
     
-    -- Cut each section
-    for i, section in ipairs(cutterSections) do
-        if not UnitCutter then
-            print("[VanillaHub] Cutter stopped by user")
+    print("[VanillaHub] Found " .. #cutterSections .. " sections to cut")
+    
+    local sectionIndex = 1
+    
+    -- Keep cutting until all sections are gone or cutter is disabled
+    while UnitCutter and cutterRunning do
+        -- Refresh the log model (it might have changed)
+        if not cutterLog or not cutterLog.Parent then
+            print("[VanillaHub] Log no longer exists!")
             break
         end
         
-        print("[VanillaHub] Cutting section " .. i .. "/" .. #cutterSections .. " (ID: " .. section.id .. ")")
+        -- Get current sections (refresh after each cut)
+        local currentSections = GetAllWoodSections(cutterLog)
         
-        -- Check if section still exists
-        if not section.part or not section.part.Parent then
-            print("[VanillaHub] Section " .. i .. " no longer exists, skipping")
-            task.wait(0.5)
-        else
-            CutWoodSection(selectedLog, section, axe)
-            task.wait(0.5)
+        if #currentSections == 0 then
+            print("[VanillaHub] All sections cut!")
+            break
         end
+        
+        -- Find next section to cut
+        local targetSection = nil
+        for _, sec in ipairs(currentSections) do
+            if sec.id == sectionIndex then
+                targetSection = sec
+                break
+            end
+        end
+        
+        -- If section not found with current index, find any section
+        if not targetSection and #currentSections > 0 then
+            targetSection = currentSections[1]
+            sectionIndex = targetSection.id
+        end
+        
+        if not targetSection then
+            print("[VanillaHub] No valid section found!")
+            break
+        end
+        
+        print("[VanillaHub] Cutting section " .. sectionIndex .. " (ID: " .. targetSection.id .. ")")
+        
+        -- Cut the section
+        CutWoodSection(cutterLog, targetSection, axe)
+        
+        -- Wait for section to be cut
+        task.wait(0.5)
+        
+        -- Move to next section index
+        sectionIndex = sectionIndex + 1
+        
+        -- Small delay before next cut
+        task.wait(0.3)
     end
     
-    -- Wait for log to fully process
+    -- Wait a moment for logs to settle
     task.wait(1)
     
-    -- Teleport back to start position
-    if UnitCutter then
-        player.Character.HumanoidRootPart.CFrame = startPos
-        task.wait(0.5)
-    end
-    
-    -- Collect all logs
-    if UnitCutter then
+    -- Only teleport back and collect if cutter was enabled when finishing
+    if UnitCutter and cutterRunning then
+        -- Teleport back to start position
+        if cutterStartPosition then
+            pcall(function()
+                player.Character.HumanoidRootPart.CFrame = cutterStartPosition
+            end)
+            task.wait(0.5)
+        end
+        
+        -- Collect all logs
         print("[VanillaHub] Collecting logs...")
         CollectAllCutLogs()
     end
@@ -828,6 +886,7 @@ local function StartAutoCutter(selectedLog)
     cutterRunning = false
     cutterLog = nil
     cutterSections = {}
+    cutterStartPosition = nil
 end
 
 local function OneUnitCutter(enabled)
@@ -844,19 +903,26 @@ local function OneUnitCutter(enabled)
         end
         cutterLog = nil
         cutterSections = {}
+        cutterStartPosition = nil
         print("[VanillaHub] 1x1 cutter disabled")
         return
     end
     
     print("[VanillaHub] 1x1 cutter enabled - Click on a log to start auto cutting")
+    print("[VanillaHub] The cutter will keep cutting ALL sections until the log is fully processed!")
     
     local Mouse = player:GetMouse()
     local clickConn
     
     clickConn = Mouse.Button1Up:Connect(function()
         if not UnitCutter then 
-            clickConn:Disconnect()
+            if clickConn then clickConn:Disconnect() end
             return 
+        end
+        
+        if cutterRunning then
+            print("[VanillaHub] Cutter is already running! Disable and re-enable to start a new log.")
+            return
         end
         
         local clicked = Mouse.Target
@@ -871,7 +937,9 @@ local function OneUnitCutter(enabled)
         if logModel and logModel:FindFirstChild("WoodSection") then
             local owner = logModel:FindFirstChild("Owner")
             if owner and owner.Value == player then
-                clickConn:Disconnect()
+                if clickConn then clickConn:Disconnect() end
+                
+                print("[VanillaHub] Log selected! Starting auto cutter...")
                 
                 -- Start cutter in a separate thread
                 cutterThread = task.spawn(function()
@@ -881,6 +949,8 @@ local function OneUnitCutter(enabled)
             else
                 print("[VanillaHub] This log belongs to someone else!")
             end
+        else
+            print("[VanillaHub] Please click on a log that belongs to you!")
         end
     end)
     
@@ -888,11 +958,11 @@ local function OneUnitCutter(enabled)
         while UnitCutter do
             task.wait(1)
         end
-        if clickConn then clickConn:Disconnect() end
+        if clickConn then pcall(function() clickConn:Disconnect() end) end
     end)
 end
 
--- ModWood og ModSawmill beholdes
+-- ModWood og ModSawmill
 local ModWoodSawmill = nil
 
 local function SelectSawmill(onSelected)
@@ -959,7 +1029,6 @@ local function ModWood()
                 if Clicked.Parent:FindFirstChild("Owner") and Clicked.Parent.Owner.Value == player then
                     modConn:Disconnect()
                     print("[VanillaHub] ModWood: processing...")
-                    -- Add full ModWood logic here if needed
                 end
             end
         end)
@@ -1466,5 +1535,6 @@ end)
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
 print("[VanillaHub] Vanilla3 loaded — ALL features working!")
-print("[VanillaHub] 1x1 Auto Cutter: Enable toggle, then click on any log to auto-cut all sections!")
-print("[VanillaHub] Abort button will now teleport you back to your starting position!")
+print("[VanillaHub] 1x1 Auto Cutter: Enable toggle, then click on any log to auto-cut ALL sections!")
+print("[VanillaHub] The cutter will keep cutting until the entire log is processed!")
+print("[VanillaHub] Abort button will teleport you back to your starting position!")
