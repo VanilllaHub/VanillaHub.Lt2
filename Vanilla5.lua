@@ -830,7 +830,7 @@ local function setBridge(lower)
         local lift = workspace.Bridge.VerticalLiftBridge.Lift
         for _, v in next, lift:GetChildren() do
             if v:IsA("BasePart") then
-                v.CFrame = v.CFrame + Vector3.new(0, lower and -0.05 or 0.05, 0)
+                v.CFrame = v.CFrame + Vector3.new(0, lower and -0.08 or 0.08, 0)
             end
         end
     end)
