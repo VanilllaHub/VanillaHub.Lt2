@@ -4,6 +4,7 @@
 -- COMPLETE VERSION - ALL features working
 -- FIXED: 1x1 Auto Cutter - Cuts ALL sections continuously
 -- FIXED: Abort teleports back to start position
+-- FIXED: Click Sell / Sell All → instant lay-flat at new position
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -50,6 +51,7 @@ local function getIsFlyEnabled()       return _G.VH and _G.VH.isFlyEnabled end
 local C = {
     BG         = Color3.fromRGB(10,  10,  10),
     CARD       = Color3.fromRGB(14,  14,  14),
+    CARD2      = Color3.fromRGB(18,  18,  18),
     ROW        = Color3.fromRGB(20,  20,  20),
     BORDER     = Color3.fromRGB(55,  55,  55),
     BORDER_DIM = Color3.fromRGB(40,  40,  40),
@@ -60,7 +62,9 @@ local C = {
     ACCENT_DIM = Color3.fromRGB(120, 120, 120),
     BTN        = Color3.fromRGB(14,  14,  14),
     BTN_HV     = Color3.fromRGB(32,  32,  32),
-    SEP        = Color3.fromRGB(40,  40,  40),
+    SEP        = Color3.fromRGB(35,  35,  35),
+    GREEN      = Color3.fromRGB(60,  180,  80),
+    RED        = Color3.fromRGB(200,  60,  60),
 }
 
 -- ════════════════════════════════════════════════════
@@ -80,30 +84,40 @@ local function stroke(p, col, thick, trans)
     return s
 end
 
+-- Clean section header with tinted left accent bar
 local function sectionLabel(parent, text)
     local w = Instance.new("Frame", parent)
-    w.Size = UDim2.new(1, 0, 0, 22)
+    w.Size = UDim2.new(1, 0, 0, 24)
     w.BackgroundTransparency = 1
+
+    local bar = Instance.new("Frame", w)
+    bar.Size             = UDim2.new(0, 3, 0.6, 0)
+    bar.Position         = UDim2.new(0, 0, 0.2, 0)
+    bar.BackgroundColor3 = C.ACCENT_DIM
+    bar.BorderSizePixel  = 0
+    corner(bar, 2)
+
     local lbl = Instance.new("TextLabel", w)
-    lbl.Size = UDim2.new(1, -4, 1, 0)
-    lbl.Position = UDim2.new(0, 4, 0, 0)
+    lbl.Size              = UDim2.new(1, -10, 1, 0)
+    lbl.Position          = UDim2.new(0, 10, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 10
-    lbl.TextColor3 = C.TEXT_DIM
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = "  " .. string.upper(text)
+    lbl.Font              = Enum.Font.GothamBold
+    lbl.TextSize          = 10
+    lbl.TextColor3        = C.TEXT_MID
+    lbl.TextXAlignment    = Enum.TextXAlignment.Left
+    lbl.Text              = string.upper(text)
     return w
 end
 
 local function sepLine(parent)
     local s = Instance.new("Frame", parent)
-    s.Size = UDim2.new(1, 0, 0, 1)
+    s.Size             = UDim2.new(1, 0, 0, 1)
     s.BackgroundColor3 = C.SEP
-    s.BorderSizePixel = 0
+    s.BorderSizePixel  = 0
     return s
 end
 
+-- Standard single button
 local function makeBtn(parent, text, cb)
     local btn = Instance.new("TextButton", parent)
     btn.Size             = UDim2.new(1, 0, 0, 34)
@@ -126,6 +140,40 @@ local function makeBtn(parent, text, cb)
     end)
     if cb then btn.MouseButton1Click:Connect(function() task.spawn(cb) end) end
     return btn
+end
+
+-- Side-by-side button pair inside a shared row frame
+local function makeBtnPair(parent, leftText, rightText, leftCb, rightCb, rightRed)
+    local row = Instance.new("Frame", parent)
+    row.Size                  = UDim2.new(1, 0, 0, 34)
+    row.BackgroundTransparency = 1
+
+    local function half(xPos, text, cb, red)
+        local btn = Instance.new("TextButton", row)
+        btn.Size             = UDim2.new(0.5, -3, 1, 0)
+        btn.Position         = UDim2.new(xPos, xPos == 0 and 0 or 6, 0, 0)
+        btn.BackgroundColor3 = C.CARD
+        btn.BorderSizePixel  = 0
+        btn.Font             = Enum.Font.GothamSemibold
+        btn.TextSize         = 12
+        btn.TextColor3       = red and C.RED or C.TEXT
+        btn.Text             = text
+        btn.AutoButtonColor  = false
+        corner(btn, 8)
+        stroke(btn, red and C.RED or C.BORDER, 1, red and 0.3 or 0.5)
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play()
+        end)
+        if cb then btn.MouseButton1Click:Connect(function() task.spawn(cb) end) end
+        return btn
+    end
+
+    half(0,   leftText,  leftCb,  false)
+    half(0.5, rightText, rightCb, rightRed)
+    return row
 end
 
 local SW_OFF      = Color3.fromRGB(55, 55, 55)
@@ -534,11 +582,11 @@ end
 local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
     getgenv().treestop = true
     getgenv().treeCut  = false
-    
+
     if isFirstTree then
         getgenv().startPosition = returnCFrame or player.Character.HumanoidRootPart.CFrame
     end
-    
+
     player.Character.Humanoid.BreakJointsOnDeath = false
 
     local success, axe = getBestAxe(treeClass)
@@ -626,11 +674,18 @@ local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
     return true
 end
 
+-- ════════════════════════════════════════════════════
+-- SELL POSITION (updated) + LAY-FLAT ROTATION
+-- Logs are tall along Y when "standing". We rotate 90°
+-- around Z so the log lays flat on the sell platform.
+-- ════════════════════════════════════════════════════
+local SELL_POS    = Vector3.new(315.01, -0.40, 84.32)
+local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(90))
+
 local function BringAllLogs()
     local OldPos = player.Character.HumanoidRootPart.CFrame
-    local targetPos = OldPos
-    local count = 0
-    
+    local count  = 0
+
     for _, v in next, workspace.LogModels:GetChildren() do
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
@@ -639,7 +694,7 @@ local function BringAllLogs()
                 task.wait(0.2)
                 if not v.PrimaryPart then v.PrimaryPart = ws end
                 for i = 1, 40 do
-                    DragModel(v, targetPos)
+                    DragModel(v, OldPos)
                     task.wait(0.05)
                 end
                 count = count + 1
@@ -647,33 +702,40 @@ local function BringAllLogs()
         end
         task.wait(0.1)
     end
-    
+
     player.Character.HumanoidRootPart.CFrame = OldPos
     print("[VanillaHub] Brought " .. count .. " logs to your position!")
 end
 
 local function SellAllLogs()
     local OldPos = player.Character.HumanoidRootPart.CFrame
-    local sellPos = CFrame.new(314.76, -0.40, 87.29)
-    local count = 0
-    
+    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
+                    and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+    local count  = 0
+
     for _, v in next, workspace.LogModels:GetChildren() do
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
+                -- Claim network ownership
                 player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
-                task.wait(0.2)
+                task.wait(0.15)
                 if not v.PrimaryPart then v.PrimaryPart = ws end
-                for i = 1, 40 do
-                    DragModel(v, sellPos)
+                local timeout = 0
+                while not isnetworkowner(ws) and timeout < 2 do
+                    if dragger then dragger:FireServer(v) end
                     task.wait(0.05)
+                    timeout += 0.05
                 end
+                if dragger then dragger:FireServer(v) end
+                -- Instant lay-flat placement at sell point
+                v:SetPrimaryPartCFrame(SELL_CF)
                 count = count + 1
             end
         end
         task.wait(0.1)
     end
-    
+
     player.Character.HumanoidRootPart.CFrame = OldPos
     print("[VanillaHub] Sold " .. count .. " logs at sell position!")
 end
@@ -819,7 +881,7 @@ local function OneUnitCutter(enabled)
     end)
 end
 
--- ModWood og ModSawmill
+-- Sawmill helpers
 local ModWoodSawmill = nil
 
 local function SelectSawmill(onSelected)
@@ -877,7 +939,6 @@ local function ModWood()
     print("[VanillaHub] ModWood: click your sawmill first.")
     SelectSawmill(function()
         print("[VanillaHub] ModWood: sawmill selected. Now click the wood piece to cut.")
-        
         local Mouse = player:GetMouse()
         local modConn
         modConn = Mouse.Button1Down:Connect(function()
@@ -896,8 +957,7 @@ local function DismemberTree()
     local OldPos        = player.Character.HumanoidRootPart.CFrame
     local LogChopped    = false
     local TreeToJointCut= nil
-
-    local Mouse = player:GetMouse()
+    local Mouse         = player:GetMouse()
 
     local branchConn = workspace.LogModels.ChildAdded:Connect(function(v)
         if v:WaitForChild("Owner",5) and v.Owner.Value == player then
@@ -955,7 +1015,99 @@ local function ViewEndTree(val)
 end
 
 -- ════════════════════════════════════════════════════
--- WOOD TAB UI
+-- CLICK SELL (instant lay-flat)
+-- ════════════════════════════════════════════════════
+
+local clickSellEnabled  = false
+local clickSellConn     = nil
+local clickSellCooldown = false
+
+local function doClickSell(logModel)
+    local ws = logModel:FindFirstChild("WoodSection")
+    if not ws then return end
+
+    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
+                    and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+
+    local oldPos = hrp.CFrame
+
+    -- Teleport next to the log to claim ownership
+    hrp.CFrame = CFrame.new(ws.CFrame.p) * CFrame.new(4, 0, 0)
+    task.wait(0.15)
+
+    if not logModel.PrimaryPart then logModel.PrimaryPart = ws end
+
+    -- Claim network ownership
+    local timeout = 0
+    while not isnetworkowner(ws) and timeout < 3 do
+        if dragger then dragger:FireServer(logModel) end
+        task.wait(0.05)
+        timeout += 0.05
+    end
+    if dragger then dragger:FireServer(logModel) end
+
+    -- Instant lay-flat at sell point
+    logModel:SetPrimaryPartCFrame(SELL_CF)
+
+    -- Return player
+    task.wait(0.05)
+    hrp.CFrame = oldPos
+end
+
+local function enableClickSell(val)
+    clickSellEnabled = val
+
+    if clickSellConn then
+        pcall(function() clickSellConn:Disconnect() end)
+        clickSellConn = nil
+    end
+
+    if not val then
+        print("[VanillaHub] Click Sell disabled")
+        return
+    end
+
+    print("[VanillaHub] Click Sell enabled — click a log to sell it instantly")
+
+    local Mouse = player:GetMouse()
+
+    clickSellConn = Mouse.Button1Up:Connect(function()
+        if not clickSellEnabled then return end
+        if clickSellCooldown    then return end
+
+        local clicked = Mouse.Target
+        if not clicked then return end
+
+        local logModel = clicked.Parent
+        while logModel and not (logModel:FindFirstChild("WoodSection") and logModel:FindFirstChild("Owner")) do
+            logModel = logModel.Parent
+        end
+        if not logModel then return end
+
+        local ownerVal = logModel:FindFirstChild("Owner")
+        if not ownerVal or ownerVal.Value ~= player then
+            print("[VanillaHub] That log isn't yours!")
+            return
+        end
+
+        clickSellCooldown = true
+        task.spawn(function()
+            doClickSell(logModel)
+            task.wait(0.8)
+            clickSellCooldown = false
+        end)
+    end)
+end
+
+table.insert(cleanupTasks, function()
+    enableClickSell(false)
+end)
+
+-- ════════════════════════════════════════════════════
+-- WOOD TAB — CLEAN LAYOUT
 -- ════════════════════════════════════════════════════
 
 local woodPage = pages["WoodTab"]
@@ -966,18 +1118,18 @@ for _, child in ipairs(woodPage:GetChildren()) do
     end
 end
 
--- TREE SELECTOR
+-- ── 1. TREE SELECTOR ────────────────────────────────
 local TREE_LIST = {
     "Generic","Walnut","Cherry","SnowGlow","Oak","Birch","Koa","Fir",
     "Volcano","GreenSwampy","CaveCrawler","Palm","GoldSwampy","Frost",
     "Spooky","SpookyNeon","LoneCave",
 }
 
-local selectedTree    = "Generic"
-local treeDropIsOpen  = false
-local TD_HEADER_H = 42
-local TD_ITEM_H   = 34
-local TD_MAX_SHOW = 6
+local selectedTree   = "Generic"
+local treeDropIsOpen = false
+local TD_HEADER_H    = 42
+local TD_ITEM_H      = 34
+local TD_MAX_SHOW    = 6
 
 sectionLabel(woodPage, "Tree Selection")
 
@@ -989,7 +1141,7 @@ treeDropOuter.ClipsDescendants = true
 corner(treeDropOuter, 9)
 
 local treeDropHeader = Instance.new("Frame", treeDropOuter)
-treeDropHeader.Size              = UDim2.new(1, 0, 0, TD_HEADER_H)
+treeDropHeader.Size                  = UDim2.new(1, 0, 0, TD_HEADER_H)
 treeDropHeader.BackgroundTransparency = 1
 
 local treeDropLbl = Instance.new("TextLabel", treeDropHeader)
@@ -1023,9 +1175,9 @@ local treeArrowLbl = Instance.new("TextLabel", treeSelFrame)
 treeArrowLbl.Size              = UDim2.new(0, 22, 1, 0)
 treeArrowLbl.Position          = UDim2.new(1, -24, 0, 0)
 treeArrowLbl.BackgroundTransparency = 1
-treeArrowLbl.Text              = "v"
+treeArrowLbl.Text              = "▾"
 treeArrowLbl.Font              = Enum.Font.GothamBold
-treeArrowLbl.TextSize          = 11
+treeArrowLbl.TextSize          = 13
 treeArrowLbl.TextColor3        = C.TEXT_MID
 
 local treeHeaderBtn = Instance.new("TextButton", treeSelFrame)
@@ -1041,13 +1193,13 @@ treeDropDivider.BorderSizePixel  = 0
 treeDropDivider.Visible          = false
 
 local treeListScroll = Instance.new("ScrollingFrame", treeDropOuter)
-treeListScroll.Position              = UDim2.new(0, 0, 0, TD_HEADER_H + 2)
-treeListScroll.Size                  = UDim2.new(1, 0, 0, 0)
+treeListScroll.Position               = UDim2.new(0, 0, 0, TD_HEADER_H + 2)
+treeListScroll.Size                   = UDim2.new(1, 0, 0, 0)
 treeListScroll.BackgroundTransparency = 1
-treeListScroll.BorderSizePixel       = 0
-treeListScroll.ScrollBarThickness    = 3
-treeListScroll.CanvasSize            = UDim2.new(0, 0, 0, 0)
-treeListScroll.ClipsDescendants      = true
+treeListScroll.BorderSizePixel        = 0
+treeListScroll.ScrollBarThickness     = 3
+treeListScroll.CanvasSize             = UDim2.new(0, 0, 0, 0)
+treeListScroll.ClipsDescendants       = true
 
 local treeListLayout = Instance.new("UIListLayout", treeListScroll)
 treeListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1076,22 +1228,22 @@ local function treeBuildList()
         row.LayoutOrder      = i
         corner(row, 7)
         local rowLbl = Instance.new("TextLabel", row)
-        rowLbl.Size              = UDim2.new(1, -16, 1, 0)
-        rowLbl.Position          = UDim2.new(0, 12, 0, 0)
+        rowLbl.Size               = UDim2.new(1, -16, 1, 0)
+        rowLbl.Position           = UDim2.new(0, 12, 0, 0)
         rowLbl.BackgroundTransparency = 1
-        rowLbl.Text              = treeName
-        rowLbl.Font              = Enum.Font.GothamSemibold
-        rowLbl.TextSize          = 12
-        rowLbl.TextColor3        = treeName == selectedTree and C.ACCENT or C.TEXT
-        rowLbl.TextXAlignment    = Enum.TextXAlignment.Left
+        rowLbl.Text               = treeName
+        rowLbl.Font               = Enum.Font.GothamSemibold
+        rowLbl.TextSize           = 12
+        rowLbl.TextColor3         = treeName == selectedTree and C.ACCENT or C.TEXT
+        rowLbl.TextXAlignment     = Enum.TextXAlignment.Left
         local rowBtn = Instance.new("TextButton", row)
-        rowBtn.Size              = UDim2.new(1, 0, 1, 0)
+        rowBtn.Size               = UDim2.new(1, 0, 1, 0)
         rowBtn.BackgroundTransparency = 1
-        rowBtn.Text              = ""
-        rowBtn.AutoButtonColor   = false
+        rowBtn.Text               = ""
+        rowBtn.AutoButtonColor    = false
         rowBtn.MouseButton1Click:Connect(function()
-            selectedTree         = treeName
-            treeSelLbl.Text      = treeName
+            selectedTree    = treeName
+            treeSelLbl.Text = treeName
             treeCloseList()
         end)
     end
@@ -1111,286 +1263,112 @@ treeHeaderBtn.MouseButton1Click:Connect(function()
     if treeDropIsOpen then treeCloseList() else treeOpenList() end
 end)
 
+-- Amount slider
 local treeAmount = 1
 makeSlider(woodPage, "Amount", 1, 50, 1, function(v) treeAmount = v end)
 
+-- ── 2. BRING TREE / ABORT ────────────────────────────
 sepLine(woodPage)
-sectionLabel(woodPage, "Actions")
+sectionLabel(woodPage, "Bring Tree")
 
-local bringAbortRow = Instance.new("Frame", woodPage)
-bringAbortRow.Size             = UDim2.new(1, 0, 0, 34)
-bringAbortRow.BackgroundTransparency = 1
-
-local bringBtn = Instance.new("TextButton", bringAbortRow)
-bringBtn.Size             = UDim2.new(0.5, -4, 1, 0)
-bringBtn.Position         = UDim2.new(0, 0, 0, 0)
-bringBtn.BackgroundColor3 = C.CARD
-bringBtn.BorderSizePixel  = 0
-bringBtn.Font             = Enum.Font.GothamSemibold
-bringBtn.TextSize         = 13
-bringBtn.TextColor3       = C.TEXT
-bringBtn.Text             = "Bring Tree"
-bringBtn.AutoButtonColor  = false
-corner(bringBtn, 8)
-stroke(bringBtn, C.BORDER, 1, 0.5)
-
-bringBtn.MouseButton1Click:Connect(function()
-    if not selectedTree or selectedTree == "" then
-        warn("[VanillaHub] Select a tree first!")
-        return
-    end
-    if not hasSingleAxe() then return end
-
-    task.spawn(function()
-        local homeCFrame = player.Character.HumanoidRootPart.CFrame
-        getgenv().treestop = true
-        getgenv().startPosition = homeCFrame
-
-        if selectedTree == "LoneCave" then
-            bringTree(selectedTree, true, homeCFrame, true)
-        else
-            for i = 1, treeAmount do
-                if not getgenv().treestop then break end
-                bringTree(selectedTree, false, homeCFrame, i == 1)
-                if i < treeAmount then
-                    task.wait(0.8)
+makeBtnPair(woodPage,
+    "▶  Bring Tree", "✕  Abort",
+    function()
+        if not selectedTree or selectedTree == "" then
+            warn("[VanillaHub] Select a tree first!") return
+        end
+        if not hasSingleAxe() then return end
+        task.spawn(function()
+            local homeCFrame = player.Character.HumanoidRootPart.CFrame
+            getgenv().treestop   = true
+            getgenv().startPosition = homeCFrame
+            if selectedTree == "LoneCave" then
+                bringTree(selectedTree, true, homeCFrame, true)
+            else
+                for i = 1, treeAmount do
+                    if not getgenv().treestop then break end
+                    bringTree(selectedTree, false, homeCFrame, i == 1)
+                    if i < treeAmount then task.wait(0.8) end
                 end
             end
-        end
-
-        if getgenv().treestop and getgenv().startPosition then
-            player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
-        end
-        getgenv().treestop = false
-        getgenv().startPosition = nil
-    end)
-end)
-
-local abortBtn = Instance.new("TextButton", bringAbortRow)
-abortBtn.Size             = UDim2.new(0.5, -4, 1, 0)
-abortBtn.Position         = UDim2.new(0.5, 4, 0, 0)
-abortBtn.BackgroundColor3 = C.CARD
-abortBtn.BorderSizePixel  = 0
-abortBtn.Font             = Enum.Font.GothamSemibold
-abortBtn.TextSize         = 13
-abortBtn.TextColor3       = C.TEXT
-abortBtn.Text             = "Abort"
-abortBtn.AutoButtonColor  = false
-corner(abortBtn, 8)
-stroke(abortBtn, C.BORDER, 1, 0.5)
-
-abortBtn.MouseButton1Click:Connect(function()
-    getgenv().treestop = false
-    getgenv().treeCut = false
-    if UnitCutter then 
-        UnitCutter = false
-        if cutterRunning then
-            cutterRunning = false
-        end
-    end
-    
-    if getgenv().startPosition then
-        task.spawn(function()
-            pcall(function()
+            if getgenv().treestop and getgenv().startPosition then
                 player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
-            end)
+            end
+            getgenv().treestop      = false
             getgenv().startPosition = nil
         end)
-    end
-    
-    print("[VanillaHub] Aborted - teleported back to start position.")
-end)
+    end,
+    function()
+        getgenv().treestop = false
+        getgenv().treeCut  = false
+        if UnitCutter then
+            UnitCutter    = false
+            cutterRunning = false
+        end
+        if getgenv().startPosition then
+            task.spawn(function()
+                pcall(function()
+                    player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
+                end)
+                getgenv().startPosition = nil
+            end)
+        end
+        print("[VanillaHub] Aborted — teleported back to start.")
+    end,
+    true  -- red abort button
+)
 
+-- ── 3. LOG MANAGEMENT ───────────────────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
-local bringLogsRow = Instance.new("Frame", woodPage)
-bringLogsRow.Size             = UDim2.new(1, 0, 0, 34)
-bringLogsRow.BackgroundTransparency = 1
+makeBtnPair(woodPage,
+    "⬇  Bring All Logs", "💰  Sell All Logs",
+    function() task.spawn(BringAllLogs) end,
+    function() task.spawn(SellAllLogs)  end
+)
 
-local bringLogsBtn = Instance.new("TextButton", bringLogsRow)
-bringLogsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
-bringLogsBtn.Position         = UDim2.new(0, 0, 0, 0)
-bringLogsBtn.BackgroundColor3 = C.CARD
-bringLogsBtn.BorderSizePixel  = 0
-bringLogsBtn.Font             = Enum.Font.GothamSemibold
-bringLogsBtn.TextSize         = 13
-bringLogsBtn.TextColor3       = C.TEXT
-bringLogsBtn.Text             = "Bring All Logs"
-bringLogsBtn.AutoButtonColor  = false
-corner(bringLogsBtn, 8)
-stroke(bringLogsBtn, C.BORDER, 1, 0.5)
-bringLogsBtn.MouseButton1Click:Connect(function()
-    task.spawn(BringAllLogs)
-end)
-
-local sellLogsBtn = Instance.new("TextButton", bringLogsRow)
-sellLogsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
-sellLogsBtn.Position         = UDim2.new(0.5, 4, 0, 0)
-sellLogsBtn.BackgroundColor3 = C.CARD
-sellLogsBtn.BorderSizePixel  = 0
-sellLogsBtn.Font             = Enum.Font.GothamSemibold
-sellLogsBtn.TextSize         = 13
-sellLogsBtn.TextColor3       = C.TEXT
-sellLogsBtn.Text             = "Sell All Logs"
-sellLogsBtn.AutoButtonColor  = false
-corner(sellLogsBtn, 8)
-stroke(sellLogsBtn, C.BORDER, 1, 0.5)
-sellLogsBtn.MouseButton1Click:Connect(function()
-    task.spawn(SellAllLogs)
-end)
-
+-- ── 4. AUTOMATION TOGGLES ────────────────────────────
 sepLine(woodPage)
-sectionLabel(woodPage, "Sawmill")
+sectionLabel(woodPage, "Automation")
 
-makeBtn(woodPage, "Mod Sawmill", function() ModSawmill() end)
-makeBtn(woodPage, "Mod Wood", function() ModWood() end)
-
-sepLine(woodPage)
-sectionLabel(woodPage, "Advanced")
-
-makeBtn(woodPage, "Dismember Tree", function() DismemberTree() end)
-
--- 1x1 cutter toggle
-makeToggle(woodPage, "Cut Plank 1x1", false, function(val)
+makeToggle(woodPage, "1×1 Auto Cutter  (click log to start)", false, function(val)
     OneUnitCutter(val)
 end)
 
--- ── Click Sell ───────────────────────────────────────────────────────────────
-local clickSellEnabled   = false
-local clickSellConn      = nil
-local clickSellCooldown  = false
-local SELL_CF            = CFrame.new(314.76, -0.40, 87.29)  -- flat/laying down, no rotation
-
-local function doClickSell(logModel)
-    local ws = logModel:FindFirstChild("WoodSection")
-    if not ws then return end
-
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
-                    and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
-
-    local oldPos = hrp.CFrame
-
-    -- Step 1: teleport to the log
-    hrp.CFrame = CFrame.new(ws.CFrame.p) * CFrame.new(4, 0, 0)
-    task.wait(0.2)
-
-    -- Step 2: claim network ownership (item tab method)
-    if not logModel.PrimaryPart then logModel.PrimaryPart = ws end
-    local timeout = 0
-    while not isnetworkowner(ws) and timeout < 3 do
-        if dragger then dragger:FireServer(logModel) end
-        task.wait(0.05)
-        timeout += 0.05
-    end
-    if dragger then dragger:FireServer(logModel) end
-
-    -- Step 3: teleport the log to sell point
-    logModel:SetPrimaryPartCFrame(SELL_CF)
-
-    -- Step 4: return player home
-    task.wait(0.1)
-    hrp.CFrame = oldPos
-end
-
-local function enableClickSell(val)
-    clickSellEnabled = val
-
-    if clickSellConn then
-        pcall(function() clickSellConn:Disconnect() end)
-        clickSellConn = nil
-    end
-
-    if not val then
-        print("[VanillaHub] Click Sell disabled")
-        return
-    end
-
-    print("[VanillaHub] Click Sell enabled — click a log to sell it")
-
-    local Mouse = player:GetMouse()
-
-    clickSellConn = Mouse.Button1Up:Connect(function()
-        if not clickSellEnabled then return end
-        if clickSellCooldown    then return end
-
-        local clicked = Mouse.Target
-        if not clicked then return end
-
-        local logModel = clicked.Parent
-        while logModel and not (logModel:FindFirstChild("WoodSection") and logModel:FindFirstChild("Owner")) do
-            logModel = logModel.Parent
-        end
-        if not logModel then return end
-
-        local ownerVal = logModel:FindFirstChild("Owner")
-        if not ownerVal or ownerVal.Value ~= player then
-            print("[VanillaHub] That log isn't yours!")
-            return
-        end
-
-        clickSellCooldown = true
-        task.spawn(function()
-            doClickSell(logModel)
-            task.wait(1)
-            clickSellCooldown = false
-        end)
-    end)
-end
-
-makeToggle(woodPage, "Click Sell", false, function(val)
+makeToggle(woodPage, "Click Sell  (click any log to sell it)", false, function(val)
     enableClickSell(val)
 end)
 
-table.insert(cleanupTasks, function()
-    enableClickSell(false)
-end)
+-- ── 5. SAWMILL ───────────────────────────────────────
+sepLine(woodPage)
+sectionLabel(woodPage, "Sawmill")
+
+makeBtnPair(woodPage,
+    "Mod Sawmill", "Mod Wood",
+    function() ModSawmill() end,
+    function() ModWood()    end
+)
+
+-- ── 6. EXTRAS ────────────────────────────────────────
+sepLine(woodPage)
+sectionLabel(woodPage, "Extras")
+
+makeBtn(woodPage, "Dismember Tree  (click log to start)", function() DismemberTree() end)
 
 makeToggle(woodPage, "View LoneCave Tree", false, function(val)
     ViewEndTree(val)
 end)
 
+-- ── 7. TOOLS ─────────────────────────────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Tools")
 
-local toolRow = Instance.new("Frame", woodPage)
-toolRow.Size             = UDim2.new(1, 0, 0, 34)
-toolRow.BackgroundTransparency = 1
-
-local getToolsBtn = Instance.new("TextButton", toolRow)
-getToolsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
-getToolsBtn.Position         = UDim2.new(0, 0, 0, 0)
-getToolsBtn.BackgroundColor3 = C.CARD
-getToolsBtn.BorderSizePixel  = 0
-getToolsBtn.Font             = Enum.Font.GothamSemibold
-getToolsBtn.TextSize         = 13
-getToolsBtn.TextColor3       = C.TEXT
-getToolsBtn.Text             = "Get Tools Fix"
-getToolsBtn.AutoButtonColor  = false
-corner(getToolsBtn, 8)
-stroke(getToolsBtn, C.BORDER, 1, 0.5)
-getToolsBtn.MouseButton1Click:Connect(function()
-    GetToolsfix()
-end)
-
-local dropToolsBtn = Instance.new("TextButton", toolRow)
-dropToolsBtn.Size             = UDim2.new(0.5, -4, 1, 0)
-dropToolsBtn.Position         = UDim2.new(0.5, 4, 0, 0)
-dropToolsBtn.BackgroundColor3 = C.CARD
-dropToolsBtn.BorderSizePixel  = 0
-dropToolsBtn.Font             = Enum.Font.GothamSemibold
-dropToolsBtn.TextSize         = 13
-dropToolsBtn.TextColor3       = C.TEXT
-dropToolsBtn.Text             = "Drop All Tools"
-dropToolsBtn.AutoButtonColor  = false
-corner(dropToolsBtn, 8)
-stroke(dropToolsBtn, C.BORDER, 1, 0.5)
-dropToolsBtn.MouseButton1Click:Connect(function()
-    task.spawn(DropTools)
-end)
+makeBtnPair(woodPage,
+    "Get Tools Fix", "Drop All Tools",
+    function() GetToolsfix()         end,
+    function() task.spawn(DropTools) end
+)
 
 -- ════════════════════════════════════════════════════
 -- SETTINGS TAB
@@ -1478,14 +1456,13 @@ table.insert(cleanupTasks, function()
     if UnitCutter then OneUnitCutter(false) end
     if PlankReAdded    then pcall(function() PlankReAdded:Disconnect()    end); PlankReAdded    = nil end
     if UnitCutterClick then pcall(function() UnitCutterClick:Disconnect() end); UnitCutterClick = nil end
-    getgenv().treestop = false
-    getgenv().treeCut = false
+    getgenv().treestop      = false
+    getgenv().treeCut       = false
     getgenv().startPosition = nil
 end)
 
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
-print("[VanillaHub] Vanilla3 loaded — ALL features working!")
-print("[VanillaHub] 1x1 Auto Cutter: Enable toggle, then click on any log to auto-cut ALL sections!")
-print("[VanillaHub] The cutter will keep cutting until the entire log is processed!")
-print("[VanillaHub] Abort button will teleport you back to your starting position!")
+print("[VanillaHub] Vanilla3 loaded!")
+print("[VanillaHub] Click Sell / Sell All → instant lay-flat at new sell position.")
+print("[VanillaHub] Abort → teleports you back to your start position.")
