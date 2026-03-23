@@ -982,7 +982,7 @@ startVanillaBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- ── TRUCKS + CARGO
+        -- ── TRUCK LOADS (trucks with cargo)
         if getTrucks() and vanillaRunning then
             local teleportedParts  = {}
             local ignoredParts     = {}
@@ -1083,107 +1083,100 @@ startVanillaBtn.MouseButton1Click:Connect(function()
         end
 
         -- ── EMPTY TRUCKS
+        -- Approach: sit in every giver truck one by one (same as Truck Loads),
+        -- run the identical cargo scan, and only teleport if nothing is found inside.
+        -- This guarantees the bounding box is accurate and uses the same proven detection.
         if getEmptyTrucks() and vanillaRunning then
 
-            local function isPointInsideEmpty(point, boxCFrame, boxSize)
-                local r = boxCFrame:PointToObjectSpace(point)
-                return math.abs(r.X) <= boxSize.X/2
-                   and math.abs(r.Y) <= boxSize.Y/2 + 2
-                   and math.abs(r.Z) <= boxSize.Z/2
+            -- Collect all giver trucks first (same query as Truck Loads)
+            local candidateTrucks = {}
+            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
+                if v.Name == "Owner" and tostring(v.Value) == giverName
+                        and v.Parent:FindFirstChild("DriveSeat") then
+                    table.insert(candidateTrucks, v.Parent)
+                end
             end
 
-            -- collect trucks that have no cargo inside their bounding box
-            local emptyTrucks = {}
-            for _, v in pairs(workspace.PlayerModels:GetDescendants()) do
-                if v.Name == "Owner" and tostring(v.Value) == giverName and v.Parent:FindFirstChild("DriveSeat") then
-                    local tModel   = v.Parent
-                    local mCF, mSz = tModel:GetBoundingBox()
+            if #candidateTrucks == 0 then
+                setStatus("No trucks found on giver's plot!", false)
+                task.wait(1)
+            else
+                progTrucks.Visible = true
+                setProgTrucks(0, #candidateTrucks)
+                setStatus(string.format("Checking %d truck(s) for cargo...", #candidateTrucks), true)
 
-                    -- build a set of the truck's own parts so we don't count them as cargo
-                    local truckParts = {}
-                    for _, p in ipairs(tModel:GetDescendants()) do
-                        if p:IsA("BasePart") then truckParts[p] = true end
+                local function isPointInside(point, boxCFrame, boxSize)
+                    local r = boxCFrame:PointToObjectSpace(point)
+                    return math.abs(r.X) <= boxSize.X/2
+                       and math.abs(r.Y) <= boxSize.Y/2 + 2
+                       and math.abs(r.Z) <= boxSize.Z/2
+                end
+
+                local done       = 0
+                local teleported = 0
+
+                for _, tModel in ipairs(candidateTrucks) do
+                    if not vanillaRunning then break end
+                    if not (tModel and tModel.Parent) then
+                        done += 1; setProgTrucks(done, #candidateTrucks); continue
                     end
 
-                    -- FIX: prefer the explicit Cargo IntValue the game sets on each truck.
-                    -- A value of 0 means truly empty; only fall back to the bounding-box
-                    -- scan when the value doesn't exist (older truck models, etc.).
+                    -- Step 1: sit in the truck (identical to Truck Loads)
+                    tModel.DriveSeat:Sit(Char.Humanoid)
+                    repeat
+                        task.wait()
+                        tModel.DriveSeat:Sit(Char.Humanoid)
+                    until Char.Humanoid.SeatPart
+
+                    -- Step 2: bounding box is now accurate with us seated
+                    local mCF, mSz = tModel:GetBoundingBox()
+
+                    -- Step 3: build ignored set (identical to Truck Loads)
+                    local ignoredParts = {}
+                    for _, p in ipairs(tModel:GetDescendants()) do
+                        if p:IsA("BasePart") then ignoredParts[p] = true end
+                    end
+                    for _, p in ipairs(Char:GetDescendants()) do
+                        if p:IsA("BasePart") then ignoredParts[p] = true end
+                    end
+
+                    -- Step 4: scan for cargo using exact same logic as Truck Loads
                     local hasCargo = false
-                    local cargoVal = tModel:FindFirstChild("Cargo")
-                    if cargoVal and cargoVal:IsA("IntValue") then
-                        hasCargo = cargoVal.Value > 0
-                    else
-                        -- Fallback: bounding-box scan for wood/cargo parts
-                        for _, part in ipairs(workspace:GetDescendants()) do
-                            if hasCargo then break end
-                            if part:IsA("BasePart") and not truckParts[part] then
-                                if part.Name == "Main" or part.Name == "WoodSection" then
-                                    local weld = part:FindFirstChild("Weld")
-                                    if weld and weld.Part1 and weld.Part1.Parent ~= part.Parent then
-                                        continue
-                                    end
-                                    if isPointInsideEmpty(part.Position, mCF, mSz) then
-                                        hasCargo = true
-                                    end
+                    for _, part in ipairs(workspace:GetDescendants()) do
+                        if hasCargo then break end
+                        if part:IsA("BasePart") and not ignoredParts[part] then
+                            if part.Name == "Main" or part.Name == "WoodSection" then
+                                if part:FindFirstChild("Weld") and part.Weld.Part1
+                                        and part.Weld.Part1.Parent ~= part.Parent then
+                                    continue
+                                end
+                                if isPointInside(part.Position, mCF, mSz) then
+                                    hasCargo = true
                                 end
                             end
                         end
                     end
 
-                    if not hasCargo then
-                        table.insert(emptyTrucks, tModel)
-                    end
-                end
-            end
-
-            if #emptyTrucks > 0 then
-                progTrucks.Visible = true
-                setProgTrucks(0, #emptyTrucks)
-                setStatus(string.format("Teleporting %d empty truck(s)...", #emptyTrucks), true)
-                local done = 0
-
-                for _, tModel in ipairs(emptyTrucks) do
-                    if not vanillaRunning then break end
-                    if not (tModel and tModel.Parent) then
-                        done += 1; setProgTrucks(done, #emptyTrucks); continue
-                    end
-
-                    -- refresh humanoid reference each truck in case state changed
-                    local hum = Char:FindFirstChildOfClass("Humanoid")
-                    if not hum then
-                        setStatus("⚠ Lost humanoid!", false)
-                        break
-                    end
-
-                    -- sit in the truck
-                    tModel.DriveSeat:Sit(hum)
-                    local waited = 0
-                    repeat
-                        task.wait(0.05)
-                        waited += 0.05
-                        tModel.DriveSeat:Sit(hum)
-                    until hum.SeatPart ~= nil or waited >= 3
-
-                    -- if we couldnt sit after 3 seconds just skip this truck
-                    if not hum.SeatPart then
-                        done += 1; setProgTrucks(done, #emptyTrucks); continue
-                    end
-
-                    local SitPart  = hum.SeatPart
-                    local mainPart = SitPart.Parent:FindFirstChild("Main")
-
-                    if mainPart then
-                        local TCF  = mainPart.CFrame
-                        local nPos = TCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
-                        SitPart.Parent:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
-                    end
-
+                    local SitPart   = Char.Humanoid.SeatPart
                     local DoorHinge = SitPart.Parent:FindFirstChild("PaintParts")
                         and SitPart.Parent.PaintParts:FindFirstChild("DoorLeft")
                         and SitPart.Parent.PaintParts.DoorLeft:FindFirstChild("ButtonRemote_Hinge")
 
+                    -- Step 5: only teleport if no cargo was detected
+                    if not hasCargo then
+                        local mainPart = tModel:FindFirstChild("Main")
+                        if mainPart then
+                            local TCF  = mainPart.CFrame
+                            local nPos = TCF.Position - GiveBaseOrigin.Position + ReceiverBaseOrigin.Position
+                            tModel:SetPrimaryPartCFrame(CFrame.new(nPos) * TCF.Rotation)
+                        end
+                        teleported += 1
+                        setStatus(string.format("Teleported %d empty truck(s)...", teleported), true)
+                    end
+
+                    -- Step 6: exit the seat (identical to Truck Loads)
                     task.wait()
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    Char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     task.wait(0.1)
                     SitPart:Destroy()
                     task.wait(0.1)
@@ -1191,18 +1184,18 @@ startVanillaBtn.MouseButton1Click:Connect(function()
                         for i = 1, 10 do RS.Interaction.RemoteProxy:FireServer(DoorHinge) end
                     end
 
-                    done += 1; setProgTrucks(done, #emptyTrucks)
+                    done += 1
+                    setProgTrucks(done, #candidateTrucks)
                     task.wait(0.3)
                 end
 
-                setProgTrucks(#emptyTrucks, #emptyTrucks)
-                setStatus(string.format("✓ %d empty truck(s) teleported!", #emptyTrucks), false)
-                task.wait(1)
-            else
-                if getEmptyTrucks() then
-                    setStatus("No empty trucks found!", false)
-                    task.wait(1)
+                setProgTrucks(#candidateTrucks, #candidateTrucks)
+                if teleported > 0 then
+                    setStatus(string.format("✓ %d empty truck(s) teleported!", teleported), false)
+                else
+                    setStatus("No empty trucks found on giver's plot!", false)
                 end
+                task.wait(1)
             end
         end
 
