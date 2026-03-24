@@ -5,6 +5,8 @@
 -- FIXED: 1x1 Auto Cutter - Cuts ALL sections continuously
 -- FIXED: Abort teleports back to start position
 -- FIXED: Click Sell / Sell All → instant lay-flat at new position
+-- FIXED: Options toggles are mutually exclusive (radio-style)
+-- FIXED: Bring/Sell All Logs → Abort button + return to start
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -84,7 +86,6 @@ local function stroke(p, col, thick, trans)
     return s
 end
 
--- Clean section header — plain label, no symbols
 local function sectionLabel(parent, text)
     local w = Instance.new("Frame", parent)
     w.Size = UDim2.new(1, 0, 0, 24)
@@ -110,7 +111,6 @@ local function sepLine(parent)
     return s
 end
 
--- Standard single button
 local function makeBtn(parent, text, cb)
     local btn = Instance.new("TextButton", parent)
     btn.Size             = UDim2.new(1, 0, 0, 34)
@@ -135,7 +135,6 @@ local function makeBtn(parent, text, cb)
     return btn
 end
 
--- Side-by-side button pair inside a shared row frame
 local function makeBtnPair(parent, leftText, rightText, leftCb, rightCb, rightRed)
     local row = Instance.new("Frame", parent)
     row.Size                  = UDim2.new(1, 0, 0, 34)
@@ -164,9 +163,9 @@ local function makeBtnPair(parent, leftText, rightText, leftCb, rightCb, rightRe
         return btn
     end
 
-    half(0,   leftText,  leftCb,  false)
-    half(0.5, rightText, rightCb, rightRed)
-    return row
+    local leftBtn  = half(0,   leftText,  leftCb,  false)
+    local rightBtn = half(0.5, rightText, rightCb, rightRed)
+    return row, leftBtn, rightBtn
 end
 
 local SW_OFF      = Color3.fromRGB(55, 55, 55)
@@ -668,22 +667,28 @@ local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
 end
 
 -- ════════════════════════════════════════════════════
--- SELL POSITION (updated) + LAY-FLAT ROTATION
--- Logs are tall along Y when "standing". We rotate 90°
--- around Z so the log lays flat on the sell platform.
+-- SELL POSITION + LAY-FLAT ROTATION
 -- ════════════════════════════════════════════════════
-local SELL_POS    = Vector3.new(315.01, -0.40, 84.32)
-local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
+local SELL_POS = Vector3.new(315.01, -0.40, 84.32)
+local SELL_CF  = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 
--- Bring All Logs: snapshots the player's current position, then brings all owned logs there
-local function BringAllLogs()
+-- ════════════════════════════════════════════════════
+-- BRING ALL LOGS / SELL ALL LOGS  (with Abort support)
+-- ════════════════════════════════════════════════════
+
+local bringLogsRunning = false
+local sellLogsRunning  = false
+local logsAbort        = false
+
+local function BringAllLogs(onDone)
     local OldPos  = player.Character.HumanoidRootPart.CFrame
-    local destCF  = OldPos  -- logs come to where you're standing when you click the button
+    local destCF  = OldPos
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
     local count   = 0
 
     for _, v in next, workspace.LogModels:GetChildren() do
+        if logsAbort then break end
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
@@ -706,15 +711,17 @@ local function BringAllLogs()
 
     player.Character.HumanoidRootPart.CFrame = OldPos
     print("[VanillaHub] Brought " .. count .. " logs.")
+    if onDone then onDone() end
 end
 
-local function SellAllLogs()
+local function SellAllLogs(onDone)
     local OldPos  = player.Character.HumanoidRootPart.CFrame
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
     local count   = 0
 
     for _, v in next, workspace.LogModels:GetChildren() do
+        if logsAbort then break end
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
@@ -737,6 +744,7 @@ local function SellAllLogs()
 
     player.Character.HumanoidRootPart.CFrame = OldPos
     print("[VanillaHub] Sent " .. count .. " logs to the sell point.")
+    if onDone then onDone() end
 end
 
 -- ════════════════════════════════════════════════════
@@ -1033,13 +1041,11 @@ local function doClickSell(logModel)
 
     local oldPos = hrp.CFrame
 
-    -- Teleport next to the log to claim ownership
     hrp.CFrame = CFrame.new(ws.CFrame.p) * CFrame.new(4, 0, 0)
     task.wait(0.15)
 
     if not logModel.PrimaryPart then logModel.PrimaryPart = ws end
 
-    -- Claim network ownership
     local timeout = 0
     while not isnetworkowner(ws) and timeout < 3 do
         if dragger then dragger:FireServer(logModel) end
@@ -1048,10 +1054,8 @@ local function doClickSell(logModel)
     end
     if dragger then dragger:FireServer(logModel) end
 
-    -- Instant lay-flat at sell point
     logModel:SetPrimaryPartCFrame(SELL_CF)
 
-    -- Return player
     task.wait(0.05)
     hrp.CFrame = oldPos
 end
@@ -1272,7 +1276,6 @@ local bringTreeBtn = makeBtn(woodPage, "Bring Tree", nil)
 
 bringTreeBtn.MouseButton1Click:Connect(function()
     if bringTreeActive then
-        -- ABORT
         bringTreeActive = false
         getgenv().treestop = false
         getgenv().treeCut  = false
@@ -1285,7 +1288,6 @@ bringTreeBtn.MouseButton1Click:Connect(function()
         bringTreeBtn.Text = "Bring Tree"
         print("[VanillaHub] Aborted.")
     else
-        -- START
         if not selectedTree or selectedTree == "" then
             warn("[VanillaHub] Select a tree first!") return
         end
@@ -1316,33 +1318,121 @@ bringTreeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Options
+-- ── Options (mutually exclusive toggles) ────────────────────────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Options")
 
-makeToggle(woodPage, "Click Sell", false, function(val)
+local optionSetters = {}
+
+local function disableAllOptions(except)
+    for name, setter in pairs(optionSetters) do
+        if name ~= except then
+            setter(false)
+        end
+    end
+end
+
+local _, setClickSell = makeToggle(woodPage, "Click Sell", false, function(val)
+    if val then disableAllOptions("clickSell") end
     enableClickSell(val)
 end)
+optionSetters["clickSell"] = function(v)
+    setClickSell(v)
+    enableClickSell(v)
+end
 
-makeToggle(woodPage, "1x1 Cutter", false, function(val)
+local _, set1x1 = makeToggle(woodPage, "1x1 Cutter", false, function(val)
+    if val then disableAllOptions("1x1") end
     OneUnitCutter(val)
 end)
+optionSetters["1x1"] = function(v)
+    set1x1(v)
+    OneUnitCutter(v)
+end
 
-makeToggle(woodPage, "View LoneCave Tree", false, function(val)
+local _, setViewLone = makeToggle(woodPage, "View LoneCave Tree", false, function(val)
+    if val then disableAllOptions("viewLone") end
     ViewEndTree(val)
 end)
+optionSetters["viewLone"] = function(v)
+    setViewLone(v)
+    ViewEndTree(v)
+end
 
--- Logs
+-- ── Logs (Bring All / Sell All with Abort + return to start) ─────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
-makeBtnPair(woodPage,
+-- We use makeBtnPair but capture the returned buttons so we can rename them
+local logsRow, bringAllBtn, sellAllBtn = makeBtnPair(woodPage,
     "Bring All Logs", "Sell All Logs",
-    function() task.spawn(BringAllLogs) end,
-    function() task.spawn(SellAllLogs)  end
+    nil, nil
 )
 
--- Tools
+local function resetLogBtns()
+    bringLogsRunning = false
+    sellLogsRunning  = false
+    logsAbort        = false
+    bringAllBtn.Text = "Bring All Logs"
+    sellAllBtn.Text  = "Sell All Logs"
+    bringAllBtn.TextColor3 = C.TEXT
+    sellAllBtn.TextColor3  = C.TEXT
+end
+
+bringAllBtn.MouseButton1Click:Connect(function()
+    if bringLogsRunning then
+        -- Abort
+        logsAbort = true
+        resetLogBtns()
+        print("[VanillaHub] Bring All Logs aborted.")
+        return
+    end
+    if sellLogsRunning then return end  -- other op running, ignore
+
+    local startPos = player.Character.HumanoidRootPart.CFrame
+    bringLogsRunning = true
+    logsAbort        = false
+    bringAllBtn.Text = "Abort"
+    bringAllBtn.TextColor3 = C.RED
+
+    task.spawn(function()
+        BringAllLogs(function()
+            -- Return to start if not aborted
+            pcall(function()
+                player.Character.HumanoidRootPart.CFrame = startPos
+            end)
+            resetLogBtns()
+        end)
+    end)
+end)
+
+sellAllBtn.MouseButton1Click:Connect(function()
+    if sellLogsRunning then
+        -- Abort
+        logsAbort = true
+        resetLogBtns()
+        print("[VanillaHub] Sell All Logs aborted.")
+        return
+    end
+    if bringLogsRunning then return end  -- other op running, ignore
+
+    local startPos = player.Character.HumanoidRootPart.CFrame
+    sellLogsRunning = true
+    logsAbort       = false
+    sellAllBtn.Text = "Abort"
+    sellAllBtn.TextColor3 = C.RED
+
+    task.spawn(function()
+        SellAllLogs(function()
+            pcall(function()
+                player.Character.HumanoidRootPart.CFrame = startPos
+            end)
+            resetLogBtns()
+        end)
+    end)
+end)
+
+-- ── Tools ─────────────────────────────────────────────────────────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Tools")
 
@@ -1441,6 +1531,7 @@ table.insert(cleanupTasks, function()
     getgenv().treestop      = false
     getgenv().treeCut       = false
     getgenv().startPosition = nil
+    logsAbort = true
 end)
 
 _G.VH.keybindButtonGUI = keybindButtonGUI
@@ -1448,3 +1539,5 @@ _G.VH.keybindButtonGUI = keybindButtonGUI
 print("[VanillaHub] Vanilla3 loaded!")
 print("[VanillaHub] Click Sell / Sell All → instant lay-flat at new sell position.")
 print("[VanillaHub] Abort → teleports you back to your start position.")
+print("[VanillaHub] Options toggles are mutually exclusive.")
+print("[VanillaHub] Bring/Sell All Logs → Abort mid-run + return to start.")
