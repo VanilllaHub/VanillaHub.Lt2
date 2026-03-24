@@ -5,6 +5,7 @@
 -- FIXED: 1x1 Auto Cutter - Cuts ALL sections continuously
 -- FIXED: Abort teleports back to start position
 -- FIXED: Click Sell / Sell All → instant lay-flat at new position
+-- FIXED: Bring All Logs / Sell All Logs → Abort button support
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -518,7 +519,9 @@ end
 getgenv().treeCut  = getgenv().treeCut  or false
 getgenv().treestop = getgenv().treestop or false
 getgenv().doneend  = getgenv().doneend  or true
-getgenv().startPosition = nil
+getgenv().startPosition   = nil
+getgenv().bringLogsStop   = false
+getgenv().sellLogsStop    = false
 
 local function calculateHitsForEndPart(part)
     return math.round((math.sqrt(part.Size.X * part.Size.Z)^2 * 8e7) / 1e7)
@@ -669,21 +672,23 @@ end
 
 -- ════════════════════════════════════════════════════
 -- SELL POSITION (updated) + LAY-FLAT ROTATION
--- Logs are tall along Y when "standing". We rotate 90°
--- around Z so the log lays flat on the sell platform.
 -- ════════════════════════════════════════════════════
 local SELL_POS    = Vector3.new(315.01, -0.40, 84.32)
 local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 
--- Bring All Logs: snapshots the player's current position, then brings all owned logs there
+-- ════════════════════════════════════════════════════
+-- BRING ALL LOGS  (abort-aware)
+-- ════════════════════════════════════════════════════
 local function BringAllLogs()
+    getgenv().bringLogsStop = false
     local OldPos  = player.Character.HumanoidRootPart.CFrame
-    local destCF  = OldPos  -- logs come to where you're standing when you click the button
+    local destCF  = OldPos
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
     local count   = 0
 
     for _, v in next, workspace.LogModels:GetChildren() do
+        if getgenv().bringLogsStop then break end
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
@@ -708,13 +713,18 @@ local function BringAllLogs()
     print("[VanillaHub] Brought " .. count .. " logs.")
 end
 
+-- ════════════════════════════════════════════════════
+-- SELL ALL LOGS  (abort-aware)
+-- ════════════════════════════════════════════════════
 local function SellAllLogs()
+    getgenv().sellLogsStop = false
     local OldPos  = player.Character.HumanoidRootPart.CFrame
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
     local count   = 0
 
     for _, v in next, workspace.LogModels:GetChildren() do
+        if getgenv().sellLogsStop then break end
         if v:FindFirstChild("Owner") and v.Owner.Value == player then
             local ws = v:FindFirstChild("WoodSection")
             if ws then
@@ -1033,13 +1043,11 @@ local function doClickSell(logModel)
 
     local oldPos = hrp.CFrame
 
-    -- Teleport next to the log to claim ownership
     hrp.CFrame = CFrame.new(ws.CFrame.p) * CFrame.new(4, 0, 0)
     task.wait(0.15)
 
     if not logModel.PrimaryPart then logModel.PrimaryPart = ws end
 
-    -- Claim network ownership
     local timeout = 0
     while not isnetworkowner(ws) and timeout < 3 do
         if dragger then dragger:FireServer(logModel) end
@@ -1048,10 +1056,8 @@ local function doClickSell(logModel)
     end
     if dragger then dragger:FireServer(logModel) end
 
-    -- Instant lay-flat at sell point
     logModel:SetPrimaryPartCFrame(SELL_CF)
 
-    -- Return player
     task.wait(0.05)
     hrp.CFrame = oldPos
 end
@@ -1332,15 +1338,59 @@ makeToggle(woodPage, "View LoneCave Tree", false, function(val)
     ViewEndTree(val)
 end)
 
--- Logs
+-- ── Logs section with per-button Abort support ──────
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
-makeBtnPair(woodPage,
-    "Bring All Logs", "Sell All Logs",
-    function() task.spawn(BringAllLogs) end,
-    function() task.spawn(SellAllLogs)  end
-)
+local bringLogsActive = false
+local sellLogsActive  = false
+
+local bringLogsBtn = makeBtn(woodPage, "Bring All Logs", nil)
+local sellLogsBtn  = makeBtn(woodPage, "Sell All Logs",  nil)
+
+bringLogsBtn.MouseButton1Click:Connect(function()
+    if bringLogsActive then
+        -- ABORT
+        getgenv().bringLogsStop = true
+        bringLogsActive = false
+        bringLogsBtn.Text = "Bring All Logs"
+        print("[VanillaHub] Bring All Logs aborted.")
+    else
+        if sellLogsActive then
+            print("[VanillaHub] Sell All Logs is already running!")
+            return
+        end
+        bringLogsActive = true
+        bringLogsBtn.Text = "Abort"
+        task.spawn(function()
+            BringAllLogs()
+            bringLogsActive = false
+            bringLogsBtn.Text = "Bring All Logs"
+        end)
+    end
+end)
+
+sellLogsBtn.MouseButton1Click:Connect(function()
+    if sellLogsActive then
+        -- ABORT
+        getgenv().sellLogsStop = true
+        sellLogsActive = false
+        sellLogsBtn.Text = "Sell All Logs"
+        print("[VanillaHub] Sell All Logs aborted.")
+    else
+        if bringLogsActive then
+            print("[VanillaHub] Bring All Logs is already running!")
+            return
+        end
+        sellLogsActive = true
+        sellLogsBtn.Text = "Abort"
+        task.spawn(function()
+            SellAllLogs()
+            sellLogsActive = false
+            sellLogsBtn.Text = "Sell All Logs"
+        end)
+    end
+end)
 
 -- Tools
 sepLine(woodPage)
@@ -1441,6 +1491,8 @@ table.insert(cleanupTasks, function()
     getgenv().treestop      = false
     getgenv().treeCut       = false
     getgenv().startPosition = nil
+    getgenv().bringLogsStop = true
+    getgenv().sellLogsStop  = true
 end)
 
 _G.VH.keybindButtonGUI = keybindButtonGUI
@@ -1448,3 +1500,4 @@ _G.VH.keybindButtonGUI = keybindButtonGUI
 print("[VanillaHub] Vanilla3 loaded!")
 print("[VanillaHub] Click Sell / Sell All → instant lay-flat at new sell position.")
 print("[VanillaHub] Abort → teleports you back to your start position.")
+print("[VanillaHub] Bring All Logs / Sell All Logs → click again to Abort.")
