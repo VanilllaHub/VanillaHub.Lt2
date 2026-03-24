@@ -478,6 +478,8 @@ end)
 
 local function getBiggestTree(treeClass)
     local trees = {}
+
+    -- Search inside TreeRegion folders (normal trees)
     for region, classes in next, treeRegions do
         if table.find(classes, treeClass) then
             for _, v2 in next, region:GetChildren() do
@@ -497,6 +499,35 @@ local function getBiggestTree(treeClass)
             end
         end
     end
+
+    -- Also search workspace directly (LoneCave and other special trees live here)
+    for _, v2 in next, workspace:GetChildren() do
+        if v2:IsA("Model") and v2:FindFirstChild("Owner") and v2:FindFirstChild("TreeClass") then
+            local ownerOk = v2.Owner.Value == nil or v2.Owner.Value == player
+            if v2.TreeClass.Value == treeClass and ownerOk then
+                -- Skip if already found via TreeRegion
+                local alreadyAdded = false
+                for _, t in ipairs(trees) do
+                    if t.tree == v2 then alreadyAdded = true; break end
+                end
+                if not alreadyAdded then
+                    local totalMass, treeTrunk = 0, nil
+                    for _, v3 in next, v2:GetChildren() do
+                        if v3:IsA("BasePart") then
+                            if v3:FindFirstChild("ID") and v3.ID.Value == 1 then treeTrunk = v3 end
+                            totalMass = totalMass + v3:GetMass()
+                        end
+                    end
+                    -- For LoneCave the trunk is just the first WoodSection if no ID=1 found
+                    if not treeTrunk then
+                        treeTrunk = v2:FindFirstChild("WoodSection")
+                    end
+                    table.insert(trees, {tree=v2, trunk=treeTrunk, mass=totalMass})
+                end
+            end
+        end
+    end
+
     table.sort(trees, function(a,b) return a.mass > b.mass end)
     return trees[1] or nil
 end
@@ -590,7 +621,7 @@ local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
     local tree = getBiggestTree(treeClass)
     if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return false end
     if not tree.trunk then warn("[VanillaHub] Tree trunk not found!"); return false end
-    if not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
+    if treeClass ~= "LoneCave" and not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
         warn("[VanillaHub] Tree too small, skipping.")
         return false
     end
@@ -679,9 +710,10 @@ local SELL_CF  = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 local bringLogsRunning = false
 local sellLogsRunning  = false
 local logsAbort        = false
+local logsStartPos     = nil  -- saved position when operation starts
 
 local function BringAllLogs(onDone)
-    local OldPos  = player.Character.HumanoidRootPart.CFrame
+    local OldPos  = logsStartPos or player.Character.HumanoidRootPart.CFrame
     local destCF  = OldPos
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
@@ -709,13 +741,16 @@ local function BringAllLogs(onDone)
         task.wait(0.1)
     end
 
-    player.Character.HumanoidRootPart.CFrame = OldPos
+    -- Always return to start position regardless of abort
+    pcall(function()
+        player.Character.HumanoidRootPart.CFrame = OldPos
+    end)
     print("[VanillaHub] Brought " .. count .. " logs.")
     if onDone then onDone() end
 end
 
 local function SellAllLogs(onDone)
-    local OldPos  = player.Character.HumanoidRootPart.CFrame
+    local OldPos  = logsStartPos or player.Character.HumanoidRootPart.CFrame
     local dragger = ReplicatedStorage:FindFirstChild("Interaction")
                     and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
     local count   = 0
@@ -742,7 +777,10 @@ local function SellAllLogs(onDone)
         task.wait(0.1)
     end
 
-    player.Character.HumanoidRootPart.CFrame = OldPos
+    -- Always return to start position regardless of abort
+    pcall(function()
+        player.Character.HumanoidRootPart.CFrame = OldPos
+    end)
     print("[VanillaHub] Sent " .. count .. " logs to the sell point.")
     if onDone then onDone() end
 end
@@ -1375,32 +1413,24 @@ local function resetLogBtns()
     logsAbort        = false
     bringAllBtn.Text = "Bring All Logs"
     sellAllBtn.Text  = "Sell All Logs"
-    bringAllBtn.TextColor3 = C.TEXT
-    sellAllBtn.TextColor3  = C.TEXT
 end
 
 bringAllBtn.MouseButton1Click:Connect(function()
     if bringLogsRunning then
-        -- Abort
+        -- Abort: set flag, the loop will break and BringAllLogs will teleport back via logsStartPos
         logsAbort = true
-        resetLogBtns()
         print("[VanillaHub] Bring All Logs aborted.")
         return
     end
-    if sellLogsRunning then return end  -- other op running, ignore
+    if sellLogsRunning then return end
 
-    local startPos = player.Character.HumanoidRootPart.CFrame
+    logsStartPos     = player.Character.HumanoidRootPart.CFrame
     bringLogsRunning = true
     logsAbort        = false
     bringAllBtn.Text = "Abort"
-    bringAllBtn.TextColor3 = C.RED
 
     task.spawn(function()
         BringAllLogs(function()
-            -- Return to start if not aborted
-            pcall(function()
-                player.Character.HumanoidRootPart.CFrame = startPos
-            end)
             resetLogBtns()
         end)
     end)
@@ -1408,25 +1438,20 @@ end)
 
 sellAllBtn.MouseButton1Click:Connect(function()
     if sellLogsRunning then
-        -- Abort
+        -- Abort: set flag, the loop will break and SellAllLogs will teleport back via logsStartPos
         logsAbort = true
-        resetLogBtns()
         print("[VanillaHub] Sell All Logs aborted.")
         return
     end
-    if bringLogsRunning then return end  -- other op running, ignore
+    if bringLogsRunning then return end
 
-    local startPos = player.Character.HumanoidRootPart.CFrame
+    logsStartPos    = player.Character.HumanoidRootPart.CFrame
     sellLogsRunning = true
     logsAbort       = false
     sellAllBtn.Text = "Abort"
-    sellAllBtn.TextColor3 = C.RED
 
     task.spawn(function()
         SellAllLogs(function()
-            pcall(function()
-                player.Character.HumanoidRootPart.CFrame = startPos
-            end)
             resetLogBtns()
         end)
     end)
