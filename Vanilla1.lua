@@ -250,7 +250,6 @@ titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub | LT2"
 titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 15
 titleLbl.TextColor3 = THEME_TEXT; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.ZIndex = 5
 
--- version label shifted left to make room for minimize button
 local versionLbl = Instance.new("TextLabel", topBar)
 versionLbl.Size = UDim2.new(0, 52, 0, 20); versionLbl.Position = UDim2.new(1, -96, 0.5, -10)
 versionLbl.BackgroundTransparency = 1; versionLbl.Text = "v1.1.0"
@@ -456,8 +455,7 @@ local function switchTab(targetName)
     end
 end
 
-
--- ── TAB ICON SIZES ────────────────────────────────────────────────────────────
+-- TAB ICON SIZES
 local TAB_ICON_SIZE = {
     ["Home"]      = 25,
     ["Player"]    = 25,
@@ -475,7 +473,6 @@ local TAB_ICON_SIZE = {
     ["Search"]    = 20,
     ["Settings"]  = 20,
 }
--- ─────────────────────────────────────────────────────────────────────────────
 
 local tabIcons = {
     ["Home"]      = "103808960525817",
@@ -574,11 +571,12 @@ local function toggleGUI()
         main.Size = UDim2.new(0, 0, 0, 0)
         main.BackgroundTransparency = 1
         wrapper.Size = UDim2.new(0, 0, 0, 0)
+        local targetH = minimized and 40 or 360
         local t = TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 540, 0, 360), BackgroundTransparency = 0
+            Size = UDim2.new(0, 540, 0, targetH), BackgroundTransparency = 0
         })
         TweenService:Create(wrapper, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 540, 0, 360)
+            Size = UDim2.new(0, 540, 0, targetH)
         }):Play()
         t:Play()
         t.Completed:Connect(function() isAnimatingGUI = false end)
@@ -855,7 +853,6 @@ end)
 -- TELEPORT TAB
 local teleportPage = pages["TeleportTab"]
 
--- Location data
 local locations = {
     {name="Spawn",            x=172,      y=3,       z=74},
     {name="The Den",          x=323,      y=41.8,    z=1930},
@@ -889,7 +886,6 @@ local locations = {
     {name="Bird Cave",        x=4813.1,   y=17.7,    z=-978.8},
 }
 
--- ── SECTION HELPER ─────────────────────────────────────────────────────────
 local function tpSectionLabel(text)
     local f = Instance.new("Frame", teleportPage)
     f.Size = UDim2.new(1, 0, 0, 20); f.BackgroundTransparency = 1
@@ -905,7 +901,6 @@ local function tpSep()
     s.Size = UDim2.new(1, 0, 0, 1); s.BackgroundColor3 = SEP_COLOR; s.BorderSizePixel = 0
 end
 
--- ── PLAYER DROPDOWN ─────────────────────────────────────────────────────────
 tpSectionLabel("Players")
 
 local tpSelectedPlayer = ""
@@ -1026,7 +1021,6 @@ end)
 tpHeaderBtn.MouseEnter:Connect(function() TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(36, 36, 36)}):Play() end)
 tpHeaderBtn.MouseLeave:Connect(function() TweenService:Create(tpSelFrame, TweenInfo.new(0.10), {BackgroundColor3 = Color3.fromRGB(26, 26, 26)}):Play() end)
 
--- ── PLAYER ACTION BUTTONS ───────────────────────────────────────────────────
 local tpBtnRow = Instance.new("Frame", teleportPage)
 tpBtnRow.Size = UDim2.new(1, 0, 0, 36); tpBtnRow.BackgroundTransparency = 1
 
@@ -1070,10 +1064,8 @@ end)
 
 tpSep()
 
--- ── LOCATIONS SECTION ──────────────────────────────────────────────────────
 tpSectionLabel("Locations")
 
--- Search bar
 local tpSearchBarFrame = Instance.new("Frame", teleportPage)
 tpSearchBarFrame.Size = UDim2.new(1, 0, 0, 38)
 tpSearchBarFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14); tpSearchBarFrame.BorderSizePixel = 0
@@ -1088,7 +1080,6 @@ searchBox.TextColor3 = THEME_TEXT; searchBox.PlaceholderText = "Search locations
 searchBox.PlaceholderColor3 = Color3.fromRGB(60, 60, 60); searchBox.Text = ""
 searchBox.ClearTextOnFocus = false; searchBox.TextXAlignment = Enum.TextXAlignment.Left
 
--- Location grid — 3-column compact tiles
 local tpCardGrid = Instance.new("Frame", teleportPage)
 tpCardGrid.BackgroundTransparency = 1; tpCardGrid.Size = UDim2.new(1, 0, 0, 0)
 
@@ -1156,7 +1147,6 @@ searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         if entry.card.Visible then entry.card.LayoutOrder = order; order = order + 1 end
     end
 end)
-
 
 -- SHARED STATE
 local tpItemSpeed = 0.3
@@ -1644,7 +1634,6 @@ dSectionLabel("Info")
 -- SEARCH TAB
 local searchTabPage = pages["SearchTab"]
 
--- Input bar frame
 local stInputFrame = Instance.new("Frame", searchTabPage)
 stInputFrame.Size             = UDim2.new(1, 0, 0, 38)
 stInputFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
@@ -1666,7 +1655,6 @@ stInput.Text               = ""
 stInput.ClearTextOnFocus   = false
 stInput.TextXAlignment     = Enum.TextXAlignment.Left
 
--- Results holder
 local stResultsHolder = Instance.new("Frame", searchTabPage)
 stResultsHolder.Size             = UDim2.new(1, 0, 0, 0)
 stResultsHolder.BackgroundTransparency = 1
@@ -1676,7 +1664,6 @@ local stResultsLayout = Instance.new("UIListLayout", stResultsHolder)
 stResultsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 stResultsLayout.Padding   = UDim.new(0, 4)
 
--- Feature list
 local allFeatures = {
     {"Walkspeed",          "PlayerTab"},  {"Jumppower",           "PlayerTab"},
     {"Fly Speed",          "PlayerTab"},  {"Fly Hotkey",          "PlayerTab"},
@@ -1873,7 +1860,6 @@ stInput:GetPropertyChangedSignal("Text"):Connect(function()
     stUpdateResults(stInput.Text)
 end)
 task.delay(0.1, function() stUpdateResults("") end)
-
 
 -- GLOBAL KEY LISTENER
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
