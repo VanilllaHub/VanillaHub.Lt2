@@ -550,10 +550,6 @@ getgenv().treestop = getgenv().treestop or false
 getgenv().doneend  = getgenv().doneend  or true
 getgenv().startPosition = nil
 
-local function calculateHitsForEndPart(part)
-    return math.round((math.sqrt(part.Size.X * part.Size.Z)^2 * 8e7) / 1e7)
-end
-
 local function DropTools()
     for _, v in pairs(player.Backpack:GetChildren()) do
         if v.Name == "Tool" then
@@ -576,33 +572,7 @@ local function GetToolsfix()
     end
 end
 
-local function GetLava()
-    local children = workspace:FindFirstChild("Region_Volcano") and workspace.Region_Volcano:GetChildren() or {}
-    for i = 1, #children do
-        local lava = children[i]
-        if lava:FindFirstChild("Lava") then return lava end
-    end
-end
-
-local function GodMode(targetCFrame)
-    local LavaPart = GetLava()
-    if not LavaPart then
-        warn("[VanillaHub] GodMode: lava part not found, skipping.")
-        return
-    end
-    player.Character.HumanoidRootPart.CFrame = CFrame.new(-1439.45, 433.4, 1317.61)
-    task.wait(0.3)
-    repeat task.wait(0.5)
-        pcall(function() firetouchinterest(player.Character.HumanoidRootPart, LavaPart.Lava, 0) end)
-    until player.Character.HumanoidRootPart:FindFirstChild("LavaFire") or not getgenv().treestop
-    if not player.Character.HumanoidRootPart:FindFirstChild("LavaFire") then return end
-    player.Character.HumanoidRootPart.LavaFire:Destroy()
-    task.wait(0.3)
-    player.Character.HumanoidRootPart.CFrame = targetCFrame
-    task.wait(0.1)
-end
-
-local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
+local function bringTree(treeClass, returnCFrame, isFirstTree)
     getgenv().treestop = true
     getgenv().treeCut  = false
 
@@ -627,10 +597,6 @@ local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
     end
 
     local destCFrame = returnCFrame or player.Character.HumanoidRootPart.CFrame
-
-    if godmodeval then
-        GodMode(tree.trunk.CFrame)
-    end
 
     task.wait(0.5)
 
@@ -663,34 +629,11 @@ local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
 
     task.wait()
 
-    if treeClass == "LoneCave" and godmodeval then
-        local numHits = calculateHitsForEndPart(tree.trunk) - 1
-        for i = 1, numHits do
-            if not getgenv().treestop then break end
-            cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
-            task.wait(1)
-        end
-        getgenv().treeCut  = false
-        getgenv().treestop = false
-        DropTools()
-        task.wait(0.3)
-        player.Character.HumanoidRootPart.CFrame = CFrame.new(-1675, 261, 1284)
-        task.wait(0.5)
-        pcall(function()
-            local t = 0
-            repeat task.wait(0.1); t += 0.1 until player.Character.Humanoid.Health >= 100 or t > 15
-        end)
-        task.wait(0.3)
-        GetToolsfix()
-        task.wait(0.5)
-        bringTree("LoneCave", false, destCFrame, false)
-    else
-        repeat
-            if not getgenv().treestop then break end
-            cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
-            task.wait()
-        until getgenv().treeCut or not getgenv().treestop
-    end
+    repeat
+        if not getgenv().treestop then break end
+        cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
+        task.wait()
+    until getgenv().treeCut or not getgenv().treestop
 
     task.wait(1)
     getgenv().treeCut = false
@@ -1337,11 +1280,11 @@ bringTreeBtn.MouseButton1Click:Connect(function()
             getgenv().treestop      = true
             getgenv().startPosition = homeCFrame
             if selectedTree == "LoneCave" then
-                bringTree(selectedTree, true, homeCFrame, true)
+                bringTree(selectedTree, homeCFrame, true)
             else
                 for i = 1, treeAmount do
                     if not getgenv().treestop then break end
-                    bringTree(selectedTree, false, homeCFrame, i == 1)
+                    bringTree(selectedTree, homeCFrame, i == 1)
                     if i < treeAmount then task.wait(0.8) end
                 end
             end
