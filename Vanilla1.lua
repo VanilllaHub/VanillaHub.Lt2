@@ -250,12 +250,64 @@ titleLbl.BackgroundTransparency = 1; titleLbl.Text = "VanillaHub | LT2"
 titleLbl.Font = Enum.Font.GothamBold; titleLbl.TextSize = 15
 titleLbl.TextColor3 = THEME_TEXT; titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.ZIndex = 5
 
+-- version label shifted left to make room for minimize button
 local versionLbl = Instance.new("TextLabel", topBar)
-versionLbl.Size = UDim2.new(0, 52, 0, 20); versionLbl.Position = UDim2.new(1, -60, 0.5, -10)
+versionLbl.Size = UDim2.new(0, 52, 0, 20); versionLbl.Position = UDim2.new(1, -96, 0.5, -10)
 versionLbl.BackgroundTransparency = 1; versionLbl.Text = "v1.1.0"
 versionLbl.Font = Enum.Font.Gotham; versionLbl.TextSize = 11
 versionLbl.TextColor3 = Color3.fromRGB(130, 130, 130); versionLbl.TextXAlignment = Enum.TextXAlignment.Right
 versionLbl.ZIndex = 5
+
+-- MINIMIZE BUTTON
+local minimized = false
+local minimizeBtn = Instance.new("TextButton", topBar)
+minimizeBtn.Size = UDim2.new(0, 24, 0, 24)
+minimizeBtn.Position = UDim2.new(1, -32, 0.5, -12)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+minimizeBtn.BorderSizePixel = 0
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 15
+minimizeBtn.TextColor3 = Color3.fromRGB(120, 120, 120)
+minimizeBtn.Text = "−"
+minimizeBtn.AutoButtonColor = false
+minimizeBtn.ZIndex = 6
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 6)
+local minBtnStroke = Instance.new("UIStroke", minimizeBtn)
+minBtnStroke.Color = BORDER_COLOR
+minBtnStroke.Thickness = 1
+minBtnStroke.Transparency = 0.3
+
+minimizeBtn.MouseEnter:Connect(function()
+    TweenService:Create(minimizeBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        TextColor3 = Color3.fromRGB(180, 180, 180)
+    }):Play()
+end)
+minimizeBtn.MouseLeave:Connect(function()
+    TweenService:Create(minimizeBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+        TextColor3 = Color3.fromRGB(120, 120, 120)
+    }):Play()
+end)
+minimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    minimizeBtn.Text = minimized and "+" or "−"
+    if minimized then
+        TweenService:Create(wrapper, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 540, 0, 40)
+        }):Play()
+        TweenService:Create(main, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 540, 0, 40)
+        }):Play()
+    else
+        TweenService:Create(wrapper, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 540, 0, 360)
+        }):Play()
+        TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 540, 0, 360)
+        }):Play()
+    end
+end)
 
 -- DRAG
 local dragging, dragStart, startPos = false, nil, nil
@@ -406,8 +458,6 @@ end
 
 
 -- ── TAB ICON SIZES ────────────────────────────────────────────────────────────
--- Change the number here for each tab to resize its sidebar icon (pixels).
--- Default is 20. Increase for bigger icons, decrease for smaller.
 local TAB_ICON_SIZE = {
     ["Home"]      = 25,
     ["Player"]    = 25,
@@ -458,7 +508,6 @@ for _, name in ipairs(tabs) do
     frame.ZIndex = 1
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
 
-    -- CHANGE: icon size increased from 16 to 20, position adjusted
     local icon = Instance.new("ImageLabel", frame)
     icon.Name = "TabIcon"
     icon.Size = UDim2.new(0, 20, 0, 20)
@@ -470,7 +519,6 @@ for _, name in ipairs(tabs) do
     icon.ImageColor3 = Color3.fromRGB(110, 110, 110)
     icon.ZIndex = 3
 
-    -- CHANGE: label nudged right 2px to match larger icon
     local nameLbl = Instance.new("TextLabel", frame)
     nameLbl.Name = "TabLabel"
     nameLbl.Size = UDim2.new(1, -34, 1, 0)
@@ -693,7 +741,6 @@ local function createServerInfoBox(text, color)
     return lbl
 end
 
--- CHANGE: uptime/players now use Heartbeat-driven update matching the uploaded script's approach
 local siUptimeLabel  = createServerInfoBox("Uptime: 00:00:00", Color3.fromRGB(210, 210, 210))
 local siPlayersLabel = createServerInfoBox("Players: ...", Color3.fromRGB(200, 200, 200))
 
@@ -750,7 +797,6 @@ serverHopBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- CHANGE: replaced old uptime system with Heartbeat-driven update (matching uploaded script)
 local function formatServerUptime(seconds)
     local h = math.floor(seconds / 3600)
     local m = math.floor((seconds % 3600) / 60)
