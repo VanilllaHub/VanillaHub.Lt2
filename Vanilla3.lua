@@ -7,6 +7,7 @@
 -- FIXED: Click Sell / Sell All → instant lay-flat at new position
 -- FIXED: Options toggles are mutually exclusive (radio-style)
 -- FIXED: Bring/Sell All Logs → Abort button + return to start
+-- FIXED: LoneCave cutting - walks each WoodSection directly
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -479,7 +480,6 @@ end)
 local function getBiggestTree(treeClass)
     local trees = {}
 
-    -- Search inside TreeRegion folders (normal trees)
     for region, classes in next, treeRegions do
         if table.find(classes, treeClass) then
             for _, v2 in next, region:GetChildren() do
@@ -493,6 +493,10 @@ local function getBiggestTree(treeClass)
                                 totalMass = totalMass + v3:GetMass()
                             end
                         end
+                        -- LoneCave fallback: use first WoodSection as trunk
+                        if not treeTrunk then
+                            treeTrunk = v2:FindFirstChild("WoodSection")
+                        end
                         table.insert(trees, {tree=v2, trunk=treeTrunk, mass=totalMass})
                     end
                 end
@@ -500,12 +504,10 @@ local function getBiggestTree(treeClass)
         end
     end
 
-    -- Also search workspace directly (LoneCave and other special trees live here)
     for _, v2 in next, workspace:GetChildren() do
         if v2:IsA("Model") and v2:FindFirstChild("Owner") and v2:FindFirstChild("TreeClass") then
             local ownerOk = v2.Owner.Value == nil or v2.Owner.Value == player
             if v2.TreeClass.Value == treeClass and ownerOk then
-                -- Skip if already found via TreeRegion
                 local alreadyAdded = false
                 for _, t in ipairs(trees) do
                     if t.tree == v2 then alreadyAdded = true; break end
@@ -518,7 +520,6 @@ local function getBiggestTree(treeClass)
                             totalMass = totalMass + v3:GetMass()
                         end
                     end
-                    -- For LoneCave the trunk is just the first WoodSection if no ID=1 found
                     if not treeTrunk then
                         treeTrunk = v2:FindFirstChild("WoodSection")
                     end
@@ -591,6 +592,8 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
     local tree = getBiggestTree(treeClass)
     if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return false end
     if not tree.trunk then warn("[VanillaHub] Tree trunk not found!"); return false end
+
+    -- Size check only for non-LoneCave trees
     if treeClass ~= "LoneCave" and not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
         warn("[VanillaHub] Tree too small, skipping.")
         return false
@@ -619,21 +622,51 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
 
     task.wait(0.15)
 
+    -- Teleport loop: for LoneCave go to first WoodSection, otherwise trunk
     task.spawn(function()
         repeat
             if not getgenv().treestop then break end
-            player.Character.HumanoidRootPart.CFrame = tree.trunk.CFrame
+            if treeClass == "LoneCave" then
+                local ws = tree.tree:FindFirstChild("WoodSection")
+                if ws then
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
+                end
+            else
+                player.Character.HumanoidRootPart.CFrame = tree.trunk.CFrame
+            end
             task.wait()
         until getgenv().treeCut or not getgenv().treestop
     end)
 
     task.wait()
 
-    repeat
-        if not getgenv().treestop then break end
-        cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
-        task.wait()
-    until getgenv().treeCut or not getgenv().treestop
+    -- ── CUT LOOP ─────────────────────────────────────────────────────────────
+    if treeClass == "LoneCave" then
+        -- LoneCave has no ID system — walk each WoodSection and chop it
+        repeat
+            if not getgenv().treestop then break end
+            local ce = tree.tree:FindFirstChild("CutEvent")
+            if ce then
+                for _, ws in ipairs(tree.tree:GetChildren()) do
+                    if not getgenv().treestop or getgenv().treeCut then break end
+                    if ws.Name == "WoodSection" then
+                        player.Character.HumanoidRootPart.CFrame =
+                            CFrame.new(ws.CFrame.p) * CFrame.new(0, 0, -3)
+                        task.wait(0.05)
+                        ChopTree(ce, 1, 0.3)
+                        task.wait(0.1)
+                    end
+                end
+            end
+            task.wait()
+        until getgenv().treeCut or not getgenv().treestop
+    else
+        repeat
+            if not getgenv().treestop then break end
+            cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
+            task.wait()
+        until getgenv().treeCut or not getgenv().treestop
+    end
 
     task.wait(1)
     getgenv().treeCut = false
@@ -647,13 +680,13 @@ local SELL_POS = Vector3.new(315.01, -0.40, 84.32)
 local SELL_CF  = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 
 -- ════════════════════════════════════════════════════
--- BRING ALL LOGS / SELL ALL LOGS  (with Abort support)
+-- BRING ALL LOGS / SELL ALL LOGS
 -- ════════════════════════════════════════════════════
 
 local bringLogsRunning = false
 local sellLogsRunning  = false
 local logsAbort        = false
-local logsStartPos     = nil  -- saved position when operation starts
+local logsStartPos     = nil
 
 local function BringAllLogs(onDone)
     local OldPos  = logsStartPos or player.Character.HumanoidRootPart.CFrame
@@ -684,7 +717,6 @@ local function BringAllLogs(onDone)
         task.wait(0.1)
     end
 
-    -- Always return to start position regardless of abort
     pcall(function()
         player.Character.HumanoidRootPart.CFrame = OldPos
     end)
@@ -720,7 +752,6 @@ local function SellAllLogs(onDone)
         task.wait(0.1)
     end
 
-    -- Always return to start position regardless of abort
     pcall(function()
         player.Character.HumanoidRootPart.CFrame = OldPos
     end)
@@ -1003,7 +1034,7 @@ local function ViewEndTree(val)
 end
 
 -- ════════════════════════════════════════════════════
--- CLICK SELL (instant lay-flat)
+-- CLICK SELL
 -- ════════════════════════════════════════════════════
 
 local clickSellEnabled  = false
@@ -1091,7 +1122,7 @@ table.insert(cleanupTasks, function()
 end)
 
 -- ════════════════════════════════════════════════════
--- WOOD TAB — CLEAN LAYOUT
+-- WOOD TAB
 -- ════════════════════════════════════════════════════
 
 local woodPage = pages["WoodTab"]
@@ -1102,7 +1133,6 @@ for _, child in ipairs(woodPage:GetChildren()) do
     end
 end
 
--- ── 1. TREE SELECTOR ────────────────────────────────
 local TREE_LIST = {
     "Generic","Walnut","Cherry","SnowGlow","Oak","Birch","Koa","Fir",
     "Volcano","GreenSwampy","CaveCrawler","Palm","GoldSwampy","Frost",
@@ -1247,11 +1277,9 @@ treeHeaderBtn.MouseButton1Click:Connect(function()
     if treeDropIsOpen then treeCloseList() else treeOpenList() end
 end)
 
--- Amount slider
 local treeAmount = 1
 makeSlider(woodPage, "Amount", 1, 50, 1, function(v) treeAmount = v end)
 
--- Bring Tree / Abort toggle button
 local bringTreeActive = false
 local bringTreeBtn = makeBtn(woodPage, "Bring Tree", nil)
 
@@ -1299,7 +1327,6 @@ bringTreeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ── Options (mutually exclusive toggles) ────────────────────────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Options")
 
@@ -1340,11 +1367,9 @@ optionSetters["viewLone"] = function(v)
     ViewEndTree(v)
 end
 
--- ── Logs (Bring All / Sell All with Abort + return to start) ─────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
--- We use makeBtnPair but capture the returned buttons so we can rename them
 local logsRow, bringAllBtn, sellAllBtn = makeBtnPair(woodPage,
     "Bring All Logs", "Sell All Logs",
     nil, nil
@@ -1360,7 +1385,6 @@ end
 
 bringAllBtn.MouseButton1Click:Connect(function()
     if bringLogsRunning then
-        -- Abort: set flag, the loop will break and BringAllLogs will teleport back via logsStartPos
         logsAbort = true
         print("[VanillaHub] Bring All Logs aborted.")
         return
@@ -1381,7 +1405,6 @@ end)
 
 sellAllBtn.MouseButton1Click:Connect(function()
     if sellLogsRunning then
-        -- Abort: set flag, the loop will break and SellAllLogs will teleport back via logsStartPos
         logsAbort = true
         print("[VanillaHub] Sell All Logs aborted.")
         return
@@ -1400,7 +1423,6 @@ sellAllBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ── Tools ─────────────────────────────────────────────────────────────────────
 sepLine(woodPage)
 sectionLabel(woodPage, "Tools")
 
@@ -1505,7 +1527,8 @@ end)
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
 print("[VanillaHub] Vanilla3 loaded!")
-print("[VanillaHub] Click Sell / Sell All → instant lay-flat at new sell position.")
+print("[VanillaHub] LoneCave: walks each WoodSection and chops directly.")
+print("[VanillaHub] Click Sell / Sell All → instant lay-flat at sell position.")
 print("[VanillaHub] Abort → teleports you back to your start position.")
 print("[VanillaHub] Options toggles are mutually exclusive.")
 print("[VanillaHub] Bring/Sell All Logs → Abort mid-run + return to start.")
