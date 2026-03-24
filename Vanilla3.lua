@@ -7,7 +7,6 @@
 -- FIXED: Click Sell / Sell All → instant lay-flat at new position
 -- FIXED: Options toggles are mutually exclusive (radio-style)
 -- FIXED: Bring/Sell All Logs → Abort button + return to start
--- FIXED: LoneCave cutting — loops all WoodSections, faceVector(1,0,0), equips axe properly
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -396,7 +395,6 @@ local function getBestAxe(treeClass)
     return true, bestTool
 end
 
--- ── cutPart: used for normal trees ──────────────────────────────────────────
 local function cutPart(event, section, height, tool, treeClass)
     local damage, cooldown
     local ok, axeStats = pcall(getToolStats, tool)
@@ -425,7 +423,6 @@ local function cutPart(event, section, height, tool, treeClass)
     })
 end
 
--- ── ChopTree: matches the 1x1 cutter style (faceVector 1,0,0) ───────────────
 local function ChopTree(CutEvent, ID, Height)
     local equipped = player.Character:FindFirstChild("Tool")
     if not equipped then return end
@@ -508,37 +505,23 @@ local function getBiggestTree(treeClass)
         if v2:IsA("Model") and v2:FindFirstChild("Owner") and v2:FindFirstChild("TreeClass") then
             local ownerOk = v2.Owner.Value == nil or v2.Owner.Value == player
             if v2.TreeClass.Value == treeClass and ownerOk then
+                -- Skip if already found via TreeRegion
                 local alreadyAdded = false
                 for _, t in ipairs(trees) do
                     if t.tree == v2 then alreadyAdded = true; break end
                 end
                 if not alreadyAdded then
                     local totalMass, treeTrunk = 0, nil
-                    local biggestSize = 0
-
                     for _, v3 in next, v2:GetChildren() do
                         if v3:IsA("BasePart") then
-                            -- Try ID=1 first
-                            if v3:FindFirstChild("ID") and v3.ID.Value == 1 then
-                                treeTrunk = v3
-                            end
-                            -- Also track biggest WoodSection as fallback
-                            if v3.Name == "WoodSection" then
-                                local sz = v3.Size.Magnitude
-                                if sz > biggestSize then
-                                    biggestSize = sz
-                                    if not treeTrunk then treeTrunk = v3 end
-                                end
-                            end
+                            if v3:FindFirstChild("ID") and v3.ID.Value == 1 then treeTrunk = v3 end
                             totalMass = totalMass + v3:GetMass()
                         end
                     end
-
-                    -- Final fallback: any WoodSection
+                    -- For LoneCave the trunk is just the first WoodSection if no ID=1 found
                     if not treeTrunk then
-                        treeTrunk = v2:FindFirstChildWhichIsA("BasePart")
+                        treeTrunk = v2:FindFirstChild("WoodSection")
                     end
-
                     table.insert(trees, {tree=v2, trunk=treeTrunk, mass=totalMass})
                 end
             end
@@ -589,59 +572,6 @@ local function GetToolsfix()
     end
 end
 
--- ════════════════════════════════════════════════════
--- LONECAVE CUTTING (matches 1x1 cutter style)
--- Loops all WoodSections, uses faceVector(1,0,0) via ChopTree
--- ════════════════════════════════════════════════════
-local function cutLoneCave(treeModel, axe, onFelled)
-    -- Equip the axe via Character (ChopTree reads from Character:FindFirstChild("Tool"))
-    player.Character.Humanoid:EquipTool(axe)
-    task.wait(0.4)
-
-    local ce = treeModel:FindFirstChild("CutEvent")
-    if not ce then
-        warn("[VanillaHub] LoneCave: no CutEvent found on tree model!")
-        return
-    end
-
-    -- Collect all WoodSections
-    local sections = {}
-    for _, v in ipairs(treeModel:GetChildren()) do
-        if v:IsA("BasePart") and v.Name == "WoodSection" then
-            table.insert(sections, v)
-        end
-    end
-
-    if #sections == 0 then
-        warn("[VanillaHub] LoneCave: no WoodSections found!")
-        return
-    end
-
-    print("[VanillaHub] LoneCave: found " .. #sections .. " sections, cutting...")
-
-    -- Cut every section continuously until the tree fells (treeCut becomes true)
-    local sectionIndex = 1
-    repeat
-        if not getgenv().treestop then break end
-
-        local ws = sections[sectionIndex]
-        -- Teleport next to the section
-        if ws and ws.Parent then
-            player.Character.HumanoidRootPart.CFrame =
-                CFrame.new(ws.Position + Vector3.new(0, 2, -3))
-            -- Use ChopTree style: sectionId = index, height = 1
-            ChopTree(ce, sectionIndex, 1)
-        end
-
-        -- Advance through sections round-robin so all get hit
-        sectionIndex = (sectionIndex % #sections) + 1
-        task.wait()
-
-    until getgenv().treeCut or not getgenv().treestop
-
-    if onFelled then onFelled() end
-end
-
 local function bringTree(treeClass, returnCFrame, isFirstTree)
     getgenv().treestop = true
     getgenv().treeCut  = false
@@ -655,11 +585,8 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
     local success, axe = getBestAxe(treeClass)
     if not success or not axe then return false end
 
-    -- For non-LoneCave trees equip via getTools path, LoneCave handled inside cutLoneCave
-    if treeClass ~= "LoneCave" then
-        player.Character.Humanoid:EquipTool(axe)
-        task.wait(0.4)
-    end
+    player.Character.Humanoid:EquipTool(axe)
+    task.wait(0.4)
 
     local tree = getBiggestTree(treeClass)
     if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return false end
@@ -680,7 +607,6 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
         return false
     end
 
-    -- Listen for the felled log arriving in LogModels
     treeListener(treeClass, function(log)
         log.PrimaryPart = log:FindFirstChild("WoodSection")
         getgenv().treeCut = true
@@ -693,37 +619,21 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
 
     task.wait(0.15)
 
-    if treeClass == "LoneCave" then
-        -- ── LoneCave: use ChopTree-style cutting across all sections ──
-        cutLoneCave(tree.tree, axe, function()
-            -- onFelled callback (treeCut flag already set by treeListener)
-        end)
-
-        -- Wait for treeCut or abort
-        local timeout = 0
-        repeat
-            task.wait()
-            timeout += task.wait()
-        until getgenv().treeCut or not getgenv().treestop or timeout > 60
-
-    else
-        -- ── Normal trees: teleport to trunk + cutPart loop ──
-        task.spawn(function()
-            repeat
-                if not getgenv().treestop then break end
-                player.Character.HumanoidRootPart.CFrame = tree.trunk.CFrame
-                task.wait()
-            until getgenv().treeCut or not getgenv().treestop
-        end)
-
-        task.wait()
-
+    task.spawn(function()
         repeat
             if not getgenv().treestop then break end
-            cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
+            player.Character.HumanoidRootPart.CFrame = tree.trunk.CFrame
             task.wait()
         until getgenv().treeCut or not getgenv().treestop
-    end
+    end)
+
+    task.wait()
+
+    repeat
+        if not getgenv().treestop then break end
+        cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
+        task.wait()
+    until getgenv().treeCut or not getgenv().treestop
 
     task.wait(1)
     getgenv().treeCut = false
@@ -743,7 +653,7 @@ local SELL_CF  = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 local bringLogsRunning = false
 local sellLogsRunning  = false
 local logsAbort        = false
-local logsStartPos     = nil
+local logsStartPos     = nil  -- saved position when operation starts
 
 local function BringAllLogs(onDone)
     local OldPos  = logsStartPos or player.Character.HumanoidRootPart.CFrame
@@ -774,6 +684,7 @@ local function BringAllLogs(onDone)
         task.wait(0.1)
     end
 
+    -- Always return to start position regardless of abort
     pcall(function()
         player.Character.HumanoidRootPart.CFrame = OldPos
     end)
@@ -809,6 +720,7 @@ local function SellAllLogs(onDone)
         task.wait(0.1)
     end
 
+    -- Always return to start position regardless of abort
     pcall(function()
         player.Character.HumanoidRootPart.CFrame = OldPos
     end)
@@ -1432,6 +1344,7 @@ end
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
+-- We use makeBtnPair but capture the returned buttons so we can rename them
 local logsRow, bringAllBtn, sellAllBtn = makeBtnPair(woodPage,
     "Bring All Logs", "Sell All Logs",
     nil, nil
@@ -1447,6 +1360,7 @@ end
 
 bringAllBtn.MouseButton1Click:Connect(function()
     if bringLogsRunning then
+        -- Abort: set flag, the loop will break and BringAllLogs will teleport back via logsStartPos
         logsAbort = true
         print("[VanillaHub] Bring All Logs aborted.")
         return
@@ -1467,6 +1381,7 @@ end)
 
 sellAllBtn.MouseButton1Click:Connect(function()
     if sellLogsRunning then
+        -- Abort: set flag, the loop will break and SellAllLogs will teleport back via logsStartPos
         logsAbort = true
         print("[VanillaHub] Sell All Logs aborted.")
         return
@@ -1590,8 +1505,7 @@ end)
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
 print("[VanillaHub] Vanilla3 loaded!")
-print("[VanillaHub] LoneCave: cuts all WoodSections using ChopTree-style (faceVector 1,0,0).")
-print("[VanillaHub] Click Sell / Sell All → instant lay-flat at sell position.")
-print("[VanillaHub] Abort → teleports back to start position.")
+print("[VanillaHub] Click Sell / Sell All → instant lay-flat at new sell position.")
+print("[VanillaHub] Abort → teleports you back to your start position.")
 print("[VanillaHub] Options toggles are mutually exclusive.")
 print("[VanillaHub] Bring/Sell All Logs → Abort mid-run + return to start.")
