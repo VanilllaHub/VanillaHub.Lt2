@@ -5,7 +5,6 @@
 -- FIXED: 1x1 Auto Cutter - Cuts ALL sections continuously
 -- FIXED: Abort teleports back to start position
 -- FIXED: Click Sell / Sell All → instant lay-flat at new position
--- FIXED: Bring All Logs / Sell All Logs → Abort button support
 -- ════════════════════════════════════════════════════
 
 if not _G.VH then
@@ -85,6 +84,7 @@ local function stroke(p, col, thick, trans)
     return s
 end
 
+-- Clean section header — plain label, no symbols
 local function sectionLabel(parent, text)
     local w = Instance.new("Frame", parent)
     w.Size = UDim2.new(1, 0, 0, 24)
@@ -110,6 +110,7 @@ local function sepLine(parent)
     return s
 end
 
+-- Standard single button
 local function makeBtn(parent, text, cb)
     local btn = Instance.new("TextButton", parent)
     btn.Size             = UDim2.new(1, 0, 0, 34)
@@ -163,9 +164,9 @@ local function makeBtnPair(parent, leftText, rightText, leftCb, rightCb, rightRe
         return btn
     end
 
-    local leftBtn  = half(0,   leftText,  leftCb,  false)
-    local rightBtn = half(0.5, rightText, rightCb, rightRed)
-    return row, leftBtn, rightBtn
+    half(0,   leftText,  leftCb,  false)
+    half(0.5, rightText, rightCb, rightRed)
+    return row
 end
 
 local SW_OFF      = Color3.fromRGB(55, 55, 55)
@@ -667,129 +668,75 @@ local function bringTree(treeClass, godmodeval, returnCFrame, isFirstTree)
 end
 
 -- ════════════════════════════════════════════════════
--- SELL POSITION + LAY-FLAT ROTATION
+-- SELL POSITION (updated) + LAY-FLAT ROTATION
+-- Logs are tall along Y when "standing". We rotate 90°
+-- around Z so the log lays flat on the sell platform.
 -- ════════════════════════════════════════════════════
-local SELL_POS = Vector3.new(315.01, -0.40, 84.32)
-local SELL_CF  = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
+local SELL_POS    = Vector3.new(315.01, -0.40, 84.32)
+local SELL_CF     = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 
--- ════════════════════════════════════════════════════
--- BRING ALL LOGS / SELL ALL LOGS — with Abort support
--- ════════════════════════════════════════════════════
-
-local bringLogsActive = false
-local sellLogsActive  = false
-
--- These are set after UI is created so the callbacks can reference the buttons
-local bringAllBtn, sellAllBtn
-
-local function resetLogButtons()
-    if bringAllBtn and bringAllBtn.Parent then
-        bringAllBtn.Text      = "Bring All Logs"
-        bringAllBtn.TextColor3 = C.TEXT
-    end
-    if sellAllBtn and sellAllBtn.Parent then
-        sellAllBtn.Text       = "Sell All Logs"
-        sellAllBtn.TextColor3 = C.TEXT
-    end
-end
-
+-- Bring All Logs: snapshots the player's current position, then brings all owned logs there
 local function BringAllLogs()
-    if bringLogsActive then
-        -- ABORT
-        bringLogsActive = false
-        print("[VanillaHub] Bring All Logs aborted.")
-        return
-    end
+    local OldPos  = player.Character.HumanoidRootPart.CFrame
+    local destCF  = OldPos  -- logs come to where you're standing when you click the button
+    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
+                    and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+    local count   = 0
 
-    bringLogsActive = true
-    if bringAllBtn and bringAllBtn.Parent then
-        bringAllBtn.Text       = "Abort"
-        bringAllBtn.TextColor3 = C.RED
-    end
-
-    task.spawn(function()
-        local OldPos  = player.Character.HumanoidRootPart.CFrame
-        local destCF  = OldPos
-        local dragger = ReplicatedStorage:FindFirstChild("Interaction")
-                        and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
-        local count   = 0
-
-        for _, v in next, workspace.LogModels:GetChildren() do
-            if not bringLogsActive then break end
-            if v:FindFirstChild("Owner") and v.Owner.Value == player then
-                local ws = v:FindFirstChild("WoodSection")
-                if ws then
-                    player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
-                    task.wait(0.15)
-                    if not v.PrimaryPart then v.PrimaryPart = ws end
-                    local timeout = 0
-                    while not isnetworkowner(ws) and timeout < 2 do
-                        if dragger then dragger:FireServer(v) end
-                        task.wait(0.05)
-                        timeout += 0.05
-                    end
+    for _, v in next, workspace.LogModels:GetChildren() do
+        if v:FindFirstChild("Owner") and v.Owner.Value == player then
+            local ws = v:FindFirstChild("WoodSection")
+            if ws then
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
+                task.wait(0.15)
+                if not v.PrimaryPart then v.PrimaryPart = ws end
+                local timeout = 0
+                while not isnetworkowner(ws) and timeout < 2 do
                     if dragger then dragger:FireServer(v) end
-                    v:SetPrimaryPartCFrame(destCF)
-                    count = count + 1
+                    task.wait(0.05)
+                    timeout += 0.05
                 end
+                if dragger then dragger:FireServer(v) end
+                v:SetPrimaryPartCFrame(destCF)
+                count = count + 1
             end
-            task.wait(0.1)
         end
+        task.wait(0.1)
+    end
 
-        player.Character.HumanoidRootPart.CFrame = OldPos
-        print("[VanillaHub] Brought " .. count .. " logs.")
-        bringLogsActive = false
-        resetLogButtons()
-    end)
+    player.Character.HumanoidRootPart.CFrame = OldPos
+    print("[VanillaHub] Brought " .. count .. " logs.")
 end
 
 local function SellAllLogs()
-    if sellLogsActive then
-        -- ABORT
-        sellLogsActive = false
-        print("[VanillaHub] Sell All Logs aborted.")
-        return
-    end
+    local OldPos  = player.Character.HumanoidRootPart.CFrame
+    local dragger = ReplicatedStorage:FindFirstChild("Interaction")
+                    and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
+    local count   = 0
 
-    sellLogsActive = true
-    if sellAllBtn and sellAllBtn.Parent then
-        sellAllBtn.Text       = "Abort"
-        sellAllBtn.TextColor3 = C.RED
-    end
-
-    task.spawn(function()
-        local OldPos  = player.Character.HumanoidRootPart.CFrame
-        local dragger = ReplicatedStorage:FindFirstChild("Interaction")
-                        and ReplicatedStorage.Interaction:FindFirstChild("ClientIsDragging")
-        local count   = 0
-
-        for _, v in next, workspace.LogModels:GetChildren() do
-            if not sellLogsActive then break end
-            if v:FindFirstChild("Owner") and v.Owner.Value == player then
-                local ws = v:FindFirstChild("WoodSection")
-                if ws then
-                    player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
-                    task.wait(0.15)
-                    if not v.PrimaryPart then v.PrimaryPart = ws end
-                    local timeout = 0
-                    while not isnetworkowner(ws) and timeout < 2 do
-                        if dragger then dragger:FireServer(v) end
-                        task.wait(0.05)
-                        timeout += 0.05
-                    end
+    for _, v in next, workspace.LogModels:GetChildren() do
+        if v:FindFirstChild("Owner") and v.Owner.Value == player then
+            local ws = v:FindFirstChild("WoodSection")
+            if ws then
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(ws.CFrame.p)
+                task.wait(0.15)
+                if not v.PrimaryPart then v.PrimaryPart = ws end
+                local timeout = 0
+                while not isnetworkowner(ws) and timeout < 2 do
                     if dragger then dragger:FireServer(v) end
-                    v:SetPrimaryPartCFrame(SELL_CF)
-                    count = count + 1
+                    task.wait(0.05)
+                    timeout += 0.05
                 end
+                if dragger then dragger:FireServer(v) end
+                v:SetPrimaryPartCFrame(SELL_CF)
+                count = count + 1
             end
-            task.wait(0.1)
         end
+        task.wait(0.1)
+    end
 
-        player.Character.HumanoidRootPart.CFrame = OldPos
-        print("[VanillaHub] Sent " .. count .. " logs to the sell point.")
-        sellLogsActive = false
-        resetLogButtons()
-    end)
+    player.Character.HumanoidRootPart.CFrame = OldPos
+    print("[VanillaHub] Sent " .. count .. " logs to the sell point.")
 end
 
 -- ════════════════════════════════════════════════════
@@ -1086,11 +1033,13 @@ local function doClickSell(logModel)
 
     local oldPos = hrp.CFrame
 
+    -- Teleport next to the log to claim ownership
     hrp.CFrame = CFrame.new(ws.CFrame.p) * CFrame.new(4, 0, 0)
     task.wait(0.15)
 
     if not logModel.PrimaryPart then logModel.PrimaryPart = ws end
 
+    -- Claim network ownership
     local timeout = 0
     while not isnetworkowner(ws) and timeout < 3 do
         if dragger then dragger:FireServer(logModel) end
@@ -1099,8 +1048,10 @@ local function doClickSell(logModel)
     end
     if dragger then dragger:FireServer(logModel) end
 
+    -- Instant lay-flat at sell point
     logModel:SetPrimaryPartCFrame(SELL_CF)
 
+    -- Return player
     task.wait(0.05)
     hrp.CFrame = oldPos
 end
@@ -1381,42 +1332,15 @@ makeToggle(woodPage, "View LoneCave Tree", false, function(val)
     ViewEndTree(val)
 end)
 
--- Logs section — buttons created here so we can capture references
+-- Logs
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
--- Build the pair row and capture both button references
-local logsRow = Instance.new("Frame", woodPage)
-logsRow.Size                  = UDim2.new(1, 0, 0, 34)
-logsRow.BackgroundTransparency = 1
-
-local function makeHalf(parent, xPos, text, red)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size             = UDim2.new(0.5, -3, 1, 0)
-    btn.Position         = UDim2.new(xPos, xPos == 0 and 0 or 6, 0, 0)
-    btn.BackgroundColor3 = C.CARD
-    btn.BorderSizePixel  = 0
-    btn.Font             = Enum.Font.GothamSemibold
-    btn.TextSize         = 12
-    btn.TextColor3       = red and C.RED or C.TEXT
-    btn.Text             = text
-    btn.AutoButtonColor  = false
-    corner(btn, 8)
-    stroke(btn, C.BORDER, 1, 0.5)
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = C.BTN_HV}):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = C.CARD}):Play()
-    end)
-    return btn
-end
-
-bringAllBtn = makeHalf(logsRow, 0,   "Bring All Logs", false)
-sellAllBtn  = makeHalf(logsRow, 0.5, "Sell All Logs",  false)
-
-bringAllBtn.MouseButton1Click:Connect(function() task.spawn(BringAllLogs) end)
-sellAllBtn.MouseButton1Click:Connect(function()  task.spawn(SellAllLogs)  end)
+makeBtnPair(woodPage,
+    "Bring All Logs", "Sell All Logs",
+    function() task.spawn(BringAllLogs) end,
+    function() task.spawn(SellAllLogs)  end
+)
 
 -- Tools
 sepLine(woodPage)
@@ -1514,8 +1438,6 @@ table.insert(cleanupTasks, function()
     if UnitCutter then OneUnitCutter(false) end
     if PlankReAdded    then pcall(function() PlankReAdded:Disconnect()    end); PlankReAdded    = nil end
     if UnitCutterClick then pcall(function() UnitCutterClick:Disconnect() end); UnitCutterClick = nil end
-    bringLogsActive = false
-    sellLogsActive  = false
     getgenv().treestop      = false
     getgenv().treeCut       = false
     getgenv().startPosition = nil
@@ -1526,4 +1448,3 @@ _G.VH.keybindButtonGUI = keybindButtonGUI
 print("[VanillaHub] Vanilla3 loaded!")
 print("[VanillaHub] Click Sell / Sell All → instant lay-flat at new sell position.")
 print("[VanillaHub] Abort → teleports you back to your start position.")
-print("[VanillaHub] Bring All Logs / Sell All Logs → click again to Abort mid-run.")
