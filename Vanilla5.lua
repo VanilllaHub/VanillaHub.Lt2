@@ -924,8 +924,8 @@ end
 -- AUTOBUILD CORE FUNCTIONS (ported from Autobuildv3)
 -- ════════════════════════════════════════════════════
 
--- Fastest speed hardcoded — no drag bar exposed
-local AB_FILL_SPEED = 0   -- 0s delay between fills (maximum speed)
+-- Fill speed set to 1 second between fills
+local AB_FILL_SPEED = 1
 
 local function isnetworkowner(part)
     return part.ReceiveAge == 0
@@ -1022,8 +1022,6 @@ local function UnloadPreview()
 end
 
 -- ── Build Preview Full Auto ───────────────────────────
--- Matches preview slots to owned wood by TreeClass and places each piece.
--- Fill speed is hardcoded to the fastest setting (0s delay).
 
 local wpcf = {}
 
@@ -1034,12 +1032,10 @@ end
 
 local function BuildPreviewFullAuto()
     wpcf = {}
-    -- Index preview slots by CFrame
     for _, v in pairs(workspace.Preview:GetChildren()) do
         local pk = v.PrimaryPart and v.PrimaryPart.CFrame or v:GetPrimaryPartCFrame()
         wpcf[pk] = {v, (v:FindFirstChild("TreeClass") and v.TreeClass.Value) or "Generic"}
     end
-    -- Collect owned small wood pieces
     local selectedWood = {}
     for _, v in pairs(workspace.PlayerModels:GetChildren()) do
         if v:FindFirstChild("WoodSection") and v:FindFirstChild("TreeClass")
@@ -1098,8 +1094,7 @@ local function BuildPreviewFullAuto()
     end
 end
 
--- ── Fill Blueprints (selected wood -> selected blueprints) ──
--- Speed also hardcoded to fastest.
+-- ── Fill Blueprints ──────────────────────────────────
 
 local function FillBlueprints()
     local selectedWood = {}
@@ -1164,7 +1159,6 @@ local function DelAllSelections()
 end
 
 -- ── Lasso Wood Select ────────────────────────────────
--- Lasso ScreenGui lives outside VanillaHub so it captures input at all times.
 
 local LassoGui = Instance.new("ScreenGui")
 LassoGui.Name         = "VHLassoWood"
@@ -1182,8 +1176,7 @@ LassoFrame.Visible  = false
 local lassoStroke = Instance.new("UIStroke", LassoFrame)
 lassoStroke.Color = Color3.fromRGB(200, 200, 200); lassoStroke.Thickness = 1.5
 
-local lassoActive   = false
-local lassoIncludeBPs = false
+local lassoActive = false
 
 local function isInLassoFrame(screenPos)
     local x = LassoFrame.AbsolutePosition.X; local y = LassoFrame.AbsolutePosition.Y
@@ -1215,7 +1208,6 @@ local lassoInputConn = UserInputService.InputBegan:Connect(function(input)
             end
             addSel(v:FindFirstChild("Main"))
             addSel(v:FindFirstChild("WoodSection"))
-            if lassoIncludeBPs then addSel(v:FindFirstChild("BuildDependentWood")) end
         end
     end
     LassoFrame.Size    = UDim2.new(0, 1, 0, 1)
@@ -1426,10 +1418,6 @@ local _, setLassoToggle = mkToggle("Lasso Wood Tool", false, function(v)
     lassoActive = v
 end)
 
-local _, setIncludeBPsToggle = mkToggle("Include Blueprints in Lasso", false, function(v)
-    lassoIncludeBPs = v
-end)
-
 mkBtn("Deselect All", nil, function() DelAllSelections() end)
 
 mkSep()
@@ -1481,19 +1469,6 @@ mkLabel("Utilities")
 
 mkBtn("Snap to Grid",               nil, function() snapToGrid() end)
 mkBtn("Center on Plot  (aim first)", nil, function() centerOnPlot() end)
-
-mkSep()
-mkLabel("Remove")
-mkHint("Removes all models inside workspace.Builds. Cannot be undone.")
-mkBtn("Remove Pixel Art", C.BTN_DANGER, function()
-    local folder = workspace:FindFirstChild("Builds")
-    if not folder then return end
-    for _, m in ipairs(folder:GetChildren()) do
-        if m:IsA("Model") then pcall(function() m:Destroy() end) end
-    end
-    cfg.followingMouse = false
-    setFollowToggle(false)
-end)
 
 local clickStopConn = UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
