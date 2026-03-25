@@ -2,7 +2,6 @@
 -- VANILLA3 — Wood Tab + Settings Tab
 -- Full WoodHub logic integrated into VanillaHub theme
 -- COMPLETE VERSION - ALL features working
--- FIXED: LoneCave - proper hit-count cutting + lava respawn + drag home
 -- FIXED: 1x1 Auto Cutter - Cuts ALL sections continuously
 -- FIXED: Abort teleports back to start position
 -- FIXED: Click Sell / Sell All → instant lay-flat at new position
@@ -323,12 +322,6 @@ local HitPoints = {
     AxeTwitter      = 1.65,
 }
 
--- ── LoneCave: calculate exact number of axe hits needed to fell the trunk ──
--- Formula sourced from Butterhub leaked source (calculateHitsForEndPart)
-local function calculateHitsForEndPart(part)
-    return math.round((math.sqrt(part.Size.X * part.Size.Z) ^ 2 * 8e7) / 1e7)
-end
-
 local function table_foreach(t, cb)
     for i = 1, #t do cb(i, t[i]) end
 end
@@ -507,11 +500,12 @@ local function getBiggestTree(treeClass)
         end
     end
 
-    -- Also search workspace directly (LoneCave lives here, not in a TreeRegion)
+    -- Also search workspace directly (LoneCave and other special trees live here)
     for _, v2 in next, workspace:GetChildren() do
         if v2:IsA("Model") and v2:FindFirstChild("Owner") and v2:FindFirstChild("TreeClass") then
             local ownerOk = v2.Owner.Value == nil or v2.Owner.Value == player
             if v2.TreeClass.Value == treeClass and ownerOk then
+                -- Skip if already found via TreeRegion
                 local alreadyAdded = false
                 for _, t in ipairs(trees) do
                     if t.tree == v2 then alreadyAdded = true; break end
@@ -524,7 +518,7 @@ local function getBiggestTree(treeClass)
                             totalMass = totalMass + v3:GetMass()
                         end
                     end
-                    -- LoneCave may not have an ID=1 part; fall back to first WoodSection
+                    -- For LoneCave the trunk is just the first WoodSection if no ID=1 found
                     if not treeTrunk then
                         treeTrunk = v2:FindFirstChild("WoodSection")
                     end
@@ -578,20 +572,6 @@ local function GetToolsfix()
     end
 end
 
--- ════════════════════════════════════════════════════
--- bringTree  (LoneCave fully fixed)
--- ════════════════════════════════════════════════════
---
--- LoneCave two-phase flow (matches Butterhub logic):
---   Phase 1  (isFirstTree = true)
---     • Equip EndTimesAxe, teleport to trunk, fire exactly
---       calculateHitsForEndPart(trunk)-1 cutPart calls at 1 s intervals
---     • Drop axe → walk into the lava kill zone → wait to fully respawn
---     • Pick axe back up → call bringTree again with isFirstTree=false
---   Phase 2  (isFirstTree = false)
---     • Tree is already felled (in workspace.LogModels)
---     • treeListener fires immediately; drag the log to startPosition
---
 local function bringTree(treeClass, returnCFrame, isFirstTree)
     getgenv().treestop = true
     getgenv().treeCut  = false
@@ -611,18 +591,22 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
     local tree = getBiggestTree(treeClass)
     if not tree then warn("[VanillaHub] No "..treeClass.." tree found!"); return false end
     if not tree.trunk then warn("[VanillaHub] Tree trunk not found!"); return false end
-
-    -- Size check is skipped for LoneCave (its trunk dimensions are non-standard)
-    if treeClass ~= "LoneCave" then
-        if not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
-            warn("[VanillaHub] Tree too small, skipping.")
-            return false
-        end
+    if treeClass ~= "LoneCave" and not (tree.trunk.Size.X >= 1 and tree.trunk.Size.Y >= 2 and tree.trunk.Size.Z >= 1) then
+        warn("[VanillaHub] Tree too small, skipping.")
+        return false
     end
 
     local destCFrame = returnCFrame or player.Character.HumanoidRootPart.CFrame
 
-    -- ── Set up the drag listener BEFORE we cut ───────────────────────────────
+    task.wait(0.5)
+
+    if not getgenv().treestop then
+        if isFirstTree and getgenv().startPosition then
+            player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
+        end
+        return false
+    end
+
     treeListener(treeClass, function(log)
         log.PrimaryPart = log:FindFirstChild("WoodSection")
         getgenv().treeCut = true
@@ -635,7 +619,6 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
 
     task.wait(0.15)
 
-    -- ── Keep teleporting to trunk until the tree falls ───────────────────────
     task.spawn(function()
         repeat
             if not getgenv().treestop then break end
@@ -646,101 +629,14 @@ local function bringTree(treeClass, returnCFrame, isFirstTree)
 
     task.wait()
 
-    -- ══════════════════════════════════════════════════════════════════════════
-    -- LONECAVE  — precision hit-count cutting
-    -- ══════════════════════════════════════════════════════════════════════════
-    if treeClass == "LoneCave" then
+    repeat
+        if not getgenv().treestop then break end
+        cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
+        task.wait()
+    until getgenv().treeCut or not getgenv().treestop
 
-        if isFirstTree then
-            -- ── Phase 1: cut the tree with exactly the right number of hits ──
-            local numHits = calculateHitsForEndPart(tree.trunk) - 1
-            print("[VanillaHub] LoneCave: trunk size " ..
-                tostring(tree.trunk.Size) .. " → " .. numHits .. " hits needed")
-
-            for i = 1, numHits do
-                if not getgenv().treestop then
-                    print("[VanillaHub] LoneCave cut aborted at hit " .. i)
-                    break
-                end
-                cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
-                print("[VanillaHub] LoneCave hit " .. i .. "/" .. numHits)
-                task.wait(1)    -- one hit per second — matches server swing cooldown
-            end
-
-            -- ── Stop the cut/drag loop ────────────────────────────────────────
-            getgenv().treeCut  = false
-            getgenv().treestop = false
-
-            -- ── Drop axe so it stays in the world after we die ───────────────
-            DropTools()
-            task.wait(0.3)
-
-            -- ── Walk into lava — this is what the server needs to validate ────
-            -- The lava pool is at the base of the LoneCave tree
-            player.Character.HumanoidRootPart.CFrame = CFrame.new(-1675, 261, 1284)
-            task.wait(0.5)
-
-            -- ── Wait for full respawn (Health back to 100) ────────────────────
-            pcall(function()
-                repeat
-                    task.wait()
-                until player.Character
-                    and player.Character:FindFirstChild("Humanoid")
-                    and player.Character.Humanoid.Health == 100
-            end)
-            task.wait(0.3)
-
-            -- ── Pick the axe back up ──────────────────────────────────────────
-            GetToolsfix()
-            task.wait(0.5)
-
-            -- ── Phase 2: tree is now felled; drag it home ─────────────────────
-            -- isFirstTree=false so we don't overwrite startPosition
-            bringTree(treeClass, getgenv().startPosition, false)
-
-        else
-            -- ── Phase 2: just wait for treeListener to fire and drag the log ──
-            -- The log should already be in workspace.LogModels or appear very
-            -- shortly after we respawn. The listener set above will fire and
-            -- drag it to destCFrame automatically.
-            -- We wait up to 10 s then give up gracefully.
-            local waited = 0
-            repeat
-                task.wait(0.2)
-                waited = waited + 0.2
-            until getgenv().treeCut or waited >= 10
-
-            if not getgenv().treeCut then
-                warn("[VanillaHub] LoneCave phase-2: log not detected within 10 s, giving up.")
-            end
-
-            task.wait(1)
-            -- Return player to start position
-            if getgenv().startPosition then
-                pcall(function()
-                    player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
-                end)
-            end
-            getgenv().doneend       = true
-            getgenv().treeCut       = false
-            getgenv().treestop      = false
-            getgenv().startPosition = nil
-        end
-
-    -- ══════════════════════════════════════════════════════════════════════════
-    -- ALL OTHER TREES  — original fast-cut loop
-    -- ══════════════════════════════════════════════════════════════════════════
-    else
-        repeat
-            if not getgenv().treestop then break end
-            cutPart(tree.tree.CutEvent, 1, 0.3, axe, treeClass)
-            task.wait()
-        until getgenv().treeCut or not getgenv().treestop
-
-        task.wait(1)
-        getgenv().treeCut = false
-    end
-
+    task.wait(1)
+    getgenv().treeCut = false
     return true
 end
 
@@ -757,7 +653,7 @@ local SELL_CF  = CFrame.new(SELL_POS) * CFrame.Angles(0, 0, math.rad(45))
 local bringLogsRunning = false
 local sellLogsRunning  = false
 local logsAbort        = false
-local logsStartPos     = nil
+local logsStartPos     = nil  -- saved position when operation starts
 
 local function BringAllLogs(onDone)
     local OldPos  = logsStartPos or player.Character.HumanoidRootPart.CFrame
@@ -788,6 +684,7 @@ local function BringAllLogs(onDone)
         task.wait(0.1)
     end
 
+    -- Always return to start position regardless of abort
     pcall(function()
         player.Character.HumanoidRootPart.CFrame = OldPos
     end)
@@ -823,6 +720,7 @@ local function SellAllLogs(onDone)
         task.wait(0.1)
     end
 
+    -- Always return to start position regardless of abort
     pcall(function()
         player.Character.HumanoidRootPart.CFrame = OldPos
     end)
@@ -1359,7 +1257,6 @@ local bringTreeBtn = makeBtn(woodPage, "Bring Tree", nil)
 
 bringTreeBtn.MouseButton1Click:Connect(function()
     if bringTreeActive then
-        -- ── ABORT ──
         bringTreeActive = false
         getgenv().treestop = false
         getgenv().treeCut  = false
@@ -1382,9 +1279,7 @@ bringTreeBtn.MouseButton1Click:Connect(function()
             local homeCFrame = player.Character.HumanoidRootPart.CFrame
             getgenv().treestop      = true
             getgenv().startPosition = homeCFrame
-
             if selectedTree == "LoneCave" then
-                -- LoneCave: always amount=1, pass isFirstTree=true
                 bringTree(selectedTree, homeCFrame, true)
             else
                 for i = 1, treeAmount do
@@ -1392,14 +1287,10 @@ bringTreeBtn.MouseButton1Click:Connect(function()
                     bringTree(selectedTree, homeCFrame, i == 1)
                     if i < treeAmount then task.wait(0.8) end
                 end
-                -- Return home after normal trees
-                if getgenv().startPosition then
-                    pcall(function()
-                        player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
-                    end)
-                end
             end
-
+            if getgenv().treestop and getgenv().startPosition then
+                player.Character.HumanoidRootPart.CFrame = getgenv().startPosition
+            end
             getgenv().treestop      = false
             getgenv().startPosition = nil
             bringTreeActive   = false
@@ -1453,6 +1344,7 @@ end
 sepLine(woodPage)
 sectionLabel(woodPage, "Logs")
 
+-- We use makeBtnPair but capture the returned buttons so we can rename them
 local logsRow, bringAllBtn, sellAllBtn = makeBtnPair(woodPage,
     "Bring All Logs", "Sell All Logs",
     nil, nil
@@ -1468,6 +1360,7 @@ end
 
 bringAllBtn.MouseButton1Click:Connect(function()
     if bringLogsRunning then
+        -- Abort: set flag, the loop will break and BringAllLogs will teleport back via logsStartPos
         logsAbort = true
         print("[VanillaHub] Bring All Logs aborted.")
         return
@@ -1488,6 +1381,7 @@ end)
 
 sellAllBtn.MouseButton1Click:Connect(function()
     if sellLogsRunning then
+        -- Abort: set flag, the loop will break and SellAllLogs will teleport back via logsStartPos
         logsAbort = true
         print("[VanillaHub] Sell All Logs aborted.")
         return
@@ -1611,8 +1505,7 @@ end)
 _G.VH.keybindButtonGUI = keybindButtonGUI
 
 print("[VanillaHub] Vanilla3 loaded!")
-print("[VanillaHub] LoneCave: precision hit-count cutting + lava respawn + drag home.")
-print("[VanillaHub] Click Sell / Sell All → instant lay-flat at sell position.")
-print("[VanillaHub] Abort → teleports back to start position.")
+print("[VanillaHub] Click Sell / Sell All → instant lay-flat at new sell position.")
+print("[VanillaHub] Abort → teleports you back to your start position.")
 print("[VanillaHub] Options toggles are mutually exclusive.")
 print("[VanillaHub] Bring/Sell All Logs → Abort mid-run + return to start.")
