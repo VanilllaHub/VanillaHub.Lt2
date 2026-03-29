@@ -12,7 +12,8 @@ local scripts = {
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla4.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla5.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla6.lua",
-    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla7.lua"
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla7.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla8.lua",
 }
 
 print("VanilllaHub: Loading LT2 Modules...")
