@@ -399,7 +399,7 @@ task.spawn(function()
 end)
 
 -- TABS
-local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Build","Vehicle","Search","Settings"}
+local tabs = {"Home","Player","World","Teleport","Wood","Slot","Dupe","Item","Sorter","AutoBuy","Pixel Art","Wire Art","Build","Vehicle","Search","Settings"}
 local pages = {}
 
 for _, name in ipairs(tabs) do
@@ -468,6 +468,7 @@ local TAB_ICON_SIZE = {
     ["Sorter"]    = 25,
     ["AutoBuy"]   = 25,
     ["Pixel Art"] = 45,
+    ["Wire Art"]  = 20,
     ["Build"]     = 25,
     ["Vehicle"]   = 10,
     ["Search"]    = 20,
@@ -486,6 +487,7 @@ local tabIcons = {
     ["Sorter"]    = "104900927627815",
     ["AutoBuy"]   = "76236698231155",
     ["Pixel Art"] = "112117095344788",
+    ["Wire Art"]  = "75885588738364",
     ["Build"]     = "97668717322455",
     ["Vehicle"]   = "131533481576470",
     ["Search"]    = "75885588738364",
