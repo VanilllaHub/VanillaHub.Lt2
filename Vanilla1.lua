@@ -467,10 +467,10 @@ local TAB_ICON_SIZE = {
     ["Item"]      = 18,
     ["Sorter"]    = 25,
     ["AutoBuy"]   = 25,
-    ["Pixel Art"] = 45,
-    ["Wire Art"]  = 20,
+    ["Pixel Art"] = 60,
+    ["Wire Art"]  = 60,
     ["Build"]     = 25,
-    ["Vehicle"]   = 10,
+    ["Vehicle"]   = 1,
     ["Search"]    = 20,
     ["Settings"]  = 20,
 }
