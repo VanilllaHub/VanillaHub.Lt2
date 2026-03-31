@@ -12,6 +12,13 @@ local scripts = {
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla6.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla7.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla8.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla9.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla10.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla11.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla12.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla13.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanilllaHub.Lt2/main/Vanilla14.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla15.lua",
 }
 
 for _, url in ipairs(scripts) do
