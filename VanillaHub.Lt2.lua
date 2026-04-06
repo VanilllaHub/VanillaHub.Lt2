@@ -2,7 +2,6 @@ local function fetch(url)
     local ok, res = pcall(game.HttpGet, game, url)
     return ok and res or nil
 end
-
 local scripts = {
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla1.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla2.lua",
@@ -17,10 +16,9 @@ local scripts = {
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla11.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla12.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla13.lua",
-    "https://raw.githubusercontent.com/VanilllaHub/VanilllaHub.Lt2/main/Vanilla14.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla14.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla15.lua",
 }
-
 for _, url in ipairs(scripts) do
     local content = fetch(url)
     if content then
