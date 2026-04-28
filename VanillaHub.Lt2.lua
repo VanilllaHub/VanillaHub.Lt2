@@ -18,6 +18,7 @@ local scripts = {
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla13.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla14.lua",
     "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla15.lua",
+    "https://raw.githubusercontent.com/VanilllaHub/VanillaHub.Lt2/main/Vanilla16.lua",
 }
 for _, url in ipairs(scripts) do
     local content = fetch(url)
